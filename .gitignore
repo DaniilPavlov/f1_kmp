@@ -1,0 +1,13 @@
+# Ignore build outputs
+.gradle/
+.kotlin/
+**/build/
+**/local.properties
+.idea/
+*.iml
+.DS_Store
+xcuserdata/
+*.xcuserstate
+captures/
+.externalNativeBuild/
+.cxx/

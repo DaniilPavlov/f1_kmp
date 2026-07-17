@@ -1,0 +1,106 @@
+# F1 KMP
+
+Kotlin Multiplatform + Compose Multiplatform приложение со статистикой Formula 1  
+(турнирные таблицы, результаты, календарь, зал славы, трассы).
+
+Порт Android-проекта **f1kotlin** на общий код для **Android** и **iOS**.  
+Данные — [Jolpica F1 API](https://github.com/jolpica/jolpica-f1) (совместим с Ergast).
+
+## Стек
+
+| Слой | Технологии |
+|------|------------|
+| UI | Compose Multiplatform, Navigation |
+| DI | Koin |
+| Сеть | Ktor + kotlinx.serialization |
+| Кэш | JSON-файлы (offline peek → refresh) |
+| Время | kotlinx-datetime |
+| Android-карта | OSMDroid |
+| iOS-карта | заглушка (см. ниже) |
+
+### Отличия от f1kotlin
+
+- Hilt → Koin  
+- Retrofit/Moshi → Ktor  
+- Room → файловый кэш  
+- java.time → kotlinx-datetime  
+- Карта OSM только на Android  
+
+## Структура
+
+```
+f1_kmp/
+├── composeApp/          # shared + Android + iOS Kotlin
+│   └── src/
+│       ├── commonMain/  # UI, ViewModel, API, repository
+│       ├── androidMain/ # Activity, OSMDroid, OkHttp
+│       ├── iosMain/     # MainViewController, Darwin HTTP
+│       ├── commonTest/
+│       └── androidUnitTest/
+├── iosApp/              # Xcode host (SwiftUI → Compose)
+└── gradle/
+```
+
+## Требования
+
+- JDK 17+
+- Android Studio / Android SDK (для Android)
+- Xcode 15+ (для iOS)
+- macOS (для сборки iOS)
+
+## Android
+
+```bash
+./gradlew :composeApp:assembleDebug
+# или установка на устройство/эмулятор:
+./gradlew :composeApp:installDebug
+```
+
+В Android Studio: Run → конфигурация **composeApp**.
+
+## iOS
+
+Сборку iOS нужно запускать **через Xcode** (Compose-ресурсы требуют параметров от Xcode):
+
+```bash
+open iosApp/iosApp.xcodeproj
+```
+
+1. Выбери схему **iosApp** и симулятор (например iPhone 16).
+2. Run (⌘R).
+
+Xcode перед сборкой вызовет:
+
+```text
+./gradlew :composeApp:embedAndSignAppleFrameworkForXcode
+```
+
+На реальное устройство в `iosApp/Configuration/Config.xcconfig` укажи свой `TEAM_ID`.
+
+**Не запускай** `embedAndSignAppleFrameworkForXcode` «голым» Gradle из терминала/Android Studio — будет ошибка  
+`Could not infer iOS target architectures`. Нужен Xcode / `xcodebuild`.
+
+Только Kotlin-фреймворк для симулятора (Apple Silicon), без установки приложения:
+
+```bash
+./gradlew :composeApp:linkDebugFrameworkIosSimulatorArm64
+```
+
+## Тесты
+
+```bash
+./gradlew :composeApp:testDebugUnitTest
+```
+
+## Карта трасс на iOS
+
+На Android вкладка «Трассы → На карте» показывает OSMDroid с пинами и кластерами.
+
+На iOS карта — **заглушка**: текст с предложением открыть список.  
+Список трасс и карточка трассы работают на обеих платформах.  
+Полноценная карта (MapKit) пока не подключена.
+
+## Offline
+
+Приложение сначала читает локальный JSON-кэш (peek), затем обновляет данные с сети.  
+Если сеть недоступна, а кэш есть — UI остаётся с последними данными.
