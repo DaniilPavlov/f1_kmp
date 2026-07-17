@@ -3,7 +3,7 @@
 Kotlin Multiplatform + Compose Multiplatform приложение со статистикой Formula 1  
 (турнирные таблицы, результаты, календарь, зал славы, трассы).
 
-Порт Android-проекта **f1kotlin** на общий код для **Android** и **iOS**.  
+Порт Android-проекта **[f1_kotlin](https://github.com/DaniilPavlov/f1_kotlin)** на общий код для **Android** и **iOS**.  
 Данные — [Jolpica F1 API](https://github.com/jolpica/jolpica-f1) (совместим с Ergast).
 
 ## Стек
