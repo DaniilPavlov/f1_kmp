@@ -6,8 +6,10 @@ import com.example.f1_kmp.data.model.CircuitModel
 import com.example.f1_kmp.data.model.PitStopModel
 import com.example.f1_kmp.data.model.QualifyingResultModel
 import com.example.f1_kmp.data.model.RaceModel
+import com.example.f1_kmp.data.model.RaceResultModel
 import com.example.f1_kmp.data.repository.F1Repository
 import com.example.f1_kmp.domain.AppException
+import com.example.f1_kmp.domain.ErrorStrings
 import com.example.f1_kmp.domain.AsyncValue
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -42,6 +44,9 @@ class RaceInfoScreenViewModel(
     private val _pitStops = MutableStateFlow<AsyncValue<List<PitStopModel>>>(AsyncValue.Loading)
     val pitStops: StateFlow<AsyncValue<List<PitStopModel>>> = _pitStops.asStateFlow()
 
+    private val _sprint = MutableStateFlow<AsyncValue<List<RaceResultModel>>>(AsyncValue.Loading)
+    val sprint: StateFlow<AsyncValue<List<RaceResultModel>>> = _sprint.asStateFlow()
+
     private val _allDataLoaded = MutableStateFlow(false)
     val allDataLoaded: StateFlow<Boolean> = _allDataLoaded.asStateFlow()
 
@@ -59,6 +64,7 @@ class RaceInfoScreenViewModel(
             _race.value = AsyncValue.Loading
             _qualifying.value = AsyncValue.Loading
             _pitStops.value = AsyncValue.Loading
+            _sprint.value = AsyncValue.Loading
 
             val raceResult = repository.getRaceResults(season, round)
             raceResult.onFailure { e ->
@@ -70,7 +76,7 @@ class RaceInfoScreenViewModel(
 
             val loadedRace = raceResult.getOrNull()
             if (loadedRace == null) {
-                val ex = AppException("Гонка не найдена")
+                val ex = AppException(ErrorStrings.raceNotFoundTitle)
                 _race.value = AsyncValue.Error(ex.title, ex.subtitle)
                 _error.value = ex
                 return@launch
@@ -86,6 +92,7 @@ class RaceInfoScreenViewModel(
         coroutineScope {
             val qualifyingDeferred = async { repository.getQualifyingResults(race.season, race.round) }
             val pitStopsDeferred = async { repository.getPitStopsWithDriverNames(race.season, race.round) }
+            val sprintDeferred = async { repository.getSprintResults(race.season, race.round) }
 
             qualifyingDeferred.await().applyUnlessCached(
                 current = _qualifying.value,
@@ -102,6 +109,15 @@ class RaceInfoScreenViewModel(
                 onFailure = { ex ->
                     _pitStops.value = AsyncValue.Error(ex.title, ex.subtitle)
                     _error.value = ex
+                },
+            )
+
+            sprintDeferred.await().applyUnlessCached(
+                current = _sprint.value,
+                onSuccess = { _sprint.value = AsyncValue.Value(it) },
+                onFailure = {
+                    // Нет спринта в уик-энде — не ошибка экрана, просто пустая секция.
+                    _sprint.value = AsyncValue.Value(emptyList())
                 },
             )
         }
@@ -140,7 +156,7 @@ class CircuitDetailViewModel(
                     if (found != null) {
                         _circuit.value = AsyncValue.Value(found)
                     } else {
-                        _circuit.value = AsyncValue.Error("Трасса не найдена")
+                        _circuit.value = AsyncValue.Error(ErrorStrings.circuitNotFound)
                     }
                 },
                 onFailure = { ex -> _circuit.value = AsyncValue.Error(ex.title, ex.subtitle) },

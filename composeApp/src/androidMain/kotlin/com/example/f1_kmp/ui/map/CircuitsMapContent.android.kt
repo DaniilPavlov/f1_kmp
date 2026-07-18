@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.view.View
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,65 +21,70 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.f1_kmp.R
 import com.example.f1_kmp.data.model.CircuitModel
 import com.example.f1_kmp.platform.OsmdroidInitializer
 import com.example.f1_kmp.ui.theme.F1Red
 import org.osmdroid.bonuspack.clustering.RadiusMarkerClusterer
 import org.osmdroid.bonuspack.clustering.StaticCluster
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase
+import org.osmdroid.tileprovider.tilesource.XYTileSource
 import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import kotlin.math.max
 import kotlin.math.min
 
-private const val PIN_HEIGHT_DP = 25f
+private const val PIN_HEIGHT_DP = 25f / 1.5f
 private const val CLUSTER_RADIUS_MULTIPLIER = 9
 private const val CLUSTER_MIN_RADIUS_PX = 45
 private const val CLUSTER_MAX_RADIUS_PX = 72
-/** Минимальный zoom: 2 — дальше белые полосы при отключённом повторении тайлов. */
 private const val MAP_MIN_ZOOM = 2.0
 private const val MAP_INITIAL_ZOOM = 2.5
 private const val MAP_MAX_ZOOM = 18.0
 
 /**
- * Android-карта трасс (OSMDroid): одна карта без повторения тайлов,
- * пины фиксированной высоты, красные кластеры.
+ * Carto Voyager вместо MAPNIK: tile.openstreetmap.org часто отдаёт пустую сетку
+ * на новых установках (строгий UA / редиректы). Carto стабильнее для демо.
+ */
+private val CIRCUITS_TILE_SOURCE: OnlineTileSourceBase = XYTileSource(
+    "CartoVoyager",
+    0,
+    20,
+    256,
+    ".png",
+    arrayOf(
+        "https://a.basemaps.cartocdn.com/rastertiles/voyager/",
+        "https://b.basemaps.cartocdn.com/rastertiles/voyager/",
+        "https://c.basemaps.cartocdn.com/rastertiles/voyager/",
+        "https://d.basemaps.cartocdn.com/rastertiles/voyager/",
+    ),
+    "© OpenStreetMap, © CARTO",
+)
+
+/**
+ * Android-карта трасс.
+ * MapView в [remember] + lifecycle (типичный фикс «только сетка» в Compose).
  */
 @Composable
 actual fun CircuitsMapContent(
     circuits: List<CircuitModel>,
     onCircuitClick: (String) -> Unit,
 ) {
-    val lifecycleOwner = LocalLifecycleOwner.current
-    var mapView by remember { mutableStateOf<MapView?>(null) }
+    val context = LocalContext.current
+    OsmdroidInitializer.ensureInitialized(context)
 
-    DisposableEffect(lifecycleOwner, mapView) {
-        val view = mapView
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_RESUME -> view?.onResume()
-                Lifecycle.Event.ON_PAUSE -> view?.onPause()
-                else -> Unit
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-            view?.onResume()
-        }
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-            view?.onPause()
-        }
-    }
+    val mapView = rememberMapViewWithLifecycle()
+    var configured by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -89,30 +95,57 @@ actual fun CircuitsMapContent(
             .clip(RoundedCornerShape(20.dp)),
     ) {
         AndroidView(
+            factory = { mapView },
             modifier = Modifier.fillMaxSize(),
-            factory = { ctx ->
-                OsmdroidInitializer.ensureInitialized(ctx)
-                MapView(ctx).apply {
-                    mapView = this
-                    setTileSource(TileSourceFactory.MAPNIK)
-                    setMultiTouchControls(true)
-                    isTilesScaledToDpi = true
+            update = { view ->
+                if (!configured) {
+                    view.setTileSource(CIRCUITS_TILE_SOURCE)
+                    view.setMultiTouchControls(true)
+                    view.zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
                     val center = circuits.firstOrNull()?.let {
                         GeoPoint(it.location.lat.toDouble(), it.location.longitude.toDouble())
                     }
-                    configureCircuitsMapView(this, center)
-                    onResume()
+                    configureCircuitsMapView(view, center)
+                    configured = true
                 }
+                populateCircuitsMap(view, circuits, onCircuitClick)
             },
-            update = { view -> populateCircuitsMap(view, circuits, onCircuitClick) },
         )
     }
 }
 
-/**
- * Базовые настройки [MapView]: без повторения тайлов, лимиты scroll/zoom.
- * [MAP_MIN_ZOOM] = 2 — чтобы не появлялись белые поля по краям.
- */
+@Composable
+private fun rememberMapViewWithLifecycle(): MapView {
+    val context = LocalContext.current
+    val mapView = remember {
+        MapView(context).apply {
+            id = View.generateViewId()
+            clipToOutline = true
+            setDestroyMode(false)
+        }
+    }
+
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle, mapView) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> mapView.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
+                else -> Unit
+            }
+        }
+        lifecycle.addObserver(observer)
+        if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            mapView.onResume()
+        }
+        onDispose {
+            lifecycle.removeObserver(observer)
+            mapView.onPause()
+        }
+    }
+    return mapView
+}
+
 private fun configureCircuitsMapView(mapView: MapView, initialCenter: GeoPoint?) {
     mapView.setHorizontalMapRepetitionEnabled(false)
     mapView.setVerticalMapRepetitionEnabled(false)
@@ -122,12 +155,9 @@ private fun configureCircuitsMapView(mapView: MapView, initialCenter: GeoPoint?)
     mapView.minZoomLevel = MAP_MIN_ZOOM
     mapView.maxZoomLevel = MAP_MAX_ZOOM
     mapView.controller.setZoom(MAP_INITIAL_ZOOM)
-    initialCenter?.let { mapView.controller.setCenter(it) }
+    mapView.controller.setCenter(initialCenter ?: GeoPoint(20.0, 0.0))
 }
 
-/**
- * Маркеры трасс: уменьшенный пин + [F1CircuitsClusterer] (красные круги с числом).
- */
 private fun populateCircuitsMap(
     mapView: MapView,
     circuits: List<CircuitModel>,
@@ -153,16 +183,14 @@ private fun populateCircuitsMap(
     mapView.invalidate()
 }
 
-/**
- * Кластеры трасс — красный круг с прозрачностью 75% и белой цифрой.
- * Размер: `min(max(size × 9, 45), 72)` px.
- */
 private class F1CircuitsClusterer(context: Context) : RadiusMarkerClusterer(context) {
     init {
         setMaxClusteringZoomLevel(15)
-        setRadius(50)
+        // Чуть шире, чем 50: на dense-экранах лучше склеиваются в красные кластеры.
+        setRadius(100)
         mTextPaint.color = Color.WHITE
         mTextPaint.textSize = 14f * context.resources.displayMetrics.density
+        mTextPaint.textAlign = Paint.Align.CENTER
         mAnchorU = Marker.ANCHOR_CENTER
         mAnchorV = Marker.ANCHOR_CENTER
     }
@@ -198,7 +226,6 @@ private class F1CircuitsClusterer(context: Context) : RadiusMarkerClusterer(cont
     }
 }
 
-/** Иконка маркера: pin_unselected, высота [PIN_HEIGHT_DP] dp (якорь — низ пина). */
 private object MapMarkerIcons {
     fun scaledPinIcon(context: Context): Drawable? {
         val source = ContextCompat.getDrawable(context, R.drawable.pin_unselected) ?: return null

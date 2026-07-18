@@ -38,6 +38,10 @@ class F1ApiService(private val client: HttpClient) {
     suspend fun getRaceResults(year: String, round: String, limit: Int = 100): MrDataResponse<ScheduleModel> =
         client.get("$year/$round/results.json") { parameter("limit", limit) }.body()
 
+    /** Результаты спринта конкретной гонки. */
+    suspend fun getSprintResults(year: String, round: String, limit: Int = 100): MrDataResponse<ScheduleModel> =
+        client.get("$year/$round/sprint.json") { parameter("limit", limit) }.body()
+
     /** Квалификация гонки (Q1/Q2/Q3). */
     suspend fun getQualifyingResults(year: String, round: String, limit: Int = 100): MrDataResponse<ScheduleModel> =
         client.get("$year/$round/qualifying.json") { parameter("limit", limit) }.body()

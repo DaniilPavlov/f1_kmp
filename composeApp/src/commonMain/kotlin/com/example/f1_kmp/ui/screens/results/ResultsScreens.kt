@@ -18,12 +18,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.example.f1_kmp.data.model.DriverModel
 import com.example.f1_kmp.data.model.RaceModel
 import com.example.f1_kmp.domain.AsyncValue
 import com.example.f1_kmp.ui.components.BlackButton
+import com.example.f1_kmp.ui.components.DriverInfoBottomSheet
 import com.example.f1_kmp.ui.components.ErrorBody
 import com.example.f1_kmp.ui.components.LoadingIndicator
 import com.example.f1_kmp.ui.components.PitStopsTable
@@ -36,6 +40,22 @@ import com.example.f1_kmp.ui.theme.F1Red
 import com.example.f1_kmp.viewmodel.RaceInfoScreenViewModel
 import com.example.f1_kmp.viewmodel.RaceSearchViewModel
 import com.example.f1_kmp.viewmodel.ResultsViewModel
+import f1_kmp.composeapp.generated.resources.Res
+import f1_kmp.composeapp.generated.resources.choose_specific_race
+import f1_kmp.composeapp.generated.resources.last_race
+import f1_kmp.composeapp.generated.resources.number_hint
+import f1_kmp.composeapp.generated.resources.pit_stops
+import f1_kmp.composeapp.generated.resources.qualifying
+import f1_kmp.composeapp.generated.resources.race
+import f1_kmp.composeapp.generated.resources.race_search_info
+import f1_kmp.composeapp.generated.resources.round
+import f1_kmp.composeapp.generated.resources.round_label
+import f1_kmp.composeapp.generated.resources.search
+import f1_kmp.composeapp.generated.resources.season
+import f1_kmp.composeapp.generated.resources.season_label
+import f1_kmp.composeapp.generated.resources.sprint
+import f1_kmp.composeapp.generated.resources.year_hint
+import com.example.f1_kmp.domain.stringResource
 
 /**
  * Вкладка «Результаты» — краткий итог последней гонки (топ-3) и переход к поиску.
@@ -46,6 +66,7 @@ fun ResultsScreen(
     onSearchRace: () -> Unit,
     onRaceDetails: (RaceModel) -> Unit,
 ) {
+    val selectedDriver = remember { mutableStateOf<DriverModel?>(null) }
     val lastRace by viewModel.lastRace.collectAsState()
 
     when (val state = lastRace) {
@@ -58,13 +79,13 @@ fun ResultsScreen(
                 .padding(vertical = AppDimens.verticalPadding.dp),
         ) {
             Column(modifier = Modifier.padding(horizontal = AppDimens.horizontalPadding.dp)) {
-                Text("Последняя гонка:", style = AppStyles.h2)
+                Text(stringResource(Res.string.last_race), style = AppStyles.h2)
                 Spacer(Modifier.height(AppDimens.verticalPadding.dp))
                 Text(state.value.raceName, style = AppStyles.h2)
                 Spacer(Modifier.height(AppDimens.verticalPadding.dp))
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    Text("Сезон: ${state.value.season}", style = AppStyles.h2, modifier = Modifier.weight(1f))
-                    Text("Раунд: ${state.value.round}", style = AppStyles.h2)
+                    Text(stringResource(Res.string.season_label, state.value.season), style = AppStyles.h2, modifier = Modifier.weight(1f))
+                    Text(stringResource(Res.string.round_label, state.value.round), style = AppStyles.h2)
                 }
             }
             Spacer(Modifier.height(10.dp))
@@ -72,11 +93,13 @@ fun ResultsScreen(
                 race = state.value,
                 maxRows = 3,
                 onDetailsClick = { onRaceDetails(state.value) },
+                onDriverClick = { selectedDriver.value = it },
             )
             Spacer(Modifier.height(AppDimens.verticalPadding.dp))
-            BoxedAction(title = "Выбрать конкретную гонку", onClick = onSearchRace)
+            BoxedAction(title = stringResource(Res.string.choose_specific_race), onClick = onSearchRace)
         }
     }
+    selectedDriver.value?.let { DriverInfoBottomSheet(it) { selectedDriver.value = null } }
 }
 
 /**
@@ -87,6 +110,7 @@ fun RaceSearchScreen(
     viewModel: RaceSearchViewModel,
     onRaceDetails: (RaceModel) -> Unit,
 ) {
+    val selectedDriver = remember { mutableStateOf<DriverModel?>(null) }
     val year by viewModel.year.collectAsState()
     val round by viewModel.round.collectAsState()
     val fieldsInputted by viewModel.fieldsInputted.collectAsState()
@@ -100,13 +124,13 @@ fun RaceSearchScreen(
             .verticalScroll(rememberScrollState())
             .padding(AppDimens.horizontalPadding.dp),
     ) {
-        Text("Введите год и номер гонки", style = AppStyles.body, modifier = Modifier.padding(vertical = 16.dp))
-        OutlinedField("Сезон", "Год", year, viewModel::onYearChanged)
+        Text(stringResource(Res.string.race_search_info), style = AppStyles.body, modifier = Modifier.padding(vertical = 16.dp))
+        OutlinedField(stringResource(Res.string.season), stringResource(Res.string.year_hint), year, viewModel::onYearChanged)
         Spacer(Modifier.height(12.dp))
-        OutlinedField("Раунд", "Номер", round, viewModel::onRoundChanged)
+        OutlinedField(stringResource(Res.string.round), stringResource(Res.string.number_hint), round, viewModel::onRoundChanged)
         Spacer(Modifier.height(16.dp))
         BlackButton(
-            text = "Поиск",
+            text = stringResource(Res.string.search),
             enabled = fieldsInputted,
             onClick = viewModel::loadRaceResults,
         )
@@ -124,22 +148,25 @@ fun RaceSearchScreen(
                     race = race,
                     maxRows = 3,
                     onDetailsClick = { onRaceDetails(race) },
+                    onDriverClick = { selectedDriver.value = it },
                 )
             }
             else -> Unit
         }
     }
+    selectedDriver.value?.let { DriverInfoBottomSheet(it) { selectedDriver.value = null } }
 }
 
 /**
- * Детальная гонка: полные результаты, квалификация и пит-стопы.
- * Секции подгружаются параллельно после успешного ответа results.
+ * Детальная гонка: полные результаты, спринт, квалификация и пит-стопы.
  */
 @Composable
 fun RaceInfoScreen(viewModel: RaceInfoScreenViewModel) {
+    val selectedDriver = remember { mutableStateOf<DriverModel?>(null) }
     val race by viewModel.race.collectAsState()
     val qualifying by viewModel.qualifying.collectAsState()
     val pitStops by viewModel.pitStops.collectAsState()
+    val sprint by viewModel.sprint.collectAsState()
     val error by viewModel.error.collectAsState()
 
     when {
@@ -160,18 +187,34 @@ fun RaceInfoScreen(viewModel: RaceInfoScreenViewModel) {
             ) {
                 Spacer(Modifier.height(AppDimens.verticalPadding.dp))
                 Text(raceData.raceName, style = AppStyles.h2)
-                RowInfo("Сезон: ${raceData.season}", "Раунд: ${raceData.round}")
-                SectionHeader("Результаты гонки")
-                RaceResultsTable(race = raceData, showHeader = false)
+                RowInfo(
+                    stringResource(Res.string.season_label, raceData.season),
+                    stringResource(Res.string.round_label, raceData.round),
+                )
+                SectionHeader(stringResource(Res.string.race))
+                RaceResultsTable(
+                    race = raceData,
+                    showHeader = false,
+                    onDriverClick = { selectedDriver.value = it },
+                )
                 Spacer(Modifier.height(AppDimens.verticalPadding.dp))
-                SectionHeader("Квалификация")
+                if (sprint is AsyncValue.Value && (sprint as AsyncValue.Value).value.isNotEmpty()) {
+                    SectionHeader(stringResource(Res.string.sprint))
+                    RaceResultsTable(
+                        race = raceData.copy(results = (sprint as AsyncValue.Value).value),
+                        showHeader = false,
+                        onDriverClick = { selectedDriver.value = it },
+                    )
+                    Spacer(Modifier.height(AppDimens.verticalPadding.dp))
+                }
+                SectionHeader(stringResource(Res.string.qualifying))
                 when (val q = qualifying) {
                     is AsyncValue.Loading -> LoadingIndicator(Modifier.padding(vertical = 16.dp))
                     is AsyncValue.Error -> Text(q.message, style = AppStyles.body)
-                    is AsyncValue.Value -> QualifyingTable(q.value)
+                    is AsyncValue.Value -> QualifyingTable(q.value) { selectedDriver.value = it }
                 }
                 Spacer(Modifier.height(AppDimens.verticalPadding.dp))
-                SectionHeader("Пит-стопы")
+                SectionHeader(stringResource(Res.string.pit_stops))
                 when (val p = pitStops) {
                     is AsyncValue.Loading -> LoadingIndicator(Modifier.padding(vertical = 16.dp))
                     is AsyncValue.Error -> Text(p.message, style = AppStyles.body)
@@ -181,6 +224,7 @@ fun RaceInfoScreen(viewModel: RaceInfoScreenViewModel) {
             }
         }
     }
+    selectedDriver.value?.let { DriverInfoBottomSheet(it) { selectedDriver.value = null } }
 }
 
 @Composable

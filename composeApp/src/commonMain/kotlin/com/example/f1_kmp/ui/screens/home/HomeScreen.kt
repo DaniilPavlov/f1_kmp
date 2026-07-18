@@ -13,10 +13,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.f1_kmp.data.model.DriverModel
 import com.example.f1_kmp.domain.AsyncValue
 import com.example.f1_kmp.ui.components.CustomSwitcher
+import com.example.f1_kmp.ui.components.DriverInfoBottomSheet
 import com.example.f1_kmp.ui.components.ErrorBody
 import com.example.f1_kmp.ui.components.LoadingIndicator
 import com.example.f1_kmp.ui.components.TournamentConstructorsTable
@@ -24,18 +28,20 @@ import com.example.f1_kmp.ui.components.TournamentDriversTable
 import com.example.f1_kmp.ui.theme.AppDimens
 import com.example.f1_kmp.ui.theme.AppStyles
 import com.example.f1_kmp.viewmodel.HomeViewModel
+import f1_kmp.composeapp.generated.resources.Res
+import f1_kmp.composeapp.generated.resources.constructors
+import f1_kmp.composeapp.generated.resources.drivers
+import f1_kmp.composeapp.generated.resources.home_standings_title
+import f1_kmp.composeapp.generated.resources.round_label
+import f1_kmp.composeapp.generated.resources.season_label
+import com.example.f1_kmp.domain.stringResource
 
 /**
  * Экран «Главная» — турнирная таблица текущего сезона.
- *
- * **Как связаны View и ViewModel:**
- * 1. `collectAsState()` подписывает Composable на [StateFlow] — при смене данных UI перерисуется.
- * 2. `when` по [AsyncValue] выбирает: загрузка / ошибка / контент.
- *
- * ViewModel создаётся через `koinViewModel()` в NavGraph и переживает поворот экрана.
  */
 @Composable
 fun HomeScreen(viewModel: HomeViewModel) {
+    val selectedDriver = remember { mutableStateOf<DriverModel?>(null) }
     val drivers by viewModel.drivers.collectAsState()
     val constructors by viewModel.constructors.collectAsState()
     val season by viewModel.season.collectAsState()
@@ -56,18 +62,23 @@ fun HomeScreen(viewModel: HomeViewModel) {
                     .padding(vertical = AppDimens.verticalPadding.dp),
             ) {
                 Column(modifier = Modifier.padding(horizontal = AppDimens.horizontalPadding.dp)) {
-                    Text("Турнирная таблица текущего сезона", style = AppStyles.h1)
+                    Text(stringResource(Res.string.home_standings_title), style = AppStyles.h1)
                     Spacer(Modifier.height(32.dp))
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        Text("Сезон: $season", style = AppStyles.h2, modifier = Modifier.weight(1f))
-                        Text("Раунд: $round", style = AppStyles.h2)
+                        Text(stringResource(Res.string.season_label, season), style = AppStyles.h2, modifier = Modifier.weight(1f))
+                        Text(stringResource(Res.string.round_label, round), style = AppStyles.h2)
                     }
                 }
                 Spacer(Modifier.height(32.dp))
-                CustomSwitcher("Пилоты", "Конструкторы", activeTable, viewModel::changeActiveTable)
+                CustomSwitcher(
+                    stringResource(Res.string.drivers),
+                    stringResource(Res.string.constructors),
+                    activeTable,
+                    viewModel::changeActiveTable,
+                )
                 Spacer(Modifier.height(8.dp))
                 if (activeTable == 0) {
-                    TournamentDriversTable(driversList)
+                    TournamentDriversTable(driversList) { selectedDriver.value = it }
                 } else {
                     TournamentConstructorsTable(constructorsList)
                 }
@@ -75,4 +86,5 @@ fun HomeScreen(viewModel: HomeViewModel) {
             }
         }
     }
+    selectedDriver.value?.let { DriverInfoBottomSheet(it) { selectedDriver.value = null } }
 }

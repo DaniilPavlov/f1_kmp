@@ -106,9 +106,11 @@ data class RaceModel(
     @SerialName("FirstPractice") val firstPractice: RaceDateModel? = null,
     @SerialName("SecondPractice") val secondPractice: RaceDateModel? = null,
     @SerialName("ThirdPractice") val thirdPractice: RaceDateModel? = null,
+    @SerialName("SprintQualifying") val sprintQualifying: RaceDateModel? = null,
     @SerialName("Qualifying") val qualifying: RaceDateModel? = null,
     @SerialName("Sprint") val sprint: RaceDateModel? = null,
     @SerialName("Results") val results: List<RaceResultModel>? = null,
+    @SerialName("SprintResults") val sprintResults: List<RaceResultModel>? = null,
     @SerialName("QualifyingResults") val qualifyingResults: List<QualifyingResultModel>? = null,
     @SerialName("PitStops") val pitStops: List<PitStopModel>? = null,
 ) {

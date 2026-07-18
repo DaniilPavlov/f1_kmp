@@ -3,9 +3,17 @@ package com.example.f1_kmp.util
 import android.content.Intent
 import android.net.Uri
 import com.example.f1_kmp.BuildConfig
+import com.example.f1_kmp.notifications.RaceReminderScheduler
 import com.example.f1_kmp.platform.AndroidContextHolder
+import org.koin.core.context.GlobalContext
 
 actual fun isDebugBuild(): Boolean = BuildConfig.DEBUG
+
+actual fun onLocaleChanged() {
+    runCatching {
+        GlobalContext.get().get<RaceReminderScheduler>().sync()
+    }
+}
 
 /** Android: открываем ссылку через [Intent.ACTION_VIEW] (внешний браузер). */
 actual fun openUrl(url: String) {

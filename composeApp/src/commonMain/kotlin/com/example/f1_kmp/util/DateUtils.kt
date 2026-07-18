@@ -1,5 +1,6 @@
 package com.example.f1_kmp.util
 
+import com.example.f1_kmp.domain.LocaleController
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
@@ -46,12 +47,26 @@ object DateUtils {
         "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
         "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
     )
+    private val englishMonths = listOf(
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+    )
+
+    private val russianWeekdays = listOf("пн", "вт", "ср", "чт", "пт", "сб", "вс")
+    private val englishWeekdays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
     /** Сравнивает две даты без учёта времени. */
     fun isSameDay(first: LocalDate, second: LocalDate): Boolean = first == second
 
-    /** Название месяца по-русски: `3` → «Март». */
-    fun monthName(month: Int): String = russianMonths[month - 1]
+    /** Название месяца: `3` → «Март» / «March». */
+    fun monthName(month: Int, language: String = LocaleController.language.value): String {
+        val months = if (language == "en") englishMonths else russianMonths
+        return months[month - 1]
+    }
+
+    /** Короткие подписи дней недели (ISO, с понедельника). */
+    fun weekdayLabels(language: String = LocaleController.language.value): List<String> =
+        if (language == "en") englishWeekdays else russianWeekdays
 
     /** Форматирует время как `HH:mm`. */
     fun formatHourMinute(dateTime: LocalDateTime): String =

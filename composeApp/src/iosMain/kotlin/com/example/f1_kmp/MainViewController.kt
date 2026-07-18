@@ -2,6 +2,8 @@ package com.example.f1_kmp
 
 import androidx.compose.ui.window.ComposeUIViewController
 import com.example.f1_kmp.di.appModule
+import com.example.f1_kmp.domain.LocaleController
+import com.example.f1_kmp.domain.LocalePreferences
 import org.koin.core.context.startKoin
 import platform.UIKit.UIColor
 import platform.UIKit.UIViewController
@@ -16,6 +18,7 @@ private var koinStarted = false
  */
 fun MainViewController(): UIViewController {
     if (!koinStarted) {
+        LocaleController.init(LocalePreferences())
         startKoin {
             modules(appModule)
         }

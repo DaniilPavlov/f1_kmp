@@ -42,25 +42,38 @@ import com.example.f1_kmp.ui.theme.F1Black
 import com.example.f1_kmp.ui.theme.F1Red
 import com.example.f1_kmp.ui.theme.F1White
 import f1_kmp.composeapp.generated.resources.Res
+import f1_kmp.composeapp.generated.resources.circuit_info_title
+import f1_kmp.composeapp.generated.resources.detailed_info
+import f1_kmp.composeapp.generated.resources.nav_calendar
 import f1_kmp.composeapp.generated.resources.nav_circuit
+import f1_kmp.composeapp.generated.resources.nav_circuits
+import f1_kmp.composeapp.generated.resources.nav_hall_of_fame
 import f1_kmp.composeapp.generated.resources.nav_home
 import f1_kmp.composeapp.generated.resources.nav_lights
 import f1_kmp.composeapp.generated.resources.nav_racing_car
+import f1_kmp.composeapp.generated.resources.nav_results
 import f1_kmp.composeapp.generated.resources.nav_trophy
+import f1_kmp.composeapp.generated.resources.race_search_title
 import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
+import com.example.f1_kmp.domain.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
 /**
  * Описание вкладки нижней навигации: route для NavHost, подпись и иконка.
  */
-sealed class BottomTab(val route: String, val label: String, val iconRes: DrawableResource) {
-    data object Home : BottomTab("home", "Главная", Res.drawable.nav_home)
-    data object Results : BottomTab("results", "Результаты", Res.drawable.nav_racing_car)
-    data object Schedule : BottomTab("schedule", "Календарь", Res.drawable.nav_lights)
-    data object HallOfFame : BottomTab("hall_of_fame", "Зал славы", Res.drawable.nav_trophy)
-    data object Circuits : BottomTab("circuits", "Трассы", Res.drawable.nav_circuit)
+sealed class BottomTab(
+    val route: String,
+    val labelRes: StringResource,
+    val iconRes: DrawableResource,
+) {
+    data object Home : BottomTab("home", Res.string.nav_home, Res.drawable.nav_home)
+    data object Results : BottomTab("results", Res.string.nav_results, Res.drawable.nav_racing_car)
+    data object Schedule : BottomTab("schedule", Res.string.nav_calendar, Res.drawable.nav_lights)
+    data object HallOfFame : BottomTab("hall_of_fame", Res.string.nav_hall_of_fame, Res.drawable.nav_trophy)
+    data object Circuits : BottomTab("circuits", Res.string.nav_circuits, Res.drawable.nav_circuit)
 }
 
 private val tabs = listOf(
@@ -91,11 +104,11 @@ fun F1App() {
         topBar = {
             when {
                 currentRoute in tabs.map { it.route } -> F1AppBar()
-                currentRoute == "race_search" -> F1AppBar(title = "Поиск гонки", onBack = popBack)
+                currentRoute == "race_search" -> F1AppBar(title = stringResource(Res.string.race_search_title), onBack = popBack)
                 currentRoute?.startsWith("race_info/") == true ->
-                    F1AppBar(title = "Подробная информация", onBack = popBack)
+                    F1AppBar(title = stringResource(Res.string.detailed_info), onBack = popBack)
                 currentRoute?.startsWith("circuit/") == true ->
-                    F1AppBar(title = "Информация о трассе", onBack = popBack)
+                    F1AppBar(title = stringResource(Res.string.circuit_info_title), onBack = popBack)
             }
         },
         bottomBar = {
@@ -192,6 +205,7 @@ private fun F1BottomBar(currentRoute: String?, onTabSelected: (BottomTab) -> Uni
             tabs.forEach { tab ->
                 val selected = currentRoute == tab.route
                 val contentColor = if (selected) F1Red else F1White
+                val label = stringResource(tab.labelRes)
                 Column(
                     modifier = Modifier
                         .clickable { onTabSelected(tab) }
@@ -200,12 +214,12 @@ private fun F1BottomBar(currentRoute: String?, onTabSelected: (BottomTab) -> Uni
                 ) {
                     Image(
                         painter = painterResource(tab.iconRes),
-                        contentDescription = tab.label,
+                        contentDescription = label,
                         modifier = Modifier.size(28.dp),
                         colorFilter = ColorFilter.tint(contentColor),
                     )
                     Text(
-                        text = tab.label,
+                        text = label,
                         style = AppStyles.navBar.copy(color = contentColor),
                     )
                 }

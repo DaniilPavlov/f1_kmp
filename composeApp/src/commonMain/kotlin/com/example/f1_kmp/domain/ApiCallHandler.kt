@@ -2,7 +2,9 @@ package com.example.f1_kmp.domain
 
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.network.sockets.SocketTimeoutException
+import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.HttpRequestTimeoutException
+import io.ktor.http.HttpStatusCode
 import io.ktor.util.network.UnresolvedAddressException
 import kotlinx.coroutines.delay
 import kotlinx.io.IOException
@@ -13,7 +15,7 @@ import kotlinx.io.IOException
  * При сетевой ошибке ([IOException] и родственные) — один повтор через [RETRY_DELAY_MS].
  * Типичный случай: первый запрос упал (холодный DNS/SSL), повтор сразу прошёл.
  *
- * Все ошибки превращаются в [AppException] с текстом на русском для UI.
+ * Все ошибки превращаются в [AppException] с локализованным текстом для UI.
  */
 object ApiCallHandler {
 
@@ -55,18 +57,63 @@ object ApiCallHandler {
         is ConnectTimeoutException,
         is HttpRequestTimeoutException,
         -> AppException(
-            title = "Сервер долго не отвечает",
-            subtitle = "Проверьте соединение и попробуйте обновить позже",
+            title = ErrorStrings.serverSlow,
+            subtitle = ErrorStrings.noConnectionSubtitle,
         )
         is UnresolvedAddressException,
         is IOException,
         -> AppException(
-            title = "Соединение отсутствует",
-            subtitle = "Как только соединение восстановится, вы снова сможете пользоваться приложением",
+            title = ErrorStrings.noConnection,
+            subtitle = ErrorStrings.noConnectionSubtitle,
+        )
+        is ClientRequestException -> AppException(
+            title = if (e.response.status == HttpStatusCode.TooManyRequests) {
+                ErrorStrings.tooManyRequests
+            } else {
+                ErrorStrings.responseParseError
+            },
+            subtitle = e.message,
         )
         else -> AppException(
-            title = "Ошибка при обработке ответа от сервера",
+            title = ErrorStrings.responseParseError,
             subtitle = e.message,
         )
     }
+}
+
+/** Локализованные сообщения для domain/repository без Context. */
+object ErrorStrings {
+    private val isEnglish: Boolean
+        get() = LocaleController.language.value == "en"
+
+    val noConnection get() = if (isEnglish) "No connection" else "Соединение отсутствует"
+    val noConnectionSubtitle get() = if (isEnglish) {
+        "Once the connection is restored, you will be able to use the app again"
+    } else {
+        "Как только соединение восстановится, вы снова сможете пользоваться приложением"
+    }
+    val serverSlow get() = if (isEnglish) "Server is taking too long to respond" else "Сервер долго не отвечает"
+    val tooManyRequests get() = if (isEnglish) "Too many requests" else "Слишком много запросов"
+    val responseParseError get() = if (isEnglish) "Error processing the server response" else "Ошибка при обработке ответа от сервера"
+    val raceNotFoundTitle get() = if (isEnglish) "Race not found" else "Гонка не найдена"
+    val raceNotFound get() = if (isEnglish) {
+        "No races found for your query. Check the entered data and try again."
+    } else {
+        "По вашему запросу гонок не найдено. Проверьте введенные данные и попробуйте еще раз."
+    }
+    val circuitNotFound get() = if (isEnglish) "Circuit not found" else "Трасса не найдена"
+}
+
+/** Локализованные названия сессий для [com.example.f1_kmp.viewmodel.ScheduleViewModel]. */
+object SessionStrings {
+    private val isEnglish: Boolean
+        get() = LocaleController.language.value == "en"
+
+    val race get() = if (isEnglish) "Race" else "Гонка"
+    val firstPractice get() = if (isEnglish) "First practice" else "Первая практика"
+    val secondPractice get() = if (isEnglish) "Second practice" else "Вторая практика"
+    val thirdPractice get() = if (isEnglish) "Third practice" else "Третья практика"
+    val sprintQualifying get() = if (isEnglish) "Sprint qualifying" else "Спринт-квалификация"
+    val sprint get() = if (isEnglish) "Sprint" else "Спринт"
+    val qualifying get() = if (isEnglish) "Qualifying" else "Квалификация"
 }

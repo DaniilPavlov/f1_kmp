@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.example.f1_kmp.data.model.ConstructorStandingsModel
+import com.example.f1_kmp.data.model.DriverModel
 import com.example.f1_kmp.data.model.DriverStandingsModel
 import com.example.f1_kmp.data.model.PitStopModel
 import com.example.f1_kmp.data.model.QualifyingResultModel
@@ -30,13 +31,39 @@ import com.example.f1_kmp.ui.theme.AppStyles
 import com.example.f1_kmp.ui.theme.F1Red
 import com.example.f1_kmp.ui.theme.F1White
 import com.example.f1_kmp.util.DateUtils
+import f1_kmp.composeapp.generated.resources.Res
+import f1_kmp.composeapp.generated.resources.constructor
+import f1_kmp.composeapp.generated.resources.country
+import f1_kmp.composeapp.generated.resources.detailed_info
+import f1_kmp.composeapp.generated.resources.driver
+import f1_kmp.composeapp.generated.resources.duration
+import f1_kmp.composeapp.generated.resources.fastest_suffix
+import f1_kmp.composeapp.generated.resources.lap
+import f1_kmp.composeapp.generated.resources.laps
+import f1_kmp.composeapp.generated.resources.points
+import f1_kmp.composeapp.generated.resources.stop
+import f1_kmp.composeapp.generated.resources.time
+import f1_kmp.composeapp.generated.resources.wins
 import kotlinx.datetime.number
+import com.example.f1_kmp.domain.stringResource
 
 /** Таблица чемпионата пилотов (вкладки Главная и Зал славы). */
 @Composable
-fun TournamentDriversTable(drivers: List<DriverStandingsModel>) {
+fun TournamentDriversTable(
+    drivers: List<DriverStandingsModel>,
+    onDriverClick: ((DriverModel) -> Unit)? = null,
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        TableHeaderRow(listOf("#", "Пилот", "Страна", "Очки", "Победы", "Команда"))
+        TableHeaderRow(
+            listOf(
+                "#",
+                stringResource(Res.string.driver),
+                stringResource(Res.string.country),
+                stringResource(Res.string.points),
+                stringResource(Res.string.wins),
+                stringResource(Res.string.constructor),
+            ),
+        )
         drivers.forEachIndexed { index, item ->
             TableDataRow(
                 cells = listOf(
@@ -48,6 +75,7 @@ fun TournamentDriversTable(drivers: List<DriverStandingsModel>) {
                     item.constructors.firstOrNull()?.name.orEmpty(),
                 ),
                 index = index,
+                onClick = onDriverClick?.let { { it(item.driver) } },
             )
         }
     }
@@ -57,7 +85,15 @@ fun TournamentDriversTable(drivers: List<DriverStandingsModel>) {
 @Composable
 fun TournamentConstructorsTable(constructors: List<ConstructorStandingsModel>) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        TableHeaderRow(listOf("#", "Команда", "Страна", "Очки", "Победы"))
+        TableHeaderRow(
+            listOf(
+                "#",
+                stringResource(Res.string.constructor),
+                stringResource(Res.string.country),
+                stringResource(Res.string.points),
+                stringResource(Res.string.wins),
+            ),
+        )
         constructors.forEachIndexed { index, item ->
             TableDataRow(
                 cells = listOf(
@@ -86,6 +122,7 @@ fun RaceResultsTable(
     maxRows: Int? = null,
     showHeader: Boolean = true,
     onDetailsClick: (() -> Unit)? = null,
+    onDriverClick: ((DriverModel) -> Unit)? = null,
 ) {
     val results = race.results.orEmpty()
     val rows = maxRows?.let { results.take(it) } ?: results
@@ -93,11 +130,20 @@ fun RaceResultsTable(
 
     Column(modifier = Modifier.fillMaxWidth()) {
         if (showHeader) {
-            TableHeaderRow(listOf("#", "Пилот", "Команда", "Очки", "Круги", "Время"))
+            TableHeaderRow(
+                listOf(
+                    "#",
+                    stringResource(Res.string.driver),
+                    stringResource(Res.string.constructor),
+                    stringResource(Res.string.points),
+                    stringResource(Res.string.laps),
+                    stringResource(Res.string.time),
+                ),
+            )
         }
         rows.forEachIndexed { index, result ->
             val isFastest = result.fastestLap?.time?.time == fastest && fastest != "999999"
-            RaceResultRow(result, index + 1, isFastest)
+            RaceResultRow(result, index + 1, isFastest, onDriverClick)
         }
         if (onDetailsClick != null) {
             Row(
@@ -109,7 +155,7 @@ fun RaceResultsTable(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Подробная информация", style = AppStyles.caption)
+                Text(stringResource(Res.string.detailed_info), style = AppStyles.caption)
                 Icon(Icons.Default.Flag, contentDescription = null)
             }
         }
@@ -117,10 +163,16 @@ fun RaceResultsTable(
 }
 
 @Composable
-private fun RaceResultRow(result: RaceResultModel, position: Int, isFastest: Boolean) {
+private fun RaceResultRow(
+    result: RaceResultModel,
+    position: Int,
+    isFastest: Boolean,
+    onDriverClick: ((DriverModel) -> Unit)? = null,
+) {
+    val fastestSuffix = stringResource(Res.string.fastest_suffix)
     val timeText = buildString {
         append(result.time?.time ?: result.status)
-        if (isFastest) append(" самый быстрый")
+        if (isFastest) append(fastestSuffix)
     }
     TableDataRow(
         cells = listOf(
@@ -133,6 +185,7 @@ private fun RaceResultRow(result: RaceResultModel, position: Int, isFastest: Boo
         ),
         index = position,
         highlight = isFastest,
+        onClick = onDriverClick?.let { { it(result.driver) } },
     )
 }
 
@@ -141,9 +194,21 @@ private fun RaceResultRow(result: RaceResultModel, position: Int, isFastest: Boo
  * Прочерк «-» ставится, если пилот не прошёл в следующий сегмент (позиция 16+ / 11+).
  */
 @Composable
-fun QualifyingTable(results: List<QualifyingResultModel>) {
+fun QualifyingTable(
+    results: List<QualifyingResultModel>,
+    onDriverClick: ((DriverModel) -> Unit)? = null,
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        TableHeaderRow(listOf("#", "Пилот", "Команда", "Q1", "Q2", "Q3"))
+        TableHeaderRow(
+            listOf(
+                "#",
+                stringResource(Res.string.driver),
+                stringResource(Res.string.constructor),
+                "Q1",
+                "Q2",
+                "Q3",
+            ),
+        )
         results.forEachIndexed { index, item ->
             val position = item.position.toIntOrNull() ?: (index + 1)
             TableDataRow(
@@ -156,6 +221,7 @@ fun QualifyingTable(results: List<QualifyingResultModel>) {
                     item.Q3 ?: "-",
                 ),
                 index = index,
+                onClick = onDriverClick?.let { { it(item.driver) } },
             )
         }
     }
@@ -165,7 +231,15 @@ fun QualifyingTable(results: List<QualifyingResultModel>) {
 @Composable
 fun PitStopsTable(stops: List<PitStopModel>) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        TableHeaderRow(listOf("Пилот", "Круг", "Стоп", "Время", "Длительность"))
+        TableHeaderRow(
+            listOf(
+                stringResource(Res.string.driver),
+                stringResource(Res.string.lap),
+                stringResource(Res.string.stop),
+                stringResource(Res.string.time),
+                stringResource(Res.string.duration),
+            ),
+        )
         stops.forEachIndexed { index, stop ->
             TableDataRow(
                 cells = listOf(stop.driverId, stop.lap, stop.stop, stop.time, stop.duration),

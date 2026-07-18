@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.f1_kmp.data.model.RaceModel
 import com.example.f1_kmp.data.repository.F1Repository
 import com.example.f1_kmp.domain.AppException
+import com.example.f1_kmp.domain.ErrorStrings
 import com.example.f1_kmp.domain.AsyncValue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -64,8 +65,7 @@ class RaceSearchViewModel(
                         _searchedRace.value = AsyncValue.Value(race)
                     } else {
                         _searchedRace.value = AsyncValue.Value(null)
-                        _errorMessage.value =
-                            "По вашему запросу гонок не найдено. Проверьте введенные данные и попробуйте еще раз."
+                        _errorMessage.value = ErrorStrings.raceNotFound
                     }
                 }
                 .onFailure { e ->

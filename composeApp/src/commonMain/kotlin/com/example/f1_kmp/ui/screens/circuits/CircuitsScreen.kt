@@ -34,10 +34,16 @@ import com.example.f1_kmp.ui.theme.F1Red
 import com.example.f1_kmp.util.openUrl
 import com.example.f1_kmp.viewmodel.CircuitDetailViewModel
 import com.example.f1_kmp.viewmodel.CircuitsViewModel
+import f1_kmp.composeapp.generated.resources.Res
+import f1_kmp.composeapp.generated.resources.as_list
+import f1_kmp.composeapp.generated.resources.city_label
+import f1_kmp.composeapp.generated.resources.country_label
+import f1_kmp.composeapp.generated.resources.on_map
+import f1_kmp.composeapp.generated.resources.read_on_wikipedia
+import com.example.f1_kmp.domain.stringResource
 
 /**
  * Экран «Трассы»: переключатель закреплён сверху, контент — в [Box] с [Modifier.weight].
- * Карта — платформенный [CircuitsMapContent] (Android OSMDroid / iOS-заглушка).
  */
 @Composable
 fun CircuitsScreen(
@@ -52,7 +58,12 @@ fun CircuitsScreen(
         is AsyncValue.Error -> ErrorBody(state.message, state.subtitle, onRetry = viewModel::loadCircuits, modifier = Modifier.fillMaxSize())
         is AsyncValue.Value -> Column(modifier = Modifier.fillMaxSize()) {
             Spacer(Modifier.height(12.dp))
-            CustomSwitcher("На карте", "Списком", activePage, viewModel::changeActivePage)
+            CustomSwitcher(
+                stringResource(Res.string.on_map),
+                stringResource(Res.string.as_list),
+                activePage,
+                viewModel::changeActivePage,
+            )
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -102,11 +113,11 @@ fun CircuitDetailScreen(viewModel: CircuitDetailViewModel) {
         ) {
             Text(state.value.circuitName, style = AppStyles.h1)
             Spacer(Modifier.height(20.dp))
-            LinkText("Прочитать информацию в википедии") { openUrl(state.value.url) }
+            LinkText(stringResource(Res.string.read_on_wikipedia)) { openUrl(state.value.url) }
             Spacer(Modifier.height(20.dp))
-            Text("Страна: ${state.value.location.country}", style = AppStyles.h3)
+            Text(stringResource(Res.string.country_label, state.value.location.country), style = AppStyles.h3)
             Spacer(Modifier.height(10.dp))
-            Text("Город: ${state.value.location.locality}", style = AppStyles.h3)
+            Text(stringResource(Res.string.city_label, state.value.location.locality), style = AppStyles.h3)
         }
     }
 }

@@ -20,12 +20,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.f1_kmp.domain.LocaleController
 import com.example.f1_kmp.ui.theme.AppStyles
 import com.example.f1_kmp.ui.theme.F1Red
 import com.example.f1_kmp.ui.theme.F1ShadowColor
@@ -41,8 +44,6 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import org.jetbrains.compose.resources.painterResource
-
-private val weekdayLabels = listOf("пн", "вт", "ср", "чт", "пт", "сб", "вс")
 
 /**
  * Кастомный месячный календарь для расписания F1.
@@ -62,6 +63,8 @@ fun F1Calendar(
     onMonthChanged: (YearMonth) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val language by LocaleController.language.collectAsState()
+    val weekdayLabels = DateUtils.weekdayLabels(language)
     val daysInMonth = focusedMonth.lengthOfMonth()
     val firstDayOfMonth = focusedMonth.atDay(1)
     // Смещение: календарь начинается с понедельника (ISO / kotlinx.datetime), не с воскресенья

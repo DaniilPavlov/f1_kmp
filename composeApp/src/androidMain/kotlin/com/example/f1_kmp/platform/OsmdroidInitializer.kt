@@ -5,10 +5,9 @@ import org.osmdroid.config.Configuration
 import java.io.File
 
 /**
- * Одноразовая настройка OSMDroid до первого [org.osmdroid.views.MapView].
- *
- * Без user-agent OpenStreetMap не отдаёт тайлы (будут только маркеры на пустом фоне).
- * Кэш кладём в cacheDir приложения — на новых Android внешнее хранилище недоступно.
+ * Настройка OSMDroid до первого [org.osmdroid.views.MapView].
+ * load + userAgent = packageName.
+ * Путь кэша — [Context.getFilesDir] (всегда доступен на API 30+).
  */
 object OsmdroidInitializer {
     @Volatile
@@ -19,15 +18,26 @@ object OsmdroidInitializer {
         synchronized(this) {
             if (initialized) return
             val appContext = context.applicationContext
+            val prefs = appContext.getSharedPreferences("osmdroid", Context.MODE_PRIVATE)
+
+            // Сбрасываем старые пути (external/cache), из‑за них часто остаётся только сетка.
+            prefs.edit().clear().apply()
+
+            val basePath = File(appContext.filesDir, "osmdroid").apply { mkdirs() }
+            val tileCache = File(basePath, "tiles").apply { mkdirs() }
+            prefs.edit()
+                .putString("osmdroid.basePath", basePath.absolutePath)
+                .putString("osmdroid.cachePath", tileCache.absolutePath)
+                .apply()
+
             val config = Configuration.getInstance()
-            config.load(
-                appContext,
-                appContext.getSharedPreferences("osmdroid", Context.MODE_PRIVATE),
-            )
+            config.load(appContext, prefs)
             config.userAgentValue = appContext.packageName
-            val basePath = File(appContext.cacheDir, "osmdroid").apply { mkdirs() }
             config.osmdroidBasePath = basePath
-            config.osmdroidTileCache = File(basePath, "tiles").apply { mkdirs() }
+            config.osmdroidTileCache = tileCache
+            config.isMapTileDownloaderFollowRedirects = true
+            config.save(appContext, prefs)
+
             initialized = true
         }
     }

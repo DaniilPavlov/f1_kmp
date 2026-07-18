@@ -9,11 +9,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.f1_kmp.domain.AsyncValue
+import com.example.f1_kmp.domain.LocaleController
 import com.example.f1_kmp.ui.components.ErrorBody
 import com.example.f1_kmp.ui.components.F1Calendar
 import com.example.f1_kmp.ui.components.LoadingIndicator
@@ -37,6 +39,11 @@ fun ScheduleScreen(viewModel: ScheduleViewModel) {
     val focusedMonth by viewModel.focusedMonth.collectAsState()
     val scheduleItems by viewModel.scheduleItems.collectAsState()
     val error by viewModel.error.collectAsState()
+    val language by LocaleController.language.collectAsState()
+
+    LaunchedEffect(language) {
+        viewModel.refreshScheduleForCurrentDay()
+    }
 
     when {
         error != null && races.isError -> ErrorBody(

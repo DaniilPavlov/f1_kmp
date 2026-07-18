@@ -63,4 +63,9 @@ class ApiCallHandlerTest {
         val error = result.exceptionOrNull() as AppException
         assertEquals("Соединение отсутствует", error.title)
     }
+
+    @Test
+    fun errorStrings_tooManyRequests_defaultsToRussian() {
+        assertEquals("Слишком много запросов", ErrorStrings.tooManyRequests)
+    }
 }

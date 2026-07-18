@@ -7,6 +7,7 @@ import com.example.f1_kmp.data.model.RaceModel
 import com.example.f1_kmp.data.repository.F1Repository
 import com.example.f1_kmp.domain.AppException
 import com.example.f1_kmp.domain.AsyncValue
+import com.example.f1_kmp.domain.SessionStrings
 import com.example.f1_kmp.util.DateUtils
 import com.example.f1_kmp.util.YearMonth
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -107,6 +108,11 @@ class ScheduleViewModel(
         buildScheduleForDate(date)
     }
 
+    /** Перестраивает список сессий после смены языка. */
+    fun refreshScheduleForCurrentDay() {
+        buildScheduleForDate(_selectedDate.value)
+    }
+
     /** Иконка под днём: финиш — день гонки, машина — день сессии. */
     fun logoForDay(day: LocalDate): DayLogo? {
         val races = _races.value.getOrNull() ?: return null
@@ -122,8 +128,9 @@ class ScheduleViewModel(
         race.firstPractice,
         race.secondPractice,
         race.thirdPractice,
-        race.qualifying,
+        race.sprintQualifying,
         race.sprint,
+        race.qualifying,
     )
 
     private fun buildScheduleForDate(date: LocalDate) {
@@ -138,7 +145,7 @@ class ScheduleViewModel(
                     items.add(
                         ScheduleSessionItem(
                             raceName = race.raceName,
-                            title = "Гонка",
+                            title = SessionStrings.race,
                             date = RaceDateModel(date = race.date, time = race.time),
                         ),
                     )
@@ -156,11 +163,12 @@ class ScheduleViewModel(
 
     private fun addSessionsForDay(race: RaceModel, day: LocalDate, items: MutableList<ScheduleSessionItem>) {
         val sessionPairs = listOf(
-            race.firstPractice to "Первая практика",
-            race.secondPractice to "Вторая практика",
-            race.thirdPractice to "Третья практика",
-            race.sprint to "Спринт",
-            race.qualifying to "Квалификация",
+            race.firstPractice to SessionStrings.firstPractice,
+            race.secondPractice to SessionStrings.secondPractice,
+            race.thirdPractice to SessionStrings.thirdPractice,
+            race.sprintQualifying to SessionStrings.sprintQualifying,
+            race.sprint to SessionStrings.sprint,
+            race.qualifying to SessionStrings.qualifying,
         )
         sessionPairs.forEach { (session, title) ->
             if (session != null && LocalDate.parse(session.date) == day) {
