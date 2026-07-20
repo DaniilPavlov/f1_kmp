@@ -35,8 +35,6 @@ import com.example.f1_kmp.platform.OsmdroidInitializer
 import com.example.f1_kmp.ui.theme.F1Red
 import org.osmdroid.bonuspack.clustering.RadiusMarkerClusterer
 import org.osmdroid.bonuspack.clustering.StaticCluster
-import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase
-import org.osmdroid.tileprovider.tilesource.XYTileSource
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
@@ -51,25 +49,6 @@ private const val CLUSTER_MAX_RADIUS_PX = 72
 private const val MAP_MIN_ZOOM = 2.0
 private const val MAP_INITIAL_ZOOM = 2.5
 private const val MAP_MAX_ZOOM = 18.0
-
-/**
- * Carto Voyager вместо MAPNIK: tile.openstreetmap.org часто отдаёт пустую сетку
- * на новых установках (строгий UA / редиректы). Carto стабильнее для демо.
- */
-private val CIRCUITS_TILE_SOURCE: OnlineTileSourceBase = XYTileSource(
-    "CartoVoyager",
-    0,
-    20,
-    256,
-    ".png",
-    arrayOf(
-        "https://a.basemaps.cartocdn.com/rastertiles/voyager/",
-        "https://b.basemaps.cartocdn.com/rastertiles/voyager/",
-        "https://c.basemaps.cartocdn.com/rastertiles/voyager/",
-        "https://d.basemaps.cartocdn.com/rastertiles/voyager/",
-    ),
-    "© OpenStreetMap, © CARTO",
-)
 
 /**
  * Android-карта трасс.
@@ -99,7 +78,7 @@ actual fun CircuitsMapContent(
             modifier = Modifier.fillMaxSize(),
             update = { view ->
                 if (!configured) {
-                    view.setTileSource(CIRCUITS_TILE_SOURCE)
+                    view.setTileSource(CircuitsTileSource)
                     view.setMultiTouchControls(true)
                     view.zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
                     val center = circuits.firstOrNull()?.let {

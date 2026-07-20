@@ -22,7 +22,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.example.f1_kmp.data.model.CircuitModel
+import com.example.f1_kmp.data.model.DriverModel
 import com.example.f1_kmp.domain.AsyncValue
+import com.example.f1_kmp.ui.components.CareerListTile
 import com.example.f1_kmp.ui.components.CustomSwitcher
 import com.example.f1_kmp.ui.components.ErrorBody
 import com.example.f1_kmp.ui.components.LinkText
@@ -37,6 +39,8 @@ import com.example.f1_kmp.viewmodel.CircuitsViewModel
 import f1_kmp.composeapp.generated.resources.Res
 import f1_kmp.composeapp.generated.resources.as_list
 import f1_kmp.composeapp.generated.resources.city_label
+import f1_kmp.composeapp.generated.resources.circuit_winners_empty
+import f1_kmp.composeapp.generated.resources.circuit_winners_title
 import f1_kmp.composeapp.generated.resources.country_label
 import f1_kmp.composeapp.generated.resources.on_map
 import f1_kmp.composeapp.generated.resources.read_on_wikipedia
@@ -97,14 +101,18 @@ private fun CircuitsList(circuits: List<CircuitModel>, onCircuitClick: (String) 
     }
 }
 
-/** Карточка трассы: название, ссылка на Wikipedia, страна и город. */
+/** Карточка трассы: название, ссылка на Wikipedia, страна, город и история победителей. */
 @Composable
-fun CircuitDetailScreen(viewModel: CircuitDetailViewModel) {
+fun CircuitDetailScreen(
+    viewModel: CircuitDetailViewModel,
+    onDriverClick: (DriverModel) -> Unit,
+) {
     val circuitState by viewModel.circuit.collectAsState()
+    val winnersState by viewModel.winners.collectAsState()
 
     when (val state = circuitState) {
         is AsyncValue.Loading -> LoadingIndicator(Modifier.fillMaxSize())
-        is AsyncValue.Error -> ErrorBody(state.message, state.subtitle, onRetry = viewModel::loadCircuit, modifier = Modifier.fillMaxSize())
+        is AsyncValue.Error -> ErrorBody(state.message, state.subtitle, onRetry = viewModel::loadAllData, modifier = Modifier.fillMaxSize())
         is AsyncValue.Value -> Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -118,6 +126,26 @@ fun CircuitDetailScreen(viewModel: CircuitDetailViewModel) {
             Text(stringResource(Res.string.country_label, state.value.location.country), style = AppStyles.h3)
             Spacer(Modifier.height(10.dp))
             Text(stringResource(Res.string.city_label, state.value.location.locality), style = AppStyles.h3)
+            Spacer(Modifier.height(28.dp))
+            Text(stringResource(Res.string.circuit_winners_title), style = AppStyles.h2)
+            Spacer(Modifier.height(12.dp))
+            when (val winners = winnersState) {
+                is AsyncValue.Loading -> LoadingIndicator(Modifier.padding(vertical = 16.dp))
+                is AsyncValue.Error -> Text(winners.message, style = AppStyles.body)
+                is AsyncValue.Value -> {
+                    if (winners.value.isEmpty()) {
+                        Text(stringResource(Res.string.circuit_winners_empty), style = AppStyles.body)
+                    } else {
+                        winners.value.forEach { win ->
+                            CareerListTile(
+                                title = "${win.season} · ${win.raceName}",
+                                subtitle = "${win.driver.fullName} · ${win.constructor.name}",
+                                onClick = { onDriverClick(win.driver) },
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -1,8 +1,10 @@
 package com.example.f1_kmp.data.api
 
 import com.example.f1_kmp.data.model.CircuitsModel
+import com.example.f1_kmp.data.model.ConstructorFetchingModel
 import com.example.f1_kmp.data.model.DriverFetchingModel
 import com.example.f1_kmp.data.model.MrDataResponse
+import com.example.f1_kmp.data.model.MrDataTotalModel
 import com.example.f1_kmp.data.model.ScheduleModel
 import com.example.f1_kmp.data.model.StandingsModel
 import io.ktor.client.HttpClient
@@ -69,4 +71,24 @@ class F1ApiService(private val client: HttpClient) {
     /** Список всех F1-трасс с координатами. */
     suspend fun getCircuits(limit: Int = 100): MrDataResponse<CircuitsModel> =
         client.get("circuits.json") { parameter("limit", limit) }.body()
+
+    /** Список сезонов F1 (для picker). */
+    suspend fun getSeasons(limit: Int = 100): MrDataResponse<MrDataTotalModel> =
+        client.get("seasons.json") { parameter("limit", limit) }.body()
+
+    /** Календарь конкретного сезона (для picker раундов). */
+    suspend fun getSeasonSchedule(year: String, limit: Int = 100): MrDataResponse<ScheduleModel> =
+        client.get("$year.json") { parameter("limit", limit) }.body()
+
+    /** Карточка конструктора по ID. */
+    suspend fun getConstructor(constructorId: String, limit: Int = 100): MrDataResponse<ConstructorFetchingModel> =
+        client.get("constructors/$constructorId.json") { parameter("limit", limit) }.body()
+
+    /** История побед на трассе (все ГП с position=1). */
+    suspend fun getCircuitWinners(circuitId: String, limit: Int = 100): MrDataResponse<ScheduleModel> =
+        client.get("circuits/$circuitId/results/1.json") { parameter("limit", limit) }.body()
+
+    /** Totals и таблицы для карьерной статистики (поле total в MRData). */
+    suspend fun getMrDataTotal(path: String, limit: Int = 100): MrDataResponse<MrDataTotalModel> =
+        client.get("$path.json") { parameter("limit", limit) }.body()
 }

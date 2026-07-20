@@ -1,12 +1,17 @@
 package com.example.f1_kmp.data.repository
 
 import com.example.f1_kmp.data.api.F1ApiService
+import com.example.f1_kmp.data.career.CareerLoader
 import com.example.f1_kmp.data.local.CacheDao
 import com.example.f1_kmp.data.local.CacheEntry
 import com.example.f1_kmp.data.local.CacheJsonMapper
 import com.example.f1_kmp.data.local.CacheKeys
+import com.example.f1_kmp.data.model.CareerStats
 import com.example.f1_kmp.data.model.CircuitModel
+import com.example.f1_kmp.data.model.CircuitRaceWin
+import com.example.f1_kmp.data.model.ConstructorModel
 import com.example.f1_kmp.data.model.ConstructorStandingsModel
+import com.example.f1_kmp.data.model.DriverModel
 import com.example.f1_kmp.data.model.DriverStandingsCache
 import com.example.f1_kmp.data.model.DriverStandingsModel
 import com.example.f1_kmp.data.model.HistoricalStandingsCache
@@ -14,8 +19,12 @@ import com.example.f1_kmp.data.model.PitStopModel
 import com.example.f1_kmp.data.model.QualifyingResultModel
 import com.example.f1_kmp.data.model.RaceModel
 import com.example.f1_kmp.data.model.RaceResultModel
+import com.example.f1_kmp.data.model.SeasonsCache
 import com.example.f1_kmp.data.model.StandingsListsModel
 import com.example.f1_kmp.domain.ApiCallHandler
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -209,6 +218,82 @@ class F1Repository(
         peekCircuitsCache()?.find { it.circuitId == circuitId }?.let { return Result.success(it) }
         return getCircuits().map { circuits -> circuits.find { it.circuitId == circuitId } }
     }
+
+    /** Годы сезонов (новые сверху), кэш на сутки. */
+    suspend fun getSeasonYears(): Result<List<String>> {
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault()).toString()
+        loadCache<SeasonsCache>(CacheKeys.SEASONS)?.takeIf { it.dayKey == today }?.years
+            ?.let { return Result.success(it) }
+
+        val network = ApiCallHandler.safeCall {
+            api.getSeasons().mrData.seasonTable?.seasons.orEmpty()
+                .map { it.season }
+                .reversed()
+        }
+        if (network.isSuccess) {
+            network.getOrNull()?.let { years ->
+                saveCache(CacheKeys.SEASONS, SeasonsCache(today, years))
+            }
+            return network
+        }
+        return loadCache<SeasonsCache>(CacheKeys.SEASONS)?.years
+            ?.let { Result.success(it) } ?: network
+    }
+
+    suspend fun getSeasonRaces(year: String): Result<List<RaceModel>> =
+        ApiCallHandler.safeCall {
+            api.getSeasonSchedule(year).mrData.raceTable.races
+        }
+
+    suspend fun getDriver(driverId: String): Result<DriverModel?> =
+        ApiCallHandler.safeCall {
+            api.getDriver(driverId).mrData.driverTable.drivers.firstOrNull()
+        }
+
+    suspend fun getConstructor(constructorId: String): Result<ConstructorModel?> =
+        ApiCallHandler.safeCall {
+            api.getConstructor(constructorId).mrData.constructorTable.constructors.firstOrNull()
+        }
+
+    suspend fun getDriverCareerStats(
+        driverId: String,
+        currentConstructors: List<ConstructorModel> = emptyList(),
+    ): Result<CareerStats<ConstructorModel>> =
+        ApiCallHandler.safeCall {
+            CareerLoader.loadDriverCareer(api, driverId, currentConstructors)
+        }
+
+    suspend fun getConstructorCareerStats(
+        constructorId: String,
+        currentDrivers: List<DriverModel> = emptyList(),
+    ): Result<CareerStats<DriverModel>> =
+        ApiCallHandler.safeCall {
+            CareerLoader.loadConstructorCareer(api, constructorId, currentDrivers)
+        }
+
+    suspend fun getCircuitWinners(circuitId: String): Result<List<CircuitRaceWin>> =
+        ApiCallHandler.safeCall {
+            api.getCircuitWinners(circuitId).mrData.raceTable.races.mapNotNull { race ->
+                val winner = race.results?.firstOrNull() ?: return@mapNotNull null
+                CircuitRaceWin(
+                    season = race.season,
+                    round = race.round,
+                    raceName = race.raceName,
+                    driver = winner.driver,
+                    constructor = winner.constructor,
+                )
+            }.reversed()
+        }
+
+    /** Текущие команды пилота из кэша standings (Home). */
+    suspend fun currentConstructorsForDriver(driverId: String): List<ConstructorModel> =
+        peekCurrentDriversCache()?.first?.find { it.driver.driverId == driverId }?.constructors.orEmpty()
+
+    /** Текущие пилоты конструктора из кэша standings (Home). */
+    suspend fun currentDriversForConstructor(constructorId: String): List<DriverModel> =
+        peekCurrentDriversCache()?.first?.filter { standing ->
+            standing.constructors.any { it.constructorId == constructorId }
+        }?.map { it.driver }.orEmpty()
 
     private suspend fun resolveDriverNames(driverIds: List<String>): Map<String, String> = coroutineScope {
         val semaphore = Semaphore(MAX_DRIVER_FETCH_PARALLEL)

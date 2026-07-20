@@ -24,6 +24,7 @@ object CacheKeys {
     const val SCHEDULE = "schedule"
     const val CIRCUITS = "circuits"
     const val LAST_RACE = "last_race"
+    const val SEASONS = "seasons"
 
     fun historicalStandings(year: String) = "historical_standings_$year"
 }

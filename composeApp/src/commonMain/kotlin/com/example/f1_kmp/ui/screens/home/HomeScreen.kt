@@ -13,14 +13,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.f1_kmp.data.model.ConstructorModel
 import com.example.f1_kmp.data.model.DriverModel
 import com.example.f1_kmp.domain.AsyncValue
 import com.example.f1_kmp.ui.components.CustomSwitcher
-import com.example.f1_kmp.ui.components.DriverInfoBottomSheet
 import com.example.f1_kmp.ui.components.ErrorBody
 import com.example.f1_kmp.ui.components.LoadingIndicator
 import com.example.f1_kmp.ui.components.TournamentConstructorsTable
@@ -36,12 +34,12 @@ import f1_kmp.composeapp.generated.resources.round_label
 import f1_kmp.composeapp.generated.resources.season_label
 import com.example.f1_kmp.domain.stringResource
 
-/**
- * Экран «Главная» — турнирная таблица текущего сезона.
- */
 @Composable
-fun HomeScreen(viewModel: HomeViewModel) {
-    val selectedDriver = remember { mutableStateOf<DriverModel?>(null) }
+fun HomeScreen(
+    viewModel: HomeViewModel,
+    onDriverClick: (DriverModel) -> Unit,
+    onConstructorClick: (ConstructorModel) -> Unit,
+) {
     val drivers by viewModel.drivers.collectAsState()
     val constructors by viewModel.constructors.collectAsState()
     val season by viewModel.season.collectAsState()
@@ -78,13 +76,12 @@ fun HomeScreen(viewModel: HomeViewModel) {
                 )
                 Spacer(Modifier.height(8.dp))
                 if (activeTable == 0) {
-                    TournamentDriversTable(driversList) { selectedDriver.value = it }
+                    TournamentDriversTable(driversList, onDriverClick = onDriverClick)
                 } else {
-                    TournamentConstructorsTable(constructorsList)
+                    TournamentConstructorsTable(constructorsList, onConstructorClick = onConstructorClick)
                 }
                 Spacer(Modifier.height(32.dp))
             }
         }
     }
-    selectedDriver.value?.let { DriverInfoBottomSheet(it) { selectedDriver.value = null } }
 }

@@ -6,24 +6,22 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.f1_kmp.data.model.ConstructorModel
 import com.example.f1_kmp.data.model.DriverModel
 import com.example.f1_kmp.domain.AsyncValue
-import com.example.f1_kmp.ui.components.BlackButton
 import com.example.f1_kmp.ui.components.CustomSwitcher
-import com.example.f1_kmp.ui.components.DriverInfoBottomSheet
 import com.example.f1_kmp.ui.components.ErrorBody
 import com.example.f1_kmp.ui.components.LoadingIndicator
+import com.example.f1_kmp.ui.components.SeasonPickerField
 import com.example.f1_kmp.ui.components.TournamentConstructorsTable
 import com.example.f1_kmp.ui.components.TournamentDriversTable
 import com.example.f1_kmp.ui.theme.AppDimens
@@ -33,21 +31,19 @@ import f1_kmp.composeapp.generated.resources.Res
 import f1_kmp.composeapp.generated.resources.constructors
 import f1_kmp.composeapp.generated.resources.drivers
 import f1_kmp.composeapp.generated.resources.hall_of_fame_title
-import f1_kmp.composeapp.generated.resources.search
 import f1_kmp.composeapp.generated.resources.season
-import f1_kmp.composeapp.generated.resources.year_hint
+import f1_kmp.composeapp.generated.resources.select_season
 import com.example.f1_kmp.domain.stringResource
 
-/**
- * Экран «Зал славы» — итоговые таблицы за выбранный год.
- */
 @Composable
-fun HallOfFameScreen(viewModel: HallOfFameViewModel) {
-    val selectedDriver = remember { mutableStateOf<DriverModel?>(null) }
+fun HallOfFameScreen(
+    viewModel: HallOfFameViewModel,
+    onDriverClick: (DriverModel) -> Unit,
+    onConstructorClick: (ConstructorModel) -> Unit,
+) {
     val drivers by viewModel.drivers.collectAsState()
     val constructors by viewModel.constructors.collectAsState()
     val year by viewModel.year.collectAsState()
-    val fieldsInputted by viewModel.fieldsInputted.collectAsState()
     val activeTable by viewModel.activeTable.collectAsState()
     val error by viewModel.error.collectAsState()
 
@@ -67,23 +63,13 @@ fun HallOfFameScreen(viewModel: HallOfFameViewModel) {
                     Text(stringResource(Res.string.hall_of_fame_title), style = AppStyles.h1)
                     Spacer(Modifier.height(16.dp))
                     Row {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(Res.string.season), style = AppStyles.caption)
-                            OutlinedTextField(
+                        Column(modifier = Modifier.width(240.dp)) {
+                            SeasonPickerField(
                                 value = year,
-                                onValueChange = viewModel::onYearChanged,
-                                placeholder = { Text(stringResource(Res.string.year_hint)) },
-                                modifier = Modifier.fillMaxSize(),
-                                singleLine = true,
-                            )
-                        }
-                        Spacer(Modifier.height(0.dp).weight(0.05f))
-                        Column(modifier = Modifier.weight(1f).padding(start = 20.dp)) {
-                            Spacer(Modifier.height(18.dp))
-                            BlackButton(
-                                text = stringResource(Res.string.search),
-                                enabled = fieldsInputted,
-                                onClick = viewModel::loadAllData,
+                                label = stringResource(Res.string.season),
+                                hint = stringResource(Res.string.select_season),
+                                onSeasonSelected = viewModel::onYearChanged,
+                                loadSeasons = viewModel::loadSeasonYears,
                             )
                         }
                     }
@@ -97,13 +83,13 @@ fun HallOfFameScreen(viewModel: HallOfFameViewModel) {
                 )
                 Spacer(Modifier.height(8.dp))
                 if (activeTable == 0) {
-                    TournamentDriversTable(driversList) { selectedDriver.value = it }
+                    TournamentDriversTable(driversList, onDriverClick = onDriverClick)
                 } else {
-                    TournamentConstructorsTable(constructorsList)
+                    TournamentConstructorsTable(constructorsList, onConstructorClick = onConstructorClick)
                 }
                 Spacer(Modifier.height(32.dp))
             }
         }
+        else -> LoadingIndicator(Modifier.fillMaxSize())
     }
-    selectedDriver.value?.let { DriverInfoBottomSheet(it) { selectedDriver.value = null } }
 }

@@ -13,13 +13,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
@@ -27,12 +24,13 @@ import com.example.f1_kmp.data.model.DriverModel
 import com.example.f1_kmp.data.model.RaceModel
 import com.example.f1_kmp.domain.AsyncValue
 import com.example.f1_kmp.ui.components.BlackButton
-import com.example.f1_kmp.ui.components.DriverInfoBottomSheet
 import com.example.f1_kmp.ui.components.ErrorBody
 import com.example.f1_kmp.ui.components.LoadingIndicator
 import com.example.f1_kmp.ui.components.PitStopsTable
 import com.example.f1_kmp.ui.components.QualifyingTable
+import com.example.f1_kmp.ui.components.RacePickerField
 import com.example.f1_kmp.ui.components.RaceResultsTable
+import com.example.f1_kmp.ui.components.SeasonPickerField
 import com.example.f1_kmp.ui.components.SectionHeader
 import com.example.f1_kmp.ui.theme.AppDimens
 import com.example.f1_kmp.ui.theme.AppStyles
@@ -43,30 +41,27 @@ import com.example.f1_kmp.viewmodel.ResultsViewModel
 import f1_kmp.composeapp.generated.resources.Res
 import f1_kmp.composeapp.generated.resources.choose_specific_race
 import f1_kmp.composeapp.generated.resources.last_race
-import f1_kmp.composeapp.generated.resources.number_hint
 import f1_kmp.composeapp.generated.resources.pit_stops
 import f1_kmp.composeapp.generated.resources.qualifying
 import f1_kmp.composeapp.generated.resources.race
 import f1_kmp.composeapp.generated.resources.race_search_info
-import f1_kmp.composeapp.generated.resources.round
 import f1_kmp.composeapp.generated.resources.round_label
 import f1_kmp.composeapp.generated.resources.search
 import f1_kmp.composeapp.generated.resources.season
 import f1_kmp.composeapp.generated.resources.season_label
+import f1_kmp.composeapp.generated.resources.select_race
+import f1_kmp.composeapp.generated.resources.select_season
+import f1_kmp.composeapp.generated.resources.select_season_first
 import f1_kmp.composeapp.generated.resources.sprint
-import f1_kmp.composeapp.generated.resources.year_hint
 import com.example.f1_kmp.domain.stringResource
 
-/**
- * Вкладка «Результаты» — краткий итог последней гонки (топ-3) и переход к поиску.
- */
 @Composable
 fun ResultsScreen(
     viewModel: ResultsViewModel,
     onSearchRace: () -> Unit,
     onRaceDetails: (RaceModel) -> Unit,
+    onDriverClick: (DriverModel) -> Unit,
 ) {
-    val selectedDriver = remember { mutableStateOf<DriverModel?>(null) }
     val lastRace by viewModel.lastRace.collectAsState()
 
     when (val state = lastRace) {
@@ -93,26 +88,22 @@ fun ResultsScreen(
                 race = state.value,
                 maxRows = 3,
                 onDetailsClick = { onRaceDetails(state.value) },
-                onDriverClick = { selectedDriver.value = it },
+                onDriverClick = onDriverClick,
             )
             Spacer(Modifier.height(AppDimens.verticalPadding.dp))
             BoxedAction(title = stringResource(Res.string.choose_specific_race), onClick = onSearchRace)
         }
     }
-    selectedDriver.value?.let { DriverInfoBottomSheet(it) { selectedDriver.value = null } }
 }
 
-/**
- * Поиск гонки по году и раунду (без offline-кэша — каждый раз сеть).
- */
 @Composable
 fun RaceSearchScreen(
     viewModel: RaceSearchViewModel,
     onRaceDetails: (RaceModel) -> Unit,
+    onDriverClick: (DriverModel) -> Unit,
 ) {
-    val selectedDriver = remember { mutableStateOf<DriverModel?>(null) }
     val year by viewModel.year.collectAsState()
-    val round by viewModel.round.collectAsState()
+    val raceDisplay by viewModel.raceDisplay.collectAsState()
     val fieldsInputted by viewModel.fieldsInputted.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val searchedRace by viewModel.searchedRace.collectAsState()
@@ -125,9 +116,23 @@ fun RaceSearchScreen(
             .padding(AppDimens.horizontalPadding.dp),
     ) {
         Text(stringResource(Res.string.race_search_info), style = AppStyles.body, modifier = Modifier.padding(vertical = 16.dp))
-        OutlinedField(stringResource(Res.string.season), stringResource(Res.string.year_hint), year, viewModel::onYearChanged)
+        SeasonPickerField(
+            value = year,
+            label = stringResource(Res.string.season),
+            hint = stringResource(Res.string.select_season),
+            onSeasonSelected = viewModel::onYearChanged,
+            loadSeasons = viewModel::loadSeasonYears,
+        )
         Spacer(Modifier.height(12.dp))
-        OutlinedField(stringResource(Res.string.round), stringResource(Res.string.number_hint), round, viewModel::onRoundChanged)
+        RacePickerField(
+            displayValue = raceDisplay,
+            seasonYear = year,
+            label = stringResource(Res.string.race),
+            hint = stringResource(Res.string.select_race),
+            disabledHint = stringResource(Res.string.select_season_first),
+            onRacePicked = { viewModel.onRacePicked(it.round, it.title) },
+            loadRaces = viewModel::loadSeasonRaces,
+        )
         Spacer(Modifier.height(16.dp))
         BlackButton(
             text = stringResource(Res.string.search),
@@ -148,21 +153,19 @@ fun RaceSearchScreen(
                     race = race,
                     maxRows = 3,
                     onDetailsClick = { onRaceDetails(race) },
-                    onDriverClick = { selectedDriver.value = it },
+                    onDriverClick = onDriverClick,
                 )
             }
             else -> Unit
         }
     }
-    selectedDriver.value?.let { DriverInfoBottomSheet(it) { selectedDriver.value = null } }
 }
 
-/**
- * Детальная гонка: полные результаты, спринт, квалификация и пит-стопы.
- */
 @Composable
-fun RaceInfoScreen(viewModel: RaceInfoScreenViewModel) {
-    val selectedDriver = remember { mutableStateOf<DriverModel?>(null) }
+fun RaceInfoScreen(
+    viewModel: RaceInfoScreenViewModel,
+    onDriverClick: (DriverModel) -> Unit,
+) {
     val race by viewModel.race.collectAsState()
     val qualifying by viewModel.qualifying.collectAsState()
     val pitStops by viewModel.pitStops.collectAsState()
@@ -195,7 +198,7 @@ fun RaceInfoScreen(viewModel: RaceInfoScreenViewModel) {
                 RaceResultsTable(
                     race = raceData,
                     showHeader = false,
-                    onDriverClick = { selectedDriver.value = it },
+                    onDriverClick = onDriverClick,
                 )
                 Spacer(Modifier.height(AppDimens.verticalPadding.dp))
                 if (sprint is AsyncValue.Value && (sprint as AsyncValue.Value).value.isNotEmpty()) {
@@ -203,7 +206,7 @@ fun RaceInfoScreen(viewModel: RaceInfoScreenViewModel) {
                     RaceResultsTable(
                         race = raceData.copy(results = (sprint as AsyncValue.Value).value),
                         showHeader = false,
-                        onDriverClick = { selectedDriver.value = it },
+                        onDriverClick = onDriverClick,
                     )
                     Spacer(Modifier.height(AppDimens.verticalPadding.dp))
                 }
@@ -211,7 +214,7 @@ fun RaceInfoScreen(viewModel: RaceInfoScreenViewModel) {
                 when (val q = qualifying) {
                     is AsyncValue.Loading -> LoadingIndicator(Modifier.padding(vertical = 16.dp))
                     is AsyncValue.Error -> Text(q.message, style = AppStyles.body)
-                    is AsyncValue.Value -> QualifyingTable(q.value) { selectedDriver.value = it }
+                    is AsyncValue.Value -> QualifyingTable(q.value, onDriverClick = onDriverClick)
                 }
                 Spacer(Modifier.height(AppDimens.verticalPadding.dp))
                 SectionHeader(stringResource(Res.string.pit_stops))
@@ -224,7 +227,6 @@ fun RaceInfoScreen(viewModel: RaceInfoScreenViewModel) {
             }
         }
     }
-    selectedDriver.value?.let { DriverInfoBottomSheet(it) { selectedDriver.value = null } }
 }
 
 @Composable
@@ -251,19 +253,5 @@ private fun BoxedAction(title: String, onClick: () -> Unit) {
             .padding(16.dp),
     ) {
         Text(title, style = AppStyles.h3)
-    }
-}
-
-@Composable
-private fun OutlinedField(label: String, hint: String, value: String, onValueChange: (String) -> Unit) {
-    Column {
-        Text(label, style = AppStyles.caption)
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            placeholder = { Text(hint) },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-        )
     }
 }

@@ -7,6 +7,8 @@ import com.example.f1_kmp.data.local.FileCacheDao
 import com.example.f1_kmp.data.repository.F1Repository
 import com.example.f1_kmp.viewmodel.CircuitDetailViewModel
 import com.example.f1_kmp.viewmodel.CircuitsViewModel
+import com.example.f1_kmp.viewmodel.ConstructorDetailViewModel
+import com.example.f1_kmp.viewmodel.DriverDetailViewModel
 import com.example.f1_kmp.viewmodel.HallOfFameViewModel
 import com.example.f1_kmp.viewmodel.HomeViewModel
 import com.example.f1_kmp.viewmodel.RaceInfoScreenViewModel
@@ -92,4 +94,6 @@ val appModule = module {
     viewModel { RaceSearchViewModel(get()) }
     viewModel { (season: String, round: String) -> RaceInfoScreenViewModel(season, round, get()) }
     viewModel { (circuitId: String) -> CircuitDetailViewModel(circuitId, get()) }
+    viewModel { (driverId: String) -> DriverDetailViewModel(driverId, get()) }
+    viewModel { (constructorId: String) -> ConstructorDetailViewModel(constructorId, get()) }
 }

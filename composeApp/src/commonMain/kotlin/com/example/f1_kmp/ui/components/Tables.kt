@@ -83,7 +83,10 @@ fun TournamentDriversTable(
 
 /** Таблица чемпионата конструкторов. */
 @Composable
-fun TournamentConstructorsTable(constructors: List<ConstructorStandingsModel>) {
+fun TournamentConstructorsTable(
+    constructors: List<ConstructorStandingsModel>,
+    onConstructorClick: ((com.example.f1_kmp.data.model.ConstructorModel) -> Unit)? = null,
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
         TableHeaderRow(
             listOf(
@@ -104,6 +107,7 @@ fun TournamentConstructorsTable(constructors: List<ConstructorStandingsModel>) {
                     item.wins,
                 ),
                 index = index,
+                onClick = onConstructorClick?.let { { it(item.constructor) } },
             )
         }
     }

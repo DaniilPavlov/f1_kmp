@@ -10,13 +10,12 @@ import com.example.f1_kmp.domain.AsyncValue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * ViewModel вкладки «Зал славы».
  *
- * Исторические standings за выбранный год (не текущий сезон с «Главной»).
- * Год вводится вручную; загрузка идёт только если [fieldsInputted] (ровно 4 цифры).
- * Кэш ключуется годом: peek → refresh через [F1Repository.getHistoricalStandings].
+ * Исторические standings за выбранный год. Список сезонов — picker, при смене года данные обновляются.
  */
 class HallOfFameViewModel(
     private val repository: F1Repository,
@@ -29,7 +28,7 @@ class HallOfFameViewModel(
     private val _constructors = MutableStateFlow<AsyncValue<List<ConstructorStandingsModel>>>(AsyncValue.Loading)
     val constructors: StateFlow<AsyncValue<List<ConstructorStandingsModel>>> = _constructors.asStateFlow()
 
-    private val _year = MutableStateFlow("2026")
+    private val _year = MutableStateFlow("")
     val year: StateFlow<String> = _year.asStateFlow()
 
     private val _fieldsInputted = MutableStateFlow(false)
@@ -42,17 +41,25 @@ class HallOfFameViewModel(
     val error: StateFlow<AppException?> = _error.asStateFlow()
 
     init {
-        checkFields()
-        loadAllData()
+        viewModelScope.launch {
+            repository.getSeasonYears().onSuccess { years ->
+                if (_year.value.isEmpty() && years.isNotEmpty()) {
+                    _year.value = years.first()
+                    checkFields()
+                    loadAllData()
+                }
+            }
+        }
     }
 
-    /** Поле года: UI фильтрует ввод, здесь только сохраняем и пересчитываем валидность. */
     fun onYearChanged(value: String) {
         _year.value = value
         checkFields()
+        if (_fieldsInputted.value) {
+            loadAllData()
+        }
     }
 
-    /** Кнопка «Найти» активна только при годе из 4 символов. */
     fun checkFields() {
         _fieldsInputted.value = _year.value.length == 4 && _year.value.isNotEmpty()
     }
@@ -61,7 +68,8 @@ class HallOfFameViewModel(
         _activeTable.value = index
     }
 
-    /** Не стартуем сеть, пока год невалиден — иначе бесполезный запрос. */
+    suspend fun loadSeasonYears(): Result<List<String>> = repository.getSeasonYears()
+
     fun loadAllData() {
         if (!_fieldsInputted.value) return
         loadJob.launch(viewModelScope) {

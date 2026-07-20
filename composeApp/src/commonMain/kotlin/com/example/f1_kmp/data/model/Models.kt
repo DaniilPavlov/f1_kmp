@@ -232,6 +232,62 @@ data class DriverTableModel(
     @SerialName("Drivers") val drivers: List<DriverModel>,
 )
 
+@Serializable
+data class ConstructorFetchingModel(
+    @SerialName("ConstructorTable") val constructorTable: ConstructorTableModel,
+)
+
+@Serializable
+data class ConstructorTableModel(
+    @SerialName("Constructors") val constructors: List<ConstructorModel>,
+)
+
+@Serializable
+data class MrDataTotalModel(
+    val total: String? = null,
+    @SerialName("RaceTable") val raceTable: RaceTableModel? = null,
+    @SerialName("ConstructorTable") val constructorTable: ConstructorTableModel? = null,
+    @SerialName("DriverTable") val driverTable: DriverTableModel? = null,
+    @SerialName("SeasonTable") val seasonTable: SeasonTableModel? = null,
+)
+
+@Serializable
+data class SeasonTableModel(
+    @SerialName("Seasons") val seasons: List<SeasonModel>,
+)
+
+@Serializable
+data class SeasonModel(
+    val season: String,
+    val url: String,
+)
+
+/** Карьерная статистика пилота или конструктора. */
+data class CareerStats<T>(
+    val races: Int,
+    val wins: Int,
+    val podiums: Int,
+    val poles: Int,
+    val current: List<T>,
+    val related: List<T>,
+)
+
+/** Победа на трассе (история ГП). */
+data class CircuitRaceWin(
+    val season: String,
+    val round: String,
+    val raceName: String,
+    val driver: DriverModel,
+    val constructor: ConstructorModel,
+)
+
+/** Кэш списка сезонов (обновляется раз в сутки). */
+@Serializable
+data class SeasonsCache(
+    val dayKey: String,
+    val years: List<String>,
+)
+
 /**
  * DTO кэша таблицы пилотов: список + сезон/раунд.
  * Нужен экрану «Главная» для строк «Сезон / Раунд» в offline-режиме.

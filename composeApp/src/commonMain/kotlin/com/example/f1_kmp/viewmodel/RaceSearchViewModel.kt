@@ -14,8 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * ViewModel экрана «Поиск гонки».
  *
- * Пользователь вводит год и раунд; по кнопке «Найти» — запрос без кэша.
- * Результат — одна гонка или сообщение «не найдено».
+ * Пользователь выбирает сезон и гонку из picker; по кнопке «Найти» — запрос без кэша.
  */
 class RaceSearchViewModel(
     private val repository: F1Repository,
@@ -27,6 +26,9 @@ class RaceSearchViewModel(
 
     private val _round = MutableStateFlow("")
     val round: StateFlow<String> = _round.asStateFlow()
+
+    private val _raceDisplay = MutableStateFlow("")
+    val raceDisplay: StateFlow<String> = _raceDisplay.asStateFlow()
 
     private val _searchedRace = MutableStateFlow<AsyncValue<RaceModel?>>(AsyncValue.Value(null))
     val searchedRace: StateFlow<AsyncValue<RaceModel?>> = _searchedRace.asStateFlow()
@@ -41,18 +43,25 @@ class RaceSearchViewModel(
     val dataLoaded: StateFlow<Boolean> = _dataLoaded.asStateFlow()
 
     fun onYearChanged(value: String) {
-        _year.value = value.filter { it.isDigit() }.take(4)
+        _year.value = value
+        _round.value = ""
+        _raceDisplay.value = ""
         checkFields()
     }
 
-    fun onRoundChanged(value: String) {
-        _round.value = value.filter { it.isDigit() }
+    fun onRacePicked(round: String, display: String) {
+        _round.value = round
+        _raceDisplay.value = display
         checkFields()
     }
 
     fun checkFields() {
         _fieldsInputted.value = _year.value.length == 4 && _round.value.isNotEmpty()
     }
+
+    suspend fun loadSeasonYears(): Result<List<String>> = repository.getSeasonYears()
+
+    suspend fun loadSeasonRaces(year: String): Result<List<RaceModel>> = repository.getSeasonRaces(year)
 
     fun loadRaceResults() {
         loadJob.launch(viewModelScope) {

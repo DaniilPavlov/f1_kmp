@@ -1,33 +1,37 @@
 # F1 KMP
 
-Kotlin Multiplatform + Compose Multiplatform приложение со статистикой Formula 1  
-(турнирные таблицы, результаты, календарь, зал славы, трассы).
+Kotlin Multiplatform + Compose Multiplatform app with Formula 1 stats  
+(standings, results, calendar, hall of fame, circuits).
 
-Порт Android-проекта **[f1_kotlin](https://github.com/DaniilPavlov/f1_kotlin)** на общий код для **Android** и **iOS**.  
-Данные — [Jolpica F1 API](https://github.com/jolpica/jolpica-f1) (совместим с Ergast).
+Data — [Jolpica F1 API](https://github.com/jolpica/jolpica-f1) (Ergast-compatible).
 
-## Стек
+Same idea, other stacks:
 
-| Слой | Технологии |
+- [f1_pet_project](https://github.com/DaniilPavlov/f1_pet_project) — Flutter (Android / iOS)
+- [f1_kotlin](https://github.com/DaniilPavlov/f1_kotlin) — native Android (source for this repo)
+
+## Stack
+
+| Layer | Tech |
 |------|------------|
 | UI | Compose Multiplatform, Navigation |
 | DI | Koin |
-| Сеть | Ktor + kotlinx.serialization |
-| Кэш | JSON-файлы (offline peek → refresh) |
-| Время | kotlinx-datetime |
-| Android-карта | OSMDroid |
-| iOS-карта | заглушка (см. ниже) |
+| Network | Ktor + kotlinx.serialization |
+| Cache | JSON files (offline peek → refresh) |
+| Time | kotlinx-datetime |
+| Android map | OSMDroid |
+| iOS map | stub (see below) |
 
-### Отличия от f1_kotlin
+### Differences from f1_kotlin
 
 - Hilt → Koin  
 - Retrofit/Moshi → Ktor  
-- Room → файловый кэш  
+- Room → file cache  
 - java.time → kotlinx-datetime  
-- Карта OSM только на Android  
-- Напоминания о сессиях — только Android (AlarmManager)
+- OSM map on Android only  
+- Session reminders on Android only (AlarmManager)
 
-## Структура
+## Structure
 
 ```
 f1_kmp/
@@ -42,78 +46,99 @@ f1_kmp/
 └── gradle/
 ```
 
-## Требования
+## Requirements
 
 - JDK 17+
-- Android Studio / Android SDK (для Android)
-- Xcode 15+ (для iOS)
-- macOS (для сборки iOS)
+- Android Studio / Android SDK (for Android)
+- Xcode 15+ (for iOS)
+- macOS (for iOS builds)
 
 ## Android
 
 ```bash
 ./gradlew :composeApp:assembleDebug
-# или установка на устройство/эмулятор:
+# install on device/emulator:
 ./gradlew :composeApp:installDebug
 ```
 
-В Android Studio: Run → конфигурация **composeApp**.
+In Android Studio: Run → **composeApp** configuration.
 
 ## iOS
 
-Сборку iOS нужно запускать **через Xcode** (Compose-ресурсы требуют параметров от Xcode):
+Build iOS **through Xcode** (Compose resources need Xcode-provided parameters):
 
 ```bash
 open iosApp/iosApp.xcodeproj
 ```
 
-1. Выбери схему **iosApp** и симулятор (например iPhone 16).
+1. Select the **iosApp** scheme and a simulator (e.g. iPhone 16).
 2. Run (⌘R).
 
-Xcode перед сборкой вызовет:
+Xcode will call before the build:
 
 ```text
 ./gradlew :composeApp:embedAndSignAppleFrameworkForXcode
 ```
 
-На реальное устройство в `iosApp/Configuration/Config.xcconfig` укажи свой `TEAM_ID`.
+For a real device, set your `TEAM_ID` in `iosApp/Configuration/Config.xcconfig`.
 
-**Не запускай** `embedAndSignAppleFrameworkForXcode` «голым» Gradle из терминала/Android Studio — будет ошибка  
-`Could not infer iOS target architectures`. Нужен Xcode / `xcodebuild`.
+**Do not run** `embedAndSignAppleFrameworkForXcode` from Gradle alone in the terminal/Android Studio — you will get  
+`Could not infer iOS target architectures`. Use Xcode / `xcodebuild`.
 
-Только Kotlin-фреймворк для симулятора (Apple Silicon), без установки приложения:
+Kotlin framework for the simulator only (Apple Silicon), without installing the app:
 
 ```bash
 ./gradlew :composeApp:linkDebugFrameworkIosSimulatorArm64
 ```
 
-## Тесты
+## Tests
 
 ```bash
 ./gradlew :composeApp:testDebugUnitTest
 ```
 
-## Карта трасс на iOS
+## CI / CD
 
-На Android вкладка «Трассы → На карте» показывает OSMDroid с пинами и кластерами.
+[![CI](https://github.com/DaniilPavlov/f1_kmp/actions/workflows/ci.yml/badge.svg)](https://github.com/DaniilPavlov/f1_kmp/actions/workflows/ci.yml)
 
-На iOS карта — **заглушка**: текст с предложением открыть список.  
-Список трасс и карточка трассы работают на обеих платформах.  
-Полноценная карта (MapKit) пока не подключена.
+| Workflow | When | What it does |
+|----------|-------|------------|
+| `ci.yml` | push / PR to `master` | build debug APK, unit tests |
+| `release.yml` | tag `v*` or manual | Android APK (+ GitHub Release) |
+
+Release:
+
+```bash
+# version in composeApp/build.gradle.kts must match the tag
+git tag v1.2.0
+git push origin v1.2.0
+```
+
+For release APK signing (optional) — `ANDROID_KEYSTORE_*` secrets in GitHub Actions.
+
+## Circuits map on iOS
+
+On Android, the **Circuits → On map** tab shows OSMDroid with pins and clusters.
+
+On iOS the map is a **stub**: text suggesting to open the list.  
+The circuit list and circuit card work on both platforms.  
+A full map (MapKit) is not connected yet.
 
 ## Offline
 
-Приложение сначала читает локальный JSON-кэш (peek), затем обновляет данные с сети.  
-Если сеть недоступна, а кэш есть — UI остаётся с последними данными.
+The app reads the local JSON cache first (peek), then refreshes from the network.  
+If the network is unavailable but cache exists, the UI keeps the last known data.
 
-## Возможности
+## Features
 
-- **Главная** — турнирные таблицы пилотов и конструкторов текущего сезона  
-- **Результаты** — последняя гонка, поиск гонки по году и раунду, детальная карточка (гонка, спринт, квалификация, пит-стопы)  
-- **Календарь** — расписание сезона с сессиями уик-энда (практики, квалификация, спринт, спринт-квалификация, гонка)  
-- **Зал славы** — итоговые таблицы пилотов и конструкторов за выбранный год  
-- **Трассы** — список и карта (OSMDroid на Android; на iOS — заглушка), карточка трассы и ссылка на Wikipedia  
-- **Карточка пилота** — по нажатию на строку в таблицах (код, номер, национальность, дата рождения, Wikipedia)  
-- **Локализация** — русский и английский, переключатель в верхней панели без перезапуска приложения  
-- **Напоминания** — локальные уведомления за 30 минут до сессий на Android (в ОС держим 10 ближайших, окно обновляется при открытии приложения)  
-- **Offline** — файловый JSON-кэш с мгновенным peek и обновлением с сети  
+- **Home** — current season driver and constructor standings  
+- **Results** — latest race, search by season and race (pickers), detail card (race, sprint, qualifying, pit stops)  
+- **Calendar** — season schedule with weekend sessions (practice, qualifying, sprint, sprint qualifying, race)  
+- **Hall of fame** — final driver and constructor tables for a selected year (season picker from Jolpica)  
+- **Circuits** — list and map (OSMDroid + Carto on Android; stub on iOS), circuit card, Wikipedia link, and race winners history  
+- **Driver card** — full screen with passport data and career stats (races, wins, podiums, poles, teams) from Jolpica endpoints  
+- **Constructor card** — nationality, Wikipedia link, career stats, and drivers list  
+- **Localization** — Russian and English, toggle in the app bar without restarting the app  
+- **Reminders** — local notifications 30 minutes before a session on Android (up to 10 upcoming kept in the OS; window refreshes when the app opens)  
+- **Schedule cache** — shared file JSON cache for the calendar and reminders  
+- **Offline** — file JSON cache with instant peek and network refresh  

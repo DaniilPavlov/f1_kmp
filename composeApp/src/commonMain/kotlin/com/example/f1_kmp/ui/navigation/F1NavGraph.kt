@@ -28,9 +28,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.f1_kmp.data.model.ConstructorModel
+import com.example.f1_kmp.data.model.DriverModel
 import com.example.f1_kmp.ui.components.F1AppBar
 import com.example.f1_kmp.ui.screens.circuits.CircuitDetailScreen
 import com.example.f1_kmp.ui.screens.circuits.CircuitsScreen
+import com.example.f1_kmp.ui.screens.constructor.ConstructorDetailScreen
+import com.example.f1_kmp.ui.screens.driver.DriverDetailScreen
 import com.example.f1_kmp.ui.screens.halloffame.HallOfFameScreen
 import com.example.f1_kmp.ui.screens.home.HomeScreen
 import com.example.f1_kmp.ui.screens.results.RaceInfoScreen
@@ -43,7 +47,9 @@ import com.example.f1_kmp.ui.theme.F1Red
 import com.example.f1_kmp.ui.theme.F1White
 import f1_kmp.composeapp.generated.resources.Res
 import f1_kmp.composeapp.generated.resources.circuit_info_title
+import f1_kmp.composeapp.generated.resources.constructor
 import f1_kmp.composeapp.generated.resources.detailed_info
+import f1_kmp.composeapp.generated.resources.driver
 import f1_kmp.composeapp.generated.resources.nav_calendar
 import f1_kmp.composeapp.generated.resources.nav_circuit
 import f1_kmp.composeapp.generated.resources.nav_circuits
@@ -100,6 +106,13 @@ fun F1App() {
     val showBottomBar = currentRoute in tabs.map { it.route }
     val popBack: () -> Unit = { navController.popBackStack() }
 
+    val onDriverClick: (DriverModel) -> Unit = { driver ->
+        navController.navigate("driver/${driver.driverId}")
+    }
+    val onConstructorClick: (ConstructorModel) -> Unit = { constructor ->
+        navController.navigate("constructor/${constructor.constructorId}")
+    }
+
     Scaffold(
         topBar = {
             when {
@@ -109,6 +122,10 @@ fun F1App() {
                     F1AppBar(title = stringResource(Res.string.detailed_info), onBack = popBack)
                 currentRoute?.startsWith("circuit/") == true ->
                     F1AppBar(title = stringResource(Res.string.circuit_info_title), onBack = popBack)
+                currentRoute?.startsWith("driver/") == true ->
+                    F1AppBar(title = stringResource(Res.string.driver), onBack = popBack)
+                currentRoute?.startsWith("constructor/") == true ->
+                    F1AppBar(title = stringResource(Res.string.constructor), onBack = popBack)
             }
         },
         bottomBar = {
@@ -134,7 +151,11 @@ fun F1App() {
                 .padding(padding),
         ) {
             composable(BottomTab.Home.route) {
-                HomeScreen(koinViewModel())
+                HomeScreen(
+                    viewModel = koinViewModel(),
+                    onDriverClick = onDriverClick,
+                    onConstructorClick = onConstructorClick,
+                )
             }
             composable(BottomTab.Results.route) {
                 ResultsScreen(
@@ -143,6 +164,7 @@ fun F1App() {
                     onRaceDetails = { race ->
                         navController.navigate("race_info/${race.season}/${race.round}")
                     },
+                    onDriverClick = onDriverClick,
                 )
             }
             composable("race_search") {
@@ -151,6 +173,7 @@ fun F1App() {
                     onRaceDetails = { race ->
                         navController.navigate("race_info/${race.season}/${race.round}")
                     },
+                    onDriverClick = onDriverClick,
                 )
             }
             composable(
@@ -162,13 +185,20 @@ fun F1App() {
             ) { entry ->
                 val season = entry.arguments?.getString("season").orEmpty()
                 val round = entry.arguments?.getString("round").orEmpty()
-                RaceInfoScreen(viewModel = koinViewModel { parametersOf(season, round) })
+                RaceInfoScreen(
+                    viewModel = koinViewModel { parametersOf(season, round) },
+                    onDriverClick = onDriverClick,
+                )
             }
             composable(BottomTab.Schedule.route) {
                 ScheduleScreen(koinViewModel())
             }
             composable(BottomTab.HallOfFame.route) {
-                HallOfFameScreen(koinViewModel())
+                HallOfFameScreen(
+                    viewModel = koinViewModel(),
+                    onDriverClick = onDriverClick,
+                    onConstructorClick = onConstructorClick,
+                )
             }
             composable(BottomTab.Circuits.route) {
                 CircuitsScreen(
@@ -183,7 +213,34 @@ fun F1App() {
                 ),
             ) { entry ->
                 val circuitId = entry.arguments?.getString("circuitId").orEmpty()
-                CircuitDetailScreen(viewModel = koinViewModel { parametersOf(circuitId) })
+                CircuitDetailScreen(
+                    viewModel = koinViewModel { parametersOf(circuitId) },
+                    onDriverClick = onDriverClick,
+                )
+            }
+            composable(
+                route = "driver/{driverId}",
+                arguments = listOf(
+                    navArgument("driverId") { type = NavType.StringType },
+                ),
+            ) { entry ->
+                val driverId = entry.arguments?.getString("driverId").orEmpty()
+                DriverDetailScreen(
+                    viewModel = koinViewModel { parametersOf(driverId) },
+                    onConstructorClick = onConstructorClick,
+                )
+            }
+            composable(
+                route = "constructor/{constructorId}",
+                arguments = listOf(
+                    navArgument("constructorId") { type = NavType.StringType },
+                ),
+            ) { entry ->
+                val constructorId = entry.arguments?.getString("constructorId").orEmpty()
+                ConstructorDetailScreen(
+                    viewModel = koinViewModel { parametersOf(constructorId) },
+                    onDriverClick = onDriverClick,
+                )
             }
         }
     }

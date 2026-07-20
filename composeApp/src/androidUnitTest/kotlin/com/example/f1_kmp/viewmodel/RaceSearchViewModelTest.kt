@@ -50,10 +50,11 @@ class RaceSearchViewModelTest {
         val viewModel = RaceSearchViewModel(repository)
 
         viewModel.onYearChanged("202")
-        viewModel.onRoundChanged("1")
+        viewModel.onRacePicked("1", "1. Bahrain Grand Prix")
         assertEquals(false, viewModel.fieldsInputted.value)
 
         viewModel.onYearChanged("2026")
+        viewModel.onRacePicked("5", "5. Monaco Grand Prix")
         assertEquals(true, viewModel.fieldsInputted.value)
     }
 
@@ -65,7 +66,7 @@ class RaceSearchViewModelTest {
 
         val viewModel = RaceSearchViewModel(repository)
         viewModel.onYearChanged("2026")
-        viewModel.onRoundChanged("5")
+        viewModel.onRacePicked("5", "5. Monaco Grand Prix")
         viewModel.loadRaceResults()
         advanceUntilIdle()
 
