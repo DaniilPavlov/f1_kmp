@@ -42,6 +42,7 @@ class RaceReminderScheduler(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val lastScheduledIds = AtomicReference<Set<Int>>(emptySet())
 
+    /** Пересчитать rolling window напоминаний из актуального расписания. */
     fun sync() {
         scope.launch {
             runCatching {
@@ -147,6 +148,7 @@ class RaceReminderScheduler(
     }
 }
 
+/** Показывает notification по срабатыванию AlarmManager. */
 class RaceReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (Build.VERSION.SDK_INT >= 33 &&
@@ -169,6 +171,7 @@ class RaceReminderReceiver : BroadcastReceiver() {
     }
 }
 
+/** После reboot / смены timezone — снова вызывает [RaceReminderScheduler.sync]. */
 class BootCompletedReceiver : BroadcastReceiver(), KoinComponent {
     private val reminderScheduler: RaceReminderScheduler by inject()
 

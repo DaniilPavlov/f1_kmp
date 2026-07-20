@@ -56,25 +56,31 @@ class F1Repository(
 
     // region peek — мгновенный UI без ожидания сети
 
+    /** Кэш текущей таблицы пилотов (список + сезон/раунд) или `null`. */
     suspend fun peekCurrentDriversCache(): Pair<List<DriverStandingsModel>, StandingsListsModel>? =
         loadCache<DriverStandingsCache>(CacheKeys.CURRENT_DRIVERS)?.let { cached ->
             Pair(cached.drivers, StandingsListsModel(cached.season, cached.round, cached.drivers, null))
         }
 
+    /** Кэш текущей таблицы конструкторов или `null`. */
     suspend fun peekCurrentConstructorsCache(): List<ConstructorStandingsModel>? =
         loadCacheList(CacheKeys.CURRENT_CONSTRUCTORS)
 
+    /** Кэш последней гонки или `null`. */
     suspend fun peekLastRaceCache(): RaceModel? =
         loadCache(CacheKeys.LAST_RACE)
 
+    /** Кэш расписания текущего сезона или `null`. */
     suspend fun peekScheduleCache(): List<RaceModel>? =
         loadCacheList(CacheKeys.SCHEDULE)
 
+    /** Кэш трасс (memory → файл) или `null`. */
     suspend fun peekCircuitsCache(): List<CircuitModel>? {
         circuitsMemoryCache?.let { return it }
         return loadCacheList<CircuitModel>(CacheKeys.CIRCUITS)?.also { circuitsMemoryCache = it }
     }
 
+    /** Кэш «Зал славы» за [year] или `null`. */
     suspend fun peekHistoricalStandingsCache(
         year: String,
     ): Pair<List<DriverStandingsModel>, List<ConstructorStandingsModel>>? =
@@ -82,6 +88,7 @@ class F1Repository(
             Pair(it.drivers, it.constructors)
         }
 
+    /** Текущая таблица пилотов: сеть → кэш; при ошибке — fallback на peek. */
     suspend fun getCurrentDriverStandings(): Result<Pair<List<DriverStandingsModel>, StandingsListsModel>> {
         val network = ApiCallHandler.safeCall {
             val list = api.getCurrentDriverStandings().mrData.standingsTable.standingsLists.first()
@@ -99,6 +106,7 @@ class F1Repository(
         return peekCurrentDriversCache()?.let { Result.success(it) } ?: network
     }
 
+    /** Текущая таблица конструкторов: сеть → кэш; при ошибке — fallback на peek. */
     suspend fun getCurrentConstructorStandings(): Result<List<ConstructorStandingsModel>> {
         val network = ApiCallHandler.safeCall {
             api.getCurrentConstructorStandings()
@@ -112,6 +120,7 @@ class F1Repository(
         return peekCurrentConstructorsCache()?.let { Result.success(it) } ?: network
     }
 
+    /** Последняя завершённая гонка: сеть → кэш; при ошибке — fallback на peek. */
     suspend fun getLastRace(): Result<RaceModel> {
         val network = ApiCallHandler.safeCall {
             api.getLastRaceResults().mrData.raceTable.races.first()
@@ -123,6 +132,7 @@ class F1Repository(
         return peekLastRaceCache()?.let { Result.success(it) } ?: network
     }
 
+    /** Результаты гонки за [year]/[round] без кэша (поиск / детальная карточка). */
     suspend fun getRaceResults(year: String, round: String): Result<RaceModel?> =
         ApiCallHandler.safeCall {
             api.getRaceResults(year, round).mrData.raceTable.races.firstOrNull()
@@ -137,6 +147,7 @@ class F1Repository(
                 .orEmpty()
         }
 
+    /** Результаты квалификации за [year]/[round]; пустой список — не ошибка. */
     suspend fun getQualifyingResults(year: String, round: String): Result<List<QualifyingResultModel>> =
         ApiCallHandler.safeCall {
             api.getQualifyingResults(year, round).mrData.raceTable.races
@@ -160,6 +171,7 @@ class F1Repository(
             }
         }
 
+    /** Расписание текущего сезона: сеть → кэш; при ошибке — fallback на peek. */
     suspend fun getCurrentSchedule(): Result<List<RaceModel>> {
         val network = ApiCallHandler.safeCall {
             api.getCurrentSchedule().mrData.raceTable.races
@@ -171,6 +183,7 @@ class F1Repository(
         return peekScheduleCache()?.let { Result.success(it) } ?: network
     }
 
+    /** Итоговые таблицы пилотов и конструкторов за [year] («Зал славы»). */
     suspend fun getHistoricalStandings(
         year: String,
     ): Result<Pair<List<DriverStandingsModel>, List<ConstructorStandingsModel>>> {
@@ -199,6 +212,7 @@ class F1Repository(
         return peekHistoricalStandingsCache(year)?.let { Result.success(it) } ?: network
     }
 
+    /** Список трасс: сеть → memory + файл; при ошибке — fallback на peek. */
     suspend fun getCircuits(): Result<List<CircuitModel>> {
         val network = ApiCallHandler.safeCall {
             api.getCircuits().mrData.circuitTable.circuits
@@ -213,6 +227,7 @@ class F1Repository(
         return peekCircuitsCache()?.let { Result.success(it) } ?: network
     }
 
+    /** Трасса по [circuitId]: memory → файл → сеть. */
     suspend fun getCircuitById(circuitId: String): Result<CircuitModel?> {
         circuitsMemoryCache?.find { it.circuitId == circuitId }?.let { return Result.success(it) }
         peekCircuitsCache()?.find { it.circuitId == circuitId }?.let { return Result.success(it) }
@@ -240,21 +255,25 @@ class F1Repository(
             ?.let { Result.success(it) } ?: network
     }
 
+    /** Гонки сезона [year] (для picker раунда). */
     suspend fun getSeasonRaces(year: String): Result<List<RaceModel>> =
         ApiCallHandler.safeCall {
             api.getSeasonSchedule(year).mrData.raceTable.races
         }
 
+    /** Карточка пилота по [driverId]. */
     suspend fun getDriver(driverId: String): Result<DriverModel?> =
         ApiCallHandler.safeCall {
             api.getDriver(driverId).mrData.driverTable.drivers.firstOrNull()
         }
 
+    /** Карточка конструктора по [constructorId]. */
     suspend fun getConstructor(constructorId: String): Result<ConstructorModel?> =
         ApiCallHandler.safeCall {
             api.getConstructor(constructorId).mrData.constructorTable.constructors.firstOrNull()
         }
 
+    /** Карьера пилота: гонки/победы/подиумы/поулы и список команд. */
     suspend fun getDriverCareerStats(
         driverId: String,
         currentConstructors: List<ConstructorModel> = emptyList(),
@@ -263,6 +282,7 @@ class F1Repository(
             CareerLoader.loadDriverCareer(api, driverId, currentConstructors)
         }
 
+    /** Карьера конструктора: гонки/победы/подиумы/поулы и список пилотов. */
     suspend fun getConstructorCareerStats(
         constructorId: String,
         currentDrivers: List<DriverModel> = emptyList(),
@@ -271,6 +291,7 @@ class F1Repository(
             CareerLoader.loadConstructorCareer(api, constructorId, currentDrivers)
         }
 
+    /** История победителей на трассе [circuitId] (новые сверху). */
     suspend fun getCircuitWinners(circuitId: String): Result<List<CircuitRaceWin>> =
         ApiCallHandler.safeCall {
             api.getCircuitWinners(circuitId).mrData.raceTable.races.mapNotNull { race ->

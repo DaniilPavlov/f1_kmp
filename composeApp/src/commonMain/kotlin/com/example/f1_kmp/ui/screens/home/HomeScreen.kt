@@ -34,6 +34,7 @@ import f1_kmp.composeapp.generated.resources.round_label
 import f1_kmp.composeapp.generated.resources.season_label
 import com.example.f1_kmp.domain.stringResource
 
+/** Главная вкладка: текущие standings пилотов и конструкторов. */
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,

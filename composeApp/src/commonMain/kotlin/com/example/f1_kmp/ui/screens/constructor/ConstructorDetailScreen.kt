@@ -33,6 +33,7 @@ import f1_kmp.composeapp.generated.resources.current_drivers
 import f1_kmp.composeapp.generated.resources.nationality
 import com.example.f1_kmp.domain.stringResource
 
+/** Экран карточки конструктора: профиль, карьера и список пилотов. */
 @Composable
 fun ConstructorDetailScreen(
     viewModel: ConstructorDetailViewModel,

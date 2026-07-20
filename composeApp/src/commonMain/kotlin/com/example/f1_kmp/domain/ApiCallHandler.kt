@@ -22,6 +22,10 @@ object ApiCallHandler {
     private const val DEFAULT_RETRIES = 1
     private const val RETRY_DELAY_MS = 400L
 
+    /**
+     * Выполняет [block] с одним повтором при сетевой ошибке.
+     * Все исключения превращаются в [AppException].
+     */
     suspend fun <T> safeCall(
         retries: Int = DEFAULT_RETRIES,
         block: suspend () -> T,

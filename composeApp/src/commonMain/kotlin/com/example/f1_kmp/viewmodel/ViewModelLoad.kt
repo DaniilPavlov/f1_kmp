@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 class LoadJobHolder {
     private var job: Job? = null
 
+    /** Отменяет предыдущий [Job] и запускает новый блок загрузки. */
     fun launch(scope: CoroutineScope, block: suspend CoroutineScope.() -> Unit) {
         job?.cancel()
         job = scope.launch(block = block)

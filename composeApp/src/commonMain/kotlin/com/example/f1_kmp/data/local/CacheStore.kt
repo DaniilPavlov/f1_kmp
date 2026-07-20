@@ -26,6 +26,7 @@ object CacheKeys {
     const val LAST_RACE = "last_race"
     const val SEASONS = "seasons"
 
+    /** Ключ кэша standings за исторический сезон [year]. */
     fun historicalStandings(year: String) = "historical_standings_$year"
 }
 
@@ -34,7 +35,10 @@ object CacheKeys {
  * Реализация — [FileCacheDao] (файлы на диске через [PlatformCacheStore]).
  */
 interface CacheDao {
+    /** Читает запись по ключу; null — файла нет. */
     suspend fun get(key: String): CacheEntry?
+
+    /** Записывает или перезаписывает JSON по ключу. */
     suspend fun insert(entry: CacheEntry)
 }
 
@@ -43,7 +47,10 @@ interface CacheDao {
  * Android пишет в filesDir, iOS — в Documents.
  */
 expect class PlatformCacheStore() {
+    /** Читает содержимое файла кэша; null — файла нет. */
     fun readText(fileName: String): String?
+
+    /** Записывает JSON в файл кэша. */
     fun writeText(fileName: String, content: String)
 }
 

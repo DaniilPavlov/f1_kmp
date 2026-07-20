@@ -32,6 +32,7 @@ import f1_kmp.composeapp.generated.resources.races_load_error
 import f1_kmp.composeapp.generated.resources.seasons_load_error
 import com.example.f1_kmp.domain.stringResource
 
+/** Поле выбора сезона: по тапу — bottom sheet со списком годов из [loadSeasons]. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SeasonPickerField(
@@ -117,8 +118,10 @@ private fun SeasonPickerSheet(
     }
 }
 
+/** Выбранная гонка: номер этапа и отображаемое название. */
 data class RacePick(val round: String, val title: String)
 
+/** Поле выбора гонки сезона; активно только при [seasonYear] из 4 цифр. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RacePickerField(

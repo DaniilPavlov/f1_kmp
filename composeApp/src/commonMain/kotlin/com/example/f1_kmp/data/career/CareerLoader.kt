@@ -13,6 +13,7 @@ import kotlinx.coroutines.delay
 object CareerLoader {
     private const val MIN_GAP_MS = 500L
 
+    /** Карьерная статистика пилота: гонки, победы, подиумы, поулы и команды. */
     suspend fun loadDriverCareer(
         api: F1ApiService,
         driverId: String,
@@ -42,6 +43,7 @@ object CareerLoader {
         )
     }
 
+    /** Карьерная статистика конструктора: гонки, победы, подиумы, поулы и пилоты. */
     suspend fun loadConstructorCareer(
         api: F1ApiService,
         constructorId: String,

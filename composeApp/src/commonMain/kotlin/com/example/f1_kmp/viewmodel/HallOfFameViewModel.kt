@@ -52,6 +52,7 @@ class HallOfFameViewModel(
         }
     }
 
+    /** Смена года в picker; при валидном значении перезагружает standings. */
     fun onYearChanged(value: String) {
         _year.value = value
         checkFields()
@@ -60,16 +61,20 @@ class HallOfFameViewModel(
         }
     }
 
+    /** Проверяет, что год введён полностью (4 цифры). */
     fun checkFields() {
         _fieldsInputted.value = _year.value.length == 4 && _year.value.isNotEmpty()
     }
 
+    /** Переключение SegmentedControl: пилоты / конструкторы. */
     fun changeActiveTable(index: Int) {
         _activeTable.value = index
     }
 
+    /** Список сезонов для [SeasonPickerField]. */
     suspend fun loadSeasonYears(): Result<List<String>> = repository.getSeasonYears()
 
+    /** Peek → сеть. Ошибку сети не показываем, если на экране уже есть кэш. */
     fun loadAllData() {
         if (!_fieldsInputted.value) return
         loadJob.launch(viewModelScope) {

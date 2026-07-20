@@ -41,6 +41,7 @@ import f1_kmp.composeapp.generated.resources.nationality
 import com.example.f1_kmp.domain.stringResource
 import kotlinx.datetime.LocalDate
 
+/** Экран карточки пилота: профиль, карьера и список команд. */
 @Composable
 fun DriverDetailScreen(
     viewModel: DriverDetailViewModel,

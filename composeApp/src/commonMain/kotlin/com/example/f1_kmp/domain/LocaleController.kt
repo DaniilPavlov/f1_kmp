@@ -16,12 +16,14 @@ object LocaleController {
 
     private lateinit var preferences: LocalePreferences
 
+    /** Вызывается при старте приложения: читает сохранённый язык из [LocalePreferences]. */
     fun init(preferences: LocalePreferences) {
         this.preferences = preferences
         val saved = preferences.loadLanguage()
         applyLanguage(saved, persist = false)
     }
 
+    /** Переключает ru ↔ en, сохраняет выбор и возвращает новый код языка. */
     fun toggle(): String {
         val next = if (_language.value == "ru") "en" else "ru"
         applyLanguage(next, persist = true)
@@ -42,8 +44,12 @@ object LocaleController {
     private val SUPPORTED = setOf("ru", "en")
 }
 
+/** Платформенное хранилище выбранного языка (SharedPreferences / UserDefaults). */
 expect class LocalePreferences {
+    /** Читает сохранённый код языка («ru» или «en»). */
     fun loadLanguage(): String
+
+    /** Сохраняет код языка. */
     fun saveLanguage(language: String)
 }
 

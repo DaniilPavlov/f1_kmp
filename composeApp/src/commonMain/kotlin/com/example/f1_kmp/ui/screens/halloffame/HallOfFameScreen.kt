@@ -35,6 +35,7 @@ import f1_kmp.composeapp.generated.resources.season
 import f1_kmp.composeapp.generated.resources.select_season
 import com.example.f1_kmp.domain.stringResource
 
+/** Экран «Зал славы»: standings за выбранный исторический сезон. */
 @Composable
 fun HallOfFameScreen(
     viewModel: HallOfFameViewModel,

@@ -19,6 +19,7 @@ fun stringResource(resource: StringResource): String {
     return key(language) { composeStringResource(resource) }
 }
 
+/** То же, что [stringResource], но с аргументами форматирования (%s, %d). */
 @Composable
 fun stringResource(resource: StringResource, vararg formatArgs: Any): String {
     val language by LocaleController.language.collectAsState()

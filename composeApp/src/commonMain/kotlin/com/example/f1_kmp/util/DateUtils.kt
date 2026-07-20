@@ -16,8 +16,10 @@ data class YearMonth(val year: Int, val month: Int) {
         require(month in 1..12) { "month must be 1..12, was $month" }
     }
 
+    /** Дата [day]-го числа этого месяца. */
     fun atDay(day: Int): LocalDate = LocalDate(year, month, day)
 
+    /** Число дней в месяце (учитывает високосный февраль). */
     fun lengthOfMonth(): Int = when (month) {
         1, 3, 5, 7, 8, 10, 12 -> 31
         4, 6, 9, 11 -> 30
@@ -25,6 +27,7 @@ data class YearMonth(val year: Int, val month: Int) {
         else -> error("Invalid month $month")
     }
 
+    /** Сдвиг на [months] месяцев (может быть отрицательным). */
     fun plusMonths(months: Int): YearMonth {
         val total = year * 12 + (month - 1) + months
         val newYear = if (total >= 0) total / 12 else (total - 11) / 12

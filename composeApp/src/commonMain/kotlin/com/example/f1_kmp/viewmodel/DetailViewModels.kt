@@ -57,6 +57,7 @@ class RaceInfoScreenViewModel(
         loadAllData()
     }
 
+    /** Повторный вызов — retry с экрана ошибки. */
     fun loadAllData() {
         loadJob.launch(viewModelScope) {
             _error.value = null
@@ -150,6 +151,7 @@ class CircuitDetailViewModel(
         loadAllData()
     }
 
+    /** Повторный вызов — retry с экрана ошибки. */
     fun loadAllData() {
         loadJob.launch(viewModelScope) {
             _error.value = null
@@ -189,6 +191,12 @@ class CircuitDetailViewModel(
     }
 }
 
+/**
+ * ViewModel карточки пилота.
+ *
+ * [driverId] — аргумент маршрута `driver_detail/{driverId}`.
+ * Загружает профиль и карьерную статистику через [F1Repository].
+ */
 class DriverDetailViewModel(
     private val driverId: String,
     private val repository: F1Repository,
@@ -208,6 +216,7 @@ class DriverDetailViewModel(
         loadAllData()
     }
 
+    /** Повторный вызов — retry с экрана ошибки. */
     fun loadAllData() {
         loadJob.launch(viewModelScope) {
             _error.value = null
@@ -241,6 +250,12 @@ class DriverDetailViewModel(
     }
 }
 
+/**
+ * ViewModel карточки конструктора.
+ *
+ * [constructorId] — аргумент маршрута `constructor_detail/{constructorId}`.
+ * Загружает профиль и карьерную статистику через [F1Repository].
+ */
 class ConstructorDetailViewModel(
     private val constructorId: String,
     private val repository: F1Repository,
@@ -260,6 +275,7 @@ class ConstructorDetailViewModel(
         loadAllData()
     }
 
+    /** Повторный вызов — retry с экрана ошибки. */
     fun loadAllData() {
         loadJob.launch(viewModelScope) {
             _error.value = null

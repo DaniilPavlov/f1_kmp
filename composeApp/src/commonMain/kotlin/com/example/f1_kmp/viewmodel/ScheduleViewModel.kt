@@ -66,6 +66,7 @@ class ScheduleViewModel(
         loadAllData()
     }
 
+    /** Peek → сеть. Ошибку сети не показываем, если на экране уже есть кэш. */
     fun loadAllData() {
         loadJob.launch(viewModelScope) {
             _error.value = null
@@ -97,6 +98,7 @@ class ScheduleViewModel(
         }
     }
 
+    /** Смена месяца в календаре (прокрутка без смены выбранного дня). */
     fun onMonthChanged(month: YearMonth) {
         _focusedMonth.value = month
     }

@@ -24,6 +24,7 @@ import f1_kmp.composeapp.generated.resources.open_in_wikipedia
 import f1_kmp.composeapp.generated.resources.wins
 import com.example.f1_kmp.domain.stringResource
 
+/** Строка «метка — значение» на экранах карьеры пилота/конструктора. */
 @Composable
 fun CareerInfoRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
@@ -32,6 +33,7 @@ fun CareerInfoRow(label: String, value: String) {
     }
 }
 
+/** Сетка 2×2 с карьерной статистикой: гонки, победы, подиумы, поулы. */
 @Composable
 fun CareerStatsGrid(races: Int, wins: Int, podiums: Int, poles: Int) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -56,6 +58,7 @@ private fun CareerStatCell(label: String, value: Int, modifier: Modifier = Modif
     }
 }
 
+/** Кликабельный элемент списка (команда, пилот) с заголовком и подзаголовком. */
 @Composable
 fun CareerListTile(title: String, subtitle: String, onClick: () -> Unit) {
     Column(
@@ -72,6 +75,7 @@ fun CareerListTile(title: String, subtitle: String, onClick: () -> Unit) {
     }
 }
 
+/** Подчёркнутая ссылка «Открыть в Wikipedia». */
 @Composable
 fun WikipediaLink(onClick: () -> Unit) {
     Text(
@@ -81,6 +85,7 @@ fun WikipediaLink(onClick: () -> Unit) {
     )
 }
 
+/** Пустое, «none» или null → «—», иначе исходная строка. */
 fun displayValue(value: String?): String =
     value?.takeUnless { it.isBlank() || it.equals("none", true) }
         ?: "—"

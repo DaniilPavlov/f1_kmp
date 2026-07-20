@@ -16,11 +16,13 @@ data class MrDataResponse<T>(
     @SerialName("MRData") val mrData: T,
 )
 
+/** Ответ standings: таблица чемпионата. */
 @Serializable
 data class StandingsModel(
     @SerialName("StandingsTable") val standingsTable: StandingsTableModel,
 )
 
+/** Таблица standings со списком срезов (обычно один — текущий/запрошенный сезон). */
 @Serializable
 data class StandingsTableModel(
     @SerialName("StandingsLists") val standingsLists: List<StandingsListsModel>,
@@ -35,6 +37,7 @@ data class StandingsListsModel(
     @SerialName("ConstructorStandings") val constructorStandings: List<ConstructorStandingsModel>? = null,
 )
 
+/** Строка турнирной таблицы пилотов. */
 @Serializable
 data class DriverStandingsModel(
     val position: String,
@@ -45,6 +48,7 @@ data class DriverStandingsModel(
     @SerialName("Constructors") val constructors: List<ConstructorModel>,
 )
 
+/** Строка турнирной таблицы конструкторов. */
 @Serializable
 data class ConstructorStandingsModel(
     val position: String,
@@ -54,6 +58,7 @@ data class ConstructorStandingsModel(
     @SerialName("Constructor") val constructor: ConstructorModel,
 )
 
+/** Пилот F1 (паспортные данные из Jolpica). */
 @Serializable
 data class DriverModel(
     val driverId: String,
@@ -69,6 +74,7 @@ data class DriverModel(
     val fullName: String get() = "$givenName $familyName"
 }
 
+/** Команда (конструктор) F1. */
 @Serializable
 data class ConstructorModel(
     val constructorId: String,
@@ -77,11 +83,13 @@ data class ConstructorModel(
     val nationality: String,
 )
 
+/** Ответ расписания / результатов гонок: таблица [RaceTableModel]. */
 @Serializable
 data class ScheduleModel(
     @SerialName("RaceTable") val raceTable: RaceTableModel,
 )
 
+/** Таблица гонок сезона (или одной гонки — в зависимости от эндпоинта). */
 @Serializable
 data class RaceTableModel(
     val season: String? = null,
@@ -139,6 +147,7 @@ data class RaceDateModel(
     val time: String? = null,
 )
 
+/** Результат гонки или спринта для одного пилота. */
 @Serializable
 data class RaceResultModel(
     val number: String,
@@ -154,12 +163,14 @@ data class RaceResultModel(
     @SerialName("FastestLap") val fastestLap: FastestLapModel? = null,
 )
 
+/** Время круга / финиша в формате Ergast (`M:SS.mmm` или относительное). */
 @Serializable
 data class TimeModel(
     val millis: String? = null,
     val time: String,
 )
 
+/** Лучший круг пилота в гонке. */
 @Serializable
 data class FastestLapModel(
     val rank: String,
@@ -168,6 +179,7 @@ data class FastestLapModel(
     @SerialName("AverageSpeed") val averageSpeed: AverageSpeedModel? = null,
 )
 
+/** Средняя скорость на лучшем круге. */
 @Serializable
 data class AverageSpeedModel(
     val units: String,
@@ -187,6 +199,10 @@ data class QualifyingResultModel(
     val Q3: String? = null,
 )
 
+/**
+ * Пит-стоп. В сыром ответе API [driverId] — id пилота;
+ * после [com.example.f1_kmp.data.repository.F1Repository.getPitStopsWithDriverNames] — полное имя.
+ */
 @Serializable
 data class PitStopModel(
     val driverId: String,
@@ -196,16 +212,19 @@ data class PitStopModel(
     val duration: String,
 )
 
+/** Ответ списка трасс. */
 @Serializable
 data class CircuitsModel(
     @SerialName("CircuitTable") val circuitTable: CircuitTableModel,
 )
 
+/** Таблица трасс. */
 @Serializable
 data class CircuitTableModel(
     @SerialName("Circuits") val circuits: List<CircuitModel>,
 )
 
+/** Трасса: id, Wikipedia URL, название и геолокация. */
 @Serializable
 data class CircuitModel(
     val circuitId: String,
@@ -214,6 +233,7 @@ data class CircuitModel(
     @SerialName("Location") val location: CircuitLocationModel,
 )
 
+/** Координаты и адрес трассы (`long` в JSON → [longitude]). */
 @Serializable
 data class CircuitLocationModel(
     val lat: String,
@@ -222,26 +242,34 @@ data class CircuitLocationModel(
     val country: String,
 )
 
+/** Ответ эндпоинта пилота(ов): обёртка [DriverTableModel]. */
 @Serializable
 data class DriverFetchingModel(
     @SerialName("DriverTable") val driverTable: DriverTableModel,
 )
 
+/** Таблица пилотов. */
 @Serializable
 data class DriverTableModel(
     @SerialName("Drivers") val drivers: List<DriverModel>,
 )
 
+/** Ответ эндпоинта конструктора(ов): обёртка [ConstructorTableModel]. */
 @Serializable
 data class ConstructorFetchingModel(
     @SerialName("ConstructorTable") val constructorTable: ConstructorTableModel,
 )
 
+/** Таблица конструкторов. */
 @Serializable
 data class ConstructorTableModel(
     @SerialName("Constructors") val constructors: List<ConstructorModel>,
 )
 
+/**
+ * Универсальный кусок [MrData] для карьерных запросов:
+ * поле [total] + опциональные таблицы (гонки / конструкторы / пилоты / сезоны).
+ */
 @Serializable
 data class MrDataTotalModel(
     val total: String? = null,
@@ -251,11 +279,13 @@ data class MrDataTotalModel(
     @SerialName("SeasonTable") val seasonTable: SeasonTableModel? = null,
 )
 
+/** Таблица сезонов чемпионата. */
 @Serializable
 data class SeasonTableModel(
     @SerialName("Seasons") val seasons: List<SeasonModel>,
 )
 
+/** Один сезон (год) в списке Jolpica. */
 @Serializable
 data class SeasonModel(
     val season: String,

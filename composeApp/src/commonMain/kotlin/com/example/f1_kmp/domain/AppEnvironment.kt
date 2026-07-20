@@ -25,6 +25,7 @@ fun AppEnvironment(
     }
 }
 
+/** CompositionLocal с текущей локалью для compose-resources. */
 expect object LocalAppLocale {
     val current: String
         @Composable get

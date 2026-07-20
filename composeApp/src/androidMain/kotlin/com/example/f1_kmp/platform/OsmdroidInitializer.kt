@@ -12,6 +12,7 @@ object OsmdroidInitializer {
     @Volatile
     private var initialized = false
 
+    /** Идемпотентная инициализация конфигурации OSMDroid (кэш тайлов, user-agent). */
     fun ensureInitialized(context: Context) {
         if (initialized) return
         synchronized(this) {

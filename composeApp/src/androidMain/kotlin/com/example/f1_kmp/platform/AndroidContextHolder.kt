@@ -10,6 +10,7 @@ object AndroidContextHolder {
     lateinit var applicationContext: Context
         private set
 
+    /** Сохраняет Application context (вызывать один раз при старте). */
     fun init(context: Context) {
         applicationContext = context.applicationContext
     }

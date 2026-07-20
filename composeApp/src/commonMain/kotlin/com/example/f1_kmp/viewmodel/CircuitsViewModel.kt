@@ -35,6 +35,7 @@ class CircuitsViewModel(
         _activePage.value = index
     }
 
+    /** Peek → сеть. Ошибку сети не показываем, если на экране уже есть кэш. */
     fun loadCircuits() {
         loadJob.launch(viewModelScope) {
             repository.peekCircuitsCache()?.let { _circuits.value = AsyncValue.Value(it) }

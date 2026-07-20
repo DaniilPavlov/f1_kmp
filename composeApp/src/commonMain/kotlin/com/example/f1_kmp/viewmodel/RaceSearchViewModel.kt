@@ -42,6 +42,7 @@ class RaceSearchViewModel(
     private val _dataLoaded = MutableStateFlow(true)
     val dataLoaded: StateFlow<Boolean> = _dataLoaded.asStateFlow()
 
+    /** Смена сезона; сбрасывает выбранную гонку. */
     fun onYearChanged(value: String) {
         _year.value = value
         _round.value = ""
@@ -49,20 +50,25 @@ class RaceSearchViewModel(
         checkFields()
     }
 
+    /** Выбор гонки из [RacePickerField]. */
     fun onRacePicked(round: String, display: String) {
         _round.value = round
         _raceDisplay.value = display
         checkFields()
     }
 
+    /** Проверяет, что сезон и этап заполнены — кнопка «Найти» активна. */
     fun checkFields() {
         _fieldsInputted.value = _year.value.length == 4 && _round.value.isNotEmpty()
     }
 
+    /** Список сезонов для [SeasonPickerField]. */
     suspend fun loadSeasonYears(): Result<List<String>> = repository.getSeasonYears()
 
+    /** Список гонок сезона для [RacePickerField]. */
     suspend fun loadSeasonRaces(year: String): Result<List<RaceModel>> = repository.getSeasonRaces(year)
 
+    /** Запрос результатов выбранной гонки (без кэша). */
     fun loadRaceResults() {
         loadJob.launch(viewModelScope) {
             _dataLoaded.value = false

@@ -55,6 +55,7 @@ import f1_kmp.composeapp.generated.resources.select_season_first
 import f1_kmp.composeapp.generated.resources.sprint
 import com.example.f1_kmp.domain.stringResource
 
+/** Вкладка «Результаты»: последняя гонка и переход к поиску. */
 @Composable
 fun ResultsScreen(
     viewModel: ResultsViewModel,
@@ -96,6 +97,7 @@ fun ResultsScreen(
     }
 }
 
+/** Экран поиска гонки по сезону и этапу. */
 @Composable
 fun RaceSearchScreen(
     viewModel: RaceSearchViewModel,
@@ -161,6 +163,7 @@ fun RaceSearchScreen(
     }
 }
 
+/** Детали гонки: результаты, спринт, квалификация и пит-стопы. */
 @Composable
 fun RaceInfoScreen(
     viewModel: RaceInfoScreenViewModel,
