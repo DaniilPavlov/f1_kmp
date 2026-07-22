@@ -1,8 +1,11 @@
 package com.example.f1_kmp.viewmodel
 
+import androidx.lifecycle.ViewModel
 import com.example.f1_kmp.data.model.CircuitLocationModel
 import com.example.f1_kmp.data.model.CircuitModel
+import com.example.f1_kmp.data.model.EspnScoreboardEvent
 import com.example.f1_kmp.data.model.RaceModel
+import com.example.f1_kmp.data.repository.EspnRepository
 import com.example.f1_kmp.data.repository.F1Repository
 import com.example.f1_kmp.domain.AppException
 import com.example.f1_kmp.domain.AsyncValue
@@ -31,11 +34,13 @@ import org.junit.Test
 class ResultsViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private lateinit var repository: F1Repository
+    private lateinit var espnRepository: EspnRepository
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         repository = mockk()
+        espnRepository = mockk(relaxed = true)
     }
 
     @After
@@ -49,8 +54,11 @@ class ResultsViewModelTest {
         val race = sampleRace()
         coEvery { repository.peekLastRaceCache() } returns null
         coEvery { repository.getLastRace() } returns Result.success(race)
+        coEvery { espnRepository.isScoreboardFresh } returns false
+        coEvery { espnRepository.peekScoreboard } returns null
+        coEvery { espnRepository.getScoreboardEvent(forceRefresh = false) } returns Result.success(null)
 
-        val viewModel = ResultsViewModel(repository)
+        val viewModel = ResultsViewModel(repository, espnRepository)
         advanceUntilIdle()
 
         val state = viewModel.lastRace.value
@@ -65,11 +73,49 @@ class ResultsViewModelTest {
         coEvery { repository.getLastRace() } returns Result.failure(
             AppException("Соединение отсутствует"),
         )
+        coEvery { espnRepository.isScoreboardFresh } returns false
+        coEvery { espnRepository.peekScoreboard } returns null
+        coEvery { espnRepository.getScoreboardEvent(forceRefresh = false) } returns Result.success(null)
 
-        val viewModel = ResultsViewModel(repository)
+        val viewModel = ResultsViewModel(repository, espnRepository)
         advanceUntilIdle()
 
         assertTrue(viewModel.lastRace.value is AsyncValue.Error)
+    }
+
+    /** Успешный ESPN scoreboard → [ResultsViewModel.scoreboard] как [AsyncValue.Value]. */
+    @Test
+    fun loadAllData_scoreboardSuccess_setsScoreboardValue() = runTest {
+        val race = sampleRace()
+        val scoreboard = sampleScoreboard()
+        coEvery { repository.peekLastRaceCache() } returns null
+        coEvery { repository.getLastRace() } returns Result.success(race)
+        coEvery { espnRepository.isScoreboardFresh } returns false
+        coEvery { espnRepository.peekScoreboard } returns null
+        coEvery { espnRepository.getScoreboardEvent(forceRefresh = false) } returns Result.success(scoreboard)
+
+        val viewModel = ResultsViewModel(repository, espnRepository)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.scoreboard.value is AsyncValue.Value)
+        assertEquals("Monaco Grand Prix", (viewModel.scoreboard.value as AsyncValue.Value).value?.name)
+    }
+
+    /** [ViewModel.onCleared] останавливает pollJob без падения (без live-loop в тесте). */
+    @Test
+    fun onCleared_stopsWithoutCrash() = runTest {
+        val race = sampleRace()
+        coEvery { repository.peekLastRaceCache() } returns null
+        coEvery { repository.getLastRace() } returns Result.success(race)
+        coEvery { espnRepository.isScoreboardFresh } returns false
+        coEvery { espnRepository.peekScoreboard } returns null
+        coEvery { espnRepository.getScoreboardEvent(forceRefresh = false) } returns Result.success(sampleScoreboard())
+
+        val viewModel = ResultsViewModel(repository, espnRepository)
+        advanceUntilIdle()
+
+        invokeOnCleared(viewModel)
+        assertTrue(viewModel.scoreboard.value is AsyncValue.Value)
     }
 
     /** Минимальная заготовка [RaceModel] — не тянем полный JSON из API. */
@@ -87,4 +133,17 @@ class ResultsViewModelTest {
         date = "2026-05-25",
         results = emptyList(),
     )
+
+    private fun sampleScoreboard() = EspnScoreboardEvent(
+        name = "Monaco Grand Prix",
+        shortName = "Monaco GP",
+        statusState = "post",
+        statusDetail = "Finished",
+    )
+
+    private fun invokeOnCleared(viewModel: ViewModel) {
+        val method = ViewModel::class.java.getDeclaredMethod("onCleared")
+        method.isAccessible = true
+        method.invoke(viewModel)
+    }
 }

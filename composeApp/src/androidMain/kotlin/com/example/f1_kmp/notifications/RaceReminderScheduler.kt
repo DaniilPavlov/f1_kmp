@@ -1,6 +1,5 @@
 package com.example.f1_kmp.notifications
 
-import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -87,34 +86,20 @@ class RaceReminderScheduler(
 
     private fun schedule(reminders: List<Reminder>) {
         createChannel()
-        val manager = context.getSystemService(AlarmManager::class.java) ?: return
         reminders.forEach { reminder ->
-            val pending = intent(reminder)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !manager.canScheduleExactAlarms()) {
-                manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, reminder.triggerAt, pending)
-            } else {
-                manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, reminder.triggerAt, pending)
-            }
+            ExplicitPendingIntents.schedule(context, reminder.triggerAt, intent(reminder))
         }
     }
 
     private fun cancelIds(ids: Set<Int>) {
         if (ids.isEmpty()) return
-        val manager = context.getSystemService(AlarmManager::class.java) ?: return
         ids.forEach { id ->
-            manager.cancel(intent(Reminder(id, 0, "", "")))
+            ExplicitPendingIntents.cancel(context, intent(Reminder(id, 0, "", "")))
         }
     }
 
-    private fun intent(reminder: Reminder): PendingIntent = PendingIntent.getBroadcast(
-        context,
-        reminder.id,
-        Intent(context, RaceReminderReceiver::class.java)
-            .putExtra(EXTRA_ID, reminder.id)
-            .putExtra(EXTRA_TITLE, reminder.title)
-            .putExtra(EXTRA_BODY, reminder.body),
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-    )
+    private fun intent(reminder: Reminder): PendingIntent =
+        ExplicitPendingIntents.raceReminder(context, reminder.id, reminder.title, reminder.body)
 
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -176,6 +161,10 @@ class BootCompletedReceiver : BroadcastReceiver(), KoinComponent {
     private val reminderScheduler: RaceReminderScheduler by inject()
 
     override fun onReceive(context: Context, intent: Intent) {
+        val action = intent.action ?: return
+        if (action != Intent.ACTION_BOOT_COMPLETED && action != Intent.ACTION_TIMEZONE_CHANGED) {
+            return
+        }
         reminderScheduler.sync()
     }
 }

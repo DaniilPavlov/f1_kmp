@@ -11,8 +11,10 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import com.example.f1_kmp.notifications.RaceReminderScheduler
 import com.example.f1_kmp.ui.theme.F1Black
+import com.example.f1_kmp.util.initShareHelper
 import org.koin.android.ext.android.inject
 
 /**
@@ -48,6 +50,7 @@ class MainActivity : ComponentActivity() {
                 reminderScheduler.sync()
             }
         })
+        initShareHelper(this, lifecycleScope)
         setContent {
             App()
         }

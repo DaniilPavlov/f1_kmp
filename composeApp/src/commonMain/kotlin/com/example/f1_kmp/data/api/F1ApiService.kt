@@ -89,6 +89,39 @@ class F1ApiService(private val client: HttpClient) {
         client.get("circuits/$circuitId/results/1.json") { parameter("limit", limit) }.body()
 
     /** Totals и таблицы для карьерной статистики (поле total в MRData). */
-    suspend fun getMrDataTotal(path: String, limit: Int = 100): MrDataResponse<MrDataTotalModel> =
-        client.get("$path.json") { parameter("limit", limit) }.body()
+    suspend fun getMrDataTotal(
+        path: String,
+        limit: Int = 100,
+        offset: Int = 0,
+    ): MrDataResponse<MrDataTotalModel> =
+        client.get("$path.json") {
+            parameter("limit", limit)
+            parameter("offset", offset)
+        }.body()
+
+    /** Статусы финиша сезона (`Finished`, `Retired`, …). */
+    suspend fun getSeasonStatus(year: String, limit: Int = 100): MrDataResponse<MrDataTotalModel> =
+        client.get("$year/status.json") { parameter("limit", limit) }.body()
+
+    /** Пилоты текущего сезона. */
+    suspend fun getCurrentDrivers(limit: Int = 100): MrDataResponse<DriverFetchingModel> =
+        client.get("current/drivers.json") { parameter("limit", limit) }.body()
+
+    /** Все пилоты (пагинация). */
+    suspend fun getAllDrivers(limit: Int = 100, offset: Int = 0): MrDataResponse<DriverFetchingModel> =
+        client.get("drivers.json") {
+            parameter("limit", limit)
+            parameter("offset", offset)
+        }.body()
+
+    /** Конструкторы текущего сезона. */
+    suspend fun getCurrentConstructors(limit: Int = 100): MrDataResponse<ConstructorFetchingModel> =
+        client.get("current/constructors.json") { parameter("limit", limit) }.body()
+
+    /** Все конструкторы (пагинация). */
+    suspend fun getAllConstructors(limit: Int = 100, offset: Int = 0): MrDataResponse<ConstructorFetchingModel> =
+        client.get("constructors.json") {
+            parameter("limit", limit)
+            parameter("offset", offset)
+        }.body()
 }

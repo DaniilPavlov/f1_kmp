@@ -67,6 +67,9 @@ kotlin {
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
+
+            implementation(libs.coil.compose)
+            implementation(libs.coil.network.ktor)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -98,6 +101,8 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.2.0"
+        // Не тянуть чужие values-en как «системный английский» вместо нашего дефолта ru.
+        resourceConfigurations += listOf("ru", "en")
     }
 
     val keystorePropertiesFile = rootProject.file("key.properties")

@@ -20,7 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,7 +33,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
@@ -59,6 +59,9 @@ import f1_kmp.composeapp.generated.resources.locale_code_ru
 import f1_kmp.composeapp.generated.resources.no_connection
 import f1_kmp.composeapp.generated.resources.no_connection_subtitle
 import f1_kmp.composeapp.generated.resources.refresh
+import f1_kmp.composeapp.generated.resources.refresh
+import androidx.compose.ui.text.style.TextOverflow
+import f1_kmp.composeapp.generated.resources.share
 import org.jetbrains.compose.resources.painterResource
 import com.example.f1_kmp.domain.stringResource
 
@@ -71,6 +74,7 @@ import com.example.f1_kmp.domain.stringResource
 fun F1AppBar(
     title: String? = null,
     onBack: (() -> Unit)? = null,
+    onShare: (() -> Unit)? = null,
 ) {
     val language by LocaleController.language.collectAsState()
     Box(
@@ -106,6 +110,24 @@ fun F1AppBar(
                 style = AppStyles.body.copy(color = F1White),
                 modifier = Modifier.align(Alignment.Center),
             )
+            if (onShare != null) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.15f))
+                        .clickable(onClick = onShare)
+                        .align(Alignment.CenterEnd),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Share,
+                        contentDescription = stringResource(Res.string.share),
+                        tint = F1White,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
         } else {
             Image(
                 painter = painterResource(Res.drawable.app_logo),
@@ -254,15 +276,22 @@ private fun RowScope.SwitcherTab(title: String, active: Boolean, onClick: () -> 
 }
 
 /**
- * Красная шапка таблицы — чистый Compose Canvas (замена Android View [F1TableHeaderView]).
+ * Красная шапка таблицы — чистый Compose Canvas.
+ *
+ * @param weights относительные ширины колонок; `null` — равные.
  */
 @Composable
-fun TableHeaderRow(cells: List<String>, modifier: Modifier = Modifier) {
+fun TableHeaderRow(
+    cells: List<String>,
+    modifier: Modifier = Modifier,
+    weights: List<Float>? = null,
+) {
     val textMeasurer = rememberTextMeasurer()
     val captionStyle = AppStyles.caption.copy(color = F1White)
     val density = LocalDensity.current
     val heightDp = with(density) { (12.sp.toPx() * 2.2f).toDp() }
-    val cellPaddingPx = with(density) { 8.dp.toPx() }
+    // 4.dp как в F1TableHeaderView — иначе узкие колонки (W) съедаются padding и дают «…»
+    val cellPaddingPx = with(density) { 4.dp.toPx() }
 
     Canvas(
         modifier = modifier
@@ -272,35 +301,55 @@ fun TableHeaderRow(cells: List<String>, modifier: Modifier = Modifier) {
         drawRect(color = F1Red)
         if (cells.isEmpty()) return@Canvas
 
-        val columnWidth = size.width / cells.size
+        val columnWeights = weights ?: List(cells.size) { 1f }
+        val totalWeight = columnWeights.sum().coerceAtLeast(0.01f)
+        var xOffset = 0f
         cells.forEachIndexed { index, title ->
+            val weight = columnWeights.getOrElse(index) { 1f }
+            val columnWidth = size.width * (weight / totalWeight)
             val maxWidth = (columnWidth - cellPaddingPx * 2).toInt().coerceAtLeast(0)
             val layout = textMeasurer.measure(
                 text = title,
                 style = captionStyle,
                 overflow = TextOverflow.Ellipsis,
-                maxLines = 1,
+                maxLines = 2,
                 constraints = Constraints(maxWidth = maxWidth),
             )
+            // Центрируем как в ячейках TableDataRow (и как в оригинальном F1TableHeaderView).
+            val textX = (xOffset + (columnWidth - layout.size.width) / 2f)
+                .coerceAtLeast(xOffset + cellPaddingPx)
             val textY = (size.height - layout.size.height) / 2f
             drawText(
                 textLayoutResult = layout,
-                topLeft = Offset(columnWidth * index + cellPaddingPx, textY),
+                topLeft = Offset(textX, textY),
             )
+            xOffset += columnWidth
         }
     }
 }
 
+/** Ячейка строки таблицы. */
+sealed interface TableCell {
+    data class Text(val value: String, val color: Color? = null) : TableCell
+    data class Flag(val countryOrNationality: String) : TableCell
+    /** Место слева + имя (часто с `\n`) по центру колонки. */
+    data class PlaceAndName(
+        val place: String,
+        val name: String,
+        val placeColor: Color? = null,
+    ) : TableCell
+}
+
 /**
- * Строка данных таблицы с зеброй (чётные строки на сером фоне).
- * [highlight] подсвечивает ячейки красным (например, лучший круг).
+ * Строка данных таблицы с зеброй.
+ * [weights] — относительные ширины; `null` — равные колонки.
  */
 @Composable
 fun TableDataRow(
-    cells: List<String>,
+    cells: List<TableCell>,
     index: Int,
     modifier: Modifier = Modifier,
-    highlight: Boolean = false,
+    weights: List<Float>? = null,
     onClick: (() -> Unit)? = null,
 ) {
     Row(
@@ -308,16 +357,31 @@ fun TableDataRow(
             .fillMaxWidth()
             .background(if (index % 2 == 1) F1GrayBg else Color.Transparent)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(vertical = 8.dp, horizontal = 4.dp),
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         cells.forEachIndexed { cellIndex, cell ->
-            Text(
-                text = cell,
-                style = if (highlight && cellIndex > 0) AppStyles.caption.copy(color = F1Red) else AppStyles.caption,
-                modifier = Modifier.weight(1f),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            val weight = weights?.getOrNull(cellIndex) ?: 1f
+            Box(
+                modifier = Modifier.weight(weight),
+                contentAlignment = Alignment.Center,
+            ) {
+                when (cell) {
+                    is TableCell.Text -> Text(
+                        text = cell.value,
+                        style = if (cell.color != null) {
+                            AppStyles.caption.copy(color = cell.color)
+                        } else {
+                            AppStyles.caption
+                        },
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                    )
+                    is TableCell.Flag -> CountryFlag(countryOrNationality = cell.countryOrNationality)
+                    is TableCell.PlaceAndName -> PlaceAndNameContent(cell)
+                }
+            }
         }
     }
     Box(
@@ -325,6 +389,61 @@ fun TableDataRow(
             .fillMaxWidth()
             .height(1.dp)
             .background(F1StrokeGray),
+    )
+}
+
+@Composable
+private fun PlaceAndNameContent(cell: TableCell.PlaceAndName) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = cell.place,
+            style = if (cell.placeColor != null) {
+                AppStyles.caption.copy(color = cell.placeColor)
+            } else {
+                AppStyles.caption
+            },
+        )
+        Text(
+            text = cell.name,
+            style = AppStyles.caption,
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 4.dp),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+/** Удобный overload: все ячейки — строки; [flagCellIndices] → флаги. */
+@Composable
+fun TableDataRow(
+    cells: List<String>,
+    index: Int,
+    modifier: Modifier = Modifier,
+    highlight: Boolean = false,
+    flagCellIndices: Set<Int> = emptySet(),
+    weights: List<Float>? = null,
+    onClick: (() -> Unit)? = null,
+) {
+    TableDataRow(
+        cells = cells.mapIndexed { i, value ->
+            when {
+                i in flagCellIndices -> TableCell.Flag(value)
+                highlight && i > 0 -> TableCell.Text(value, color = F1Red)
+                else -> TableCell.Text(value)
+            }
+        },
+        index = index,
+        modifier = modifier,
+        weights = weights,
+        onClick = onClick,
     )
 }
 

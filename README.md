@@ -1,9 +1,11 @@
 # F1 KMP
 
 Kotlin Multiplatform + Compose Multiplatform app with Formula 1 stats  
-(standings, results, calendar, hall of fame, circuits).
+(standings, results, calendar, news, circuits).
 
-Data — [Jolpica F1 API](https://github.com/jolpica/jolpica-f1) (Ergast-compatible).
+Data:
+- [Jolpica F1 API](https://github.com/jolpica/jolpica-f1) (Ergast-compatible) — schedule, results, standings
+- [ESPN](https://site.api.espn.com/) — news, weekend scoreboard, driver photos
 
 Same idea, other stacks:
 
@@ -16,11 +18,12 @@ Same idea, other stacks:
 |------|------------|
 | UI | Compose Multiplatform, Navigation |
 | DI | Koin |
-| Network | Ktor + kotlinx.serialization |
-| Cache | JSON files (offline peek → refresh) |
+| Network | Ktor + kotlinx.serialization (Jolpica + ESPN clients) |
+| Images | Coil 3 |
+| Cache | JSON files (offline peek → refresh); ESPN in-memory TTL |
 | Time | kotlinx-datetime |
-| Android map | OSMDroid |
-| iOS map | stub (see below) |
+| Android map | OSMDroid + OSMBonusPack (Carto tiles) |
+| iOS map | MapKit pins |
 
 ### Differences from f1_kotlin
 
@@ -28,8 +31,8 @@ Same idea, other stacks:
 - Retrofit/Moshi → Ktor  
 - Room → file cache  
 - java.time → kotlinx-datetime  
-- OSM map on Android only  
-- Session reminders on Android only (AlarmManager)
+- OSM map on Android only; MapKit pins on iOS  
+- Session reminders: AlarmManager (Android) / UNUserNotificationCenter (iOS)
 
 ## Structure
 
@@ -37,8 +40,8 @@ Same idea, other stacks:
 f1_kmp/
 ├── composeApp/          # shared + Android + iOS Kotlin
 │   └── src/
-│       ├── commonMain/  # UI, ViewModel, API, repository
-│       ├── androidMain/ # Activity, OSMDroid, OkHttp
+│       ├── commonMain/  # UI, ViewModel, API, repository, circuit assets
+│       ├── androidMain/ # Activity, OSMDroid, OkHttp, reminders, share
 │       ├── iosMain/     # MainViewController, Darwin HTTP
 │       ├── commonTest/
 │       └── androidUnitTest/
@@ -120,25 +123,27 @@ For release APK signing (optional) — `ANDROID_KEYSTORE_*` secrets in GitHub Ac
 
 On Android, the **Circuits → On map** tab shows OSMDroid with pins and clusters.
 
-On iOS the map is a **stub**: text suggesting to open the list.  
-The circuit list and circuit card work on both platforms.  
-A full map (MapKit) is not connected yet.
+On iOS the map uses **MapKit** with pins (no clustering).  
+The circuit list and circuit card work on both platforms.
 
 ## Offline
 
 The app reads the local JSON cache first (peek), then refreshes from the network.  
-If the network is unavailable but cache exists, the UI keeps the last known data.
+If the network is unavailable but cache exists, the UI keeps the last known data.  
+ESPN news/scoreboard use a short in-memory TTL.
 
 ## Features
 
 - **Home** — current season driver and constructor standings  
-- **Results** — latest race, search by season and race (pickers), detail card (race, sprint, qualifying, pit stops)  
-- **Calendar** — season schedule with weekend sessions (practice, qualifying, sprint, sprint qualifying, race)  
-- **Hall of fame** — final driver and constructor tables for a selected year (season picker from Jolpica)  
-- **Circuits** — list and map (OSMDroid + Carto on Android; stub on iOS), circuit card, Wikipedia link, and race winners history  
-- **Driver card** — full screen with passport data and career stats (races, wins, podiums, poles, teams) from Jolpica endpoints  
-- **Constructor card** — nationality, Wikipedia link, career stats, and drivers list  
+- **Results** — weekend scoreboard (ESPN, live poll), latest race, race search, hall of fame, H2H (drivers / constructors), finish statuses  
+- **Calendar** — monthly calendar with session times; on empty days shows next GP card (layout + countdown); local reminders 30 min before (Android)  
+- **News** — F1 headlines from ESPN  
+- **Circuits** — list and map (OSMDroid + Carto on Android; stub on iOS), track layouts, length/laps/turns/speed/elevation, Wikipedia, winners history  
+- **Driver / Constructor cards** — ESPN photos/news, career stats with tappable wins / podiums / poles lists  
 - **Localization** — Russian and English, toggle in the app bar without restarting the app  
-- **Reminders** — local notifications 30 minutes before a session on Android (up to 10 upcoming kept in the OS; window refreshes when the app opens)  
+- **Reminders** — local notifications 30 minutes before a session (up to 10 upcoming; Android AlarmManager / iOS UNUserNotificationCenter)  
 - **Schedule cache** — shared file JSON cache for the calendar and reminders  
 - **Offline** — file JSON cache with instant peek and network refresh  
+- **Share** — career stats and race results (PNG on Android, text share sheet on iOS)  
+- **Shimmer skeletons** — loading placeholders for main screens  
+- **Country flags** — nationality / country as emoji in tables, career cards, circuits, scoreboard  

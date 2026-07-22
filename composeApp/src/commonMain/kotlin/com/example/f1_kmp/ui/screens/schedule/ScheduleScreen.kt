@@ -12,14 +12,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.f1_kmp.data.model.RaceModel
 import com.example.f1_kmp.domain.AsyncValue
 import com.example.f1_kmp.domain.LocaleController
 import com.example.f1_kmp.ui.components.ErrorBody
 import com.example.f1_kmp.ui.components.F1Calendar
-import com.example.f1_kmp.ui.components.LoadingIndicator
 import com.example.f1_kmp.ui.components.ScheduleSessionCard
+import com.example.f1_kmp.ui.components.shimmer.ScheduleShimmer
 import com.example.f1_kmp.ui.theme.AppDimens
 import com.example.f1_kmp.ui.theme.AppStyles
 import com.example.f1_kmp.viewmodel.ScheduleViewModel
@@ -27,9 +31,8 @@ import com.example.f1_kmp.viewmodel.ScheduleViewModel
 /**
  * Экран «Календарь».
  *
- * Сверху — [F1Calendar], снизу — карточки сессий на выбранный день.
- * Элемент с пустым [com.example.f1_kmp.viewmodel.ScheduleSessionItem.title]
- * рисуется как заголовок с названием гонки.
+ * Сверху — [F1Calendar], снизу — карточки сессий на выбранный день
+ * или [ScheduleRaceFeaturedCard] с countdown, если день пустой и есть upcoming race.
  */
 @Composable
 fun ScheduleScreen(viewModel: ScheduleViewModel) {
@@ -38,8 +41,10 @@ fun ScheduleScreen(viewModel: ScheduleViewModel) {
     val userPickedDay by viewModel.userPickedDay.collectAsState()
     val focusedMonth by viewModel.focusedMonth.collectAsState()
     val scheduleItems by viewModel.scheduleItems.collectAsState()
+    val upcomingRace by viewModel.upcomingRace.collectAsState()
     val error by viewModel.error.collectAsState()
     val language by LocaleController.language.collectAsState()
+    var sessionsRace by remember { mutableStateOf<RaceModel?>(null) }
 
     LaunchedEffect(language) {
         viewModel.refreshScheduleForCurrentDay()
@@ -52,7 +57,7 @@ fun ScheduleScreen(viewModel: ScheduleViewModel) {
             onRetry = viewModel::loadAllData,
             modifier = Modifier.fillMaxSize(),
         )
-        races.isLoading -> LoadingIndicator(Modifier.fillMaxSize())
+        races.isLoading -> ScheduleShimmer(modifier = Modifier.fillMaxSize())
         else -> Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -71,13 +76,29 @@ fun ScheduleScreen(viewModel: ScheduleViewModel) {
                 onMonthChanged = viewModel::onMonthChanged,
             )
             Spacer(Modifier.height(AppDimens.verticalPadding.dp))
-            scheduleItems.forEach { item ->
-                if (item.title.isEmpty()) {
-                    Text(item.raceName, style = AppStyles.h3, modifier = Modifier.padding(bottom = 12.dp))
-                } else {
-                    ScheduleSessionCard(item.title, item.date.date, item.date.time)
+            if (scheduleItems.isNotEmpty()) {
+                scheduleItems.forEach { item ->
+                    if (item.title.isEmpty()) {
+                        Text(item.raceName, style = AppStyles.h3, modifier = Modifier.padding(bottom = 12.dp))
+                    } else {
+                        ScheduleSessionCard(item.title, item.date.date, item.date.time)
+                    }
+                }
+            } else {
+                upcomingRace?.let { race ->
+                    ScheduleRaceFeaturedCard(
+                        race = race,
+                        onViewSessions = { sessionsRace = race },
+                    )
                 }
             }
         }
+    }
+
+    sessionsRace?.let { race ->
+        ScheduleRaceSessionsSheet(
+            race = race,
+            onDismiss = { sessionsRace = null },
+        )
     }
 }

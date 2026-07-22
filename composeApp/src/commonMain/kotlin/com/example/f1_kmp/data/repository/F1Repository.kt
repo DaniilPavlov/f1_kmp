@@ -14,6 +14,8 @@ import com.example.f1_kmp.data.model.ConstructorStandingsModel
 import com.example.f1_kmp.data.model.DriverModel
 import com.example.f1_kmp.data.model.DriverStandingsCache
 import com.example.f1_kmp.data.model.DriverStandingsModel
+import com.example.f1_kmp.data.model.FinishStatusItem
+import com.example.f1_kmp.data.model.H2hStats
 import com.example.f1_kmp.data.model.HistoricalStandingsCache
 import com.example.f1_kmp.data.model.PitStopModel
 import com.example.f1_kmp.data.model.QualifyingResultModel
@@ -28,6 +30,7 @@ import kotlinx.datetime.todayIn
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
@@ -289,6 +292,73 @@ class F1Repository(
     ): Result<CareerStats<DriverModel>> =
         ApiCallHandler.safeCall {
             CareerLoader.loadConstructorCareer(api, constructorId, currentDrivers)
+        }
+
+    suspend fun getDriverH2hStats(driverId: String, season: String? = null): Result<H2hStats> =
+        ApiCallHandler.safeCall {
+            CareerLoader.loadH2hStats(api, "drivers/$driverId", season)
+        }
+
+    suspend fun getConstructorH2hStats(constructorId: String, season: String? = null): Result<H2hStats> =
+        ApiCallHandler.safeCall {
+            CareerLoader.loadH2hStats(api, "constructors/$constructorId", season)
+        }
+
+    suspend fun getSeasonFinishStatuses(year: String): Result<List<FinishStatusItem>> =
+        ApiCallHandler.safeCall {
+            api.getSeasonStatus(year).mrData.statusTable?.status.orEmpty()
+                .map { dto ->
+                    FinishStatusItem(
+                        statusId = dto.statusId.orEmpty(),
+                        status = dto.status.orEmpty(),
+                        count = dto.count?.toIntOrNull() ?: 0,
+                    )
+                }
+                .sortedByDescending { it.count }
+        }
+
+    suspend fun getCurrentDrivers(): Result<List<DriverModel>> =
+        ApiCallHandler.safeCall {
+            api.getCurrentDrivers().mrData.driverTable.drivers
+        }
+
+    suspend fun getAllDrivers(): Result<List<DriverModel>> =
+        ApiCallHandler.safeCall {
+            val all = mutableListOf<DriverModel>()
+            var offset = 0
+            var total = 1
+            while (offset < total) {
+                val response = api.getAllDrivers(limit = 100, offset = offset)
+                total = response.mrData.total?.toIntOrNull() ?: all.size
+                val page = response.mrData.driverTable.drivers
+                if (page.isEmpty()) break
+                all.addAll(page)
+                offset += 100
+                if (offset < total) delay(280)
+            }
+            all.sortedBy { it.familyName.lowercase() }
+        }
+
+    suspend fun getCurrentConstructorsList(): Result<List<ConstructorModel>> =
+        ApiCallHandler.safeCall {
+            api.getCurrentConstructors().mrData.constructorTable.constructors
+        }
+
+    suspend fun getAllConstructors(): Result<List<ConstructorModel>> =
+        ApiCallHandler.safeCall {
+            val all = mutableListOf<ConstructorModel>()
+            var offset = 0
+            var total = 1
+            while (offset < total) {
+                val response = api.getAllConstructors(limit = 100, offset = offset)
+                total = response.mrData.total?.toIntOrNull() ?: all.size
+                val page = response.mrData.constructorTable.constructors
+                if (page.isEmpty()) break
+                all.addAll(page)
+                offset += 100
+                if (offset < total) delay(280)
+            }
+            all.sortedBy { it.name.lowercase() }
         }
 
     /** История победителей на трассе [circuitId] (новые сверху). */

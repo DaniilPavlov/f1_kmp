@@ -3,13 +3,15 @@ package com.example.f1_kmp.domain
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ProvidedValue
 import androidx.compose.runtime.staticCompositionLocalOf
-import platform.Foundation.NSLocale
+import platform.Foundation.NSCurrentLocaleDidChangeNotification
+import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSUserDefaults
 
 private const val LANG_KEY = "AppleLanguages"
 
 actual object LocalAppLocale {
-    private val default = NSLocale.preferredLanguages.first() as String
+    // Дефолт приложения — русский, не системный язык устройства.
+    private val default: String = "ru"
     private val LocalAppLocaleState = staticCompositionLocalOf { default }
 
     actual val current: String
@@ -18,10 +20,16 @@ actual object LocalAppLocale {
     @Composable
     actual infix fun provides(value: String?): ProvidedValue<*> {
         val new = value ?: default
+        val defaults = NSUserDefaults.standardUserDefaults
         if (value == null) {
-            NSUserDefaults.standardUserDefaults.removeObjectForKey(LANG_KEY)
+            defaults.removeObjectForKey(LANG_KEY)
         } else {
-            NSUserDefaults.standardUserDefaults.setObject(listOf(new), LANG_KEY)
+            defaults.setObject(arrayListOf(new), LANG_KEY)
+            defaults.synchronize()
+            NSNotificationCenter.defaultCenter.postNotificationName(
+                aName = NSCurrentLocaleDidChangeNotification,
+                `object` = null,
+            )
         }
         return LocalAppLocaleState.provides(new)
     }

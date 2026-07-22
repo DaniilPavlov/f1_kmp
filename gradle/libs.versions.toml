@@ -17,6 +17,7 @@ coroutines-test = "1.9.0"
 mockk = "1.13.12"
 junit = "4.13.2"
 detekt = "1.23.7"
+coil = "3.1.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -49,6 +50,9 @@ koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
 
 osmdroid = { module = "org.osmdroid:osmdroid-android", version.ref = "osmdroid" }
 osmbonuspack = { module = "com.github.MKergall:OSMBonusPack", version.ref = "osmbonuspack" }
+
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

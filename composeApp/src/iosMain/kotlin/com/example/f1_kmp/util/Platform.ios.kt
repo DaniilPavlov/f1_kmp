@@ -1,5 +1,6 @@
 package com.example.f1_kmp.util
 
+import com.example.f1_kmp.notifications.RaceReminderBridge
 import kotlin.experimental.ExperimentalNativeApi
 import kotlin.native.Platform
 import platform.Foundation.NSURL
@@ -8,7 +9,9 @@ import platform.UIKit.UIApplication
 @OptIn(ExperimentalNativeApi::class)
 actual fun isDebugBuild(): Boolean = Platform.isDebugBinary
 
-actual fun onLocaleChanged() = Unit
+actual fun onLocaleChanged() {
+    runCatching { RaceReminderBridge.sync() }
+}
 
 /** iOS: открываем URL через [UIApplication.openURL]. */
 actual fun openUrl(url: String) {

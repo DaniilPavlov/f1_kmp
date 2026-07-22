@@ -20,7 +20,7 @@ import com.example.f1_kmp.data.model.DriverModel
 import com.example.f1_kmp.domain.AsyncValue
 import com.example.f1_kmp.ui.components.CustomSwitcher
 import com.example.f1_kmp.ui.components.ErrorBody
-import com.example.f1_kmp.ui.components.LoadingIndicator
+import com.example.f1_kmp.ui.components.shimmer.TournamentTablesShimmer
 import com.example.f1_kmp.ui.components.TournamentConstructorsTable
 import com.example.f1_kmp.ui.components.TournamentDriversTable
 import com.example.f1_kmp.ui.theme.AppDimens
@@ -49,7 +49,7 @@ fun HomeScreen(
     val error by viewModel.error.collectAsState()
 
     when {
-        drivers.isLoading || constructors.isLoading -> LoadingIndicator(Modifier.fillMaxSize())
+        drivers.isLoading || constructors.isLoading -> TournamentTablesShimmer(modifier = Modifier.fillMaxSize())
         error != null -> ErrorBody(error?.title, error?.subtitle, onRetry = viewModel::loadAllData, modifier = Modifier.fillMaxSize())
         drivers is AsyncValue.Value && constructors is AsyncValue.Value -> {
             val driversList = (drivers as AsyncValue.Value).value

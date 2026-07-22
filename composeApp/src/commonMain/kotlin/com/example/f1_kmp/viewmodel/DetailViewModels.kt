@@ -2,11 +2,16 @@ package com.example.f1_kmp.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.f1_kmp.data.circuits.CircuitStats
+import com.example.f1_kmp.data.circuits.CircuitStatsRepository
 import com.example.f1_kmp.data.model.CircuitModel
+import com.example.f1_kmp.data.model.EspnDriverCardData
+import com.example.f1_kmp.data.model.NewsArticle
 import com.example.f1_kmp.data.model.PitStopModel
 import com.example.f1_kmp.data.model.QualifyingResultModel
 import com.example.f1_kmp.data.model.RaceModel
 import com.example.f1_kmp.data.model.RaceResultModel
+import com.example.f1_kmp.data.repository.EspnRepository
 import com.example.f1_kmp.data.repository.F1Repository
 import com.example.f1_kmp.domain.AppException
 import com.example.f1_kmp.domain.ErrorStrings
@@ -47,9 +52,6 @@ class RaceInfoScreenViewModel(
     private val _sprint = MutableStateFlow<AsyncValue<List<RaceResultModel>>>(AsyncValue.Loading)
     val sprint: StateFlow<AsyncValue<List<RaceResultModel>>> = _sprint.asStateFlow()
 
-    private val _allDataLoaded = MutableStateFlow(false)
-    val allDataLoaded: StateFlow<Boolean> = _allDataLoaded.asStateFlow()
-
     private val _error = MutableStateFlow<AppException?>(null)
     val error: StateFlow<AppException?> = _error.asStateFlow()
 
@@ -61,7 +63,6 @@ class RaceInfoScreenViewModel(
     fun loadAllData() {
         loadJob.launch(viewModelScope) {
             _error.value = null
-            _allDataLoaded.value = false
             _race.value = AsyncValue.Loading
             _qualifying.value = AsyncValue.Loading
             _pitStops.value = AsyncValue.Loading
@@ -84,7 +85,6 @@ class RaceInfoScreenViewModel(
             }
 
             _race.value = AsyncValue.Value(loadedRace)
-            _allDataLoaded.value = true
             loadExtraSections(loadedRace)
         }
     }
@@ -135,6 +135,7 @@ class RaceInfoScreenViewModel(
 class CircuitDetailViewModel(
     private val circuitId: String,
     private val repository: F1Repository,
+    private val circuitStatsRepository: CircuitStatsRepository,
 ) : ViewModel() {
     private val loadJob = LoadJobHolder()
 
@@ -143,6 +144,9 @@ class CircuitDetailViewModel(
 
     private val _winners = MutableStateFlow<AsyncValue<List<com.example.f1_kmp.data.model.CircuitRaceWin>>>(AsyncValue.Loading)
     val winners: StateFlow<AsyncValue<List<com.example.f1_kmp.data.model.CircuitRaceWin>>> = _winners.asStateFlow()
+
+    private val _stats = MutableStateFlow<CircuitStats?>(null)
+    val stats: StateFlow<CircuitStats?> = _stats.asStateFlow()
 
     private val _error = MutableStateFlow<AppException?>(null)
     val error: StateFlow<AppException?> = _error.asStateFlow()
@@ -156,8 +160,13 @@ class CircuitDetailViewModel(
         loadJob.launch(viewModelScope) {
             _error.value = null
             loadCircuit()
+            loadStats()
             loadWinners()
         }
+    }
+
+    private suspend fun loadStats() {
+        _stats.value = runCatching { circuitStatsRepository.of(circuitId) }.getOrNull()
     }
 
     private suspend fun loadCircuit() {
@@ -200,6 +209,7 @@ class CircuitDetailViewModel(
 class DriverDetailViewModel(
     private val driverId: String,
     private val repository: F1Repository,
+    private val espnRepository: EspnRepository,
 ) : ViewModel() {
     private val loadJob = LoadJobHolder()
 
@@ -208,6 +218,9 @@ class DriverDetailViewModel(
 
     private val _careerStats = MutableStateFlow<AsyncValue<com.example.f1_kmp.data.model.CareerStats<com.example.f1_kmp.data.model.ConstructorModel>>>(AsyncValue.Loading)
     val careerStats: StateFlow<AsyncValue<com.example.f1_kmp.data.model.CareerStats<com.example.f1_kmp.data.model.ConstructorModel>>> = _careerStats.asStateFlow()
+
+    private val _espnCard = MutableStateFlow(EspnDriverCardData())
+    val espnCard: StateFlow<EspnDriverCardData> = _espnCard.asStateFlow()
 
     private val _error = MutableStateFlow<AppException?>(null)
     val error: StateFlow<AppException?> = _error.asStateFlow()
@@ -222,6 +235,7 @@ class DriverDetailViewModel(
             _error.value = null
             _driver.value = AsyncValue.Loading
             _careerStats.value = AsyncValue.Loading
+            _espnCard.value = EspnDriverCardData()
 
             val currentConstructors = repository.currentConstructorsForDriver(driverId)
             val driverResult = repository.getDriver(driverId)
@@ -238,14 +252,24 @@ class DriverDetailViewModel(
             }
             _driver.value = AsyncValue.Value(loadedDriver)
 
-            repository.getDriverCareerStats(driverId, currentConstructors).applyUnlessCached(
-                current = _careerStats.value,
-                onSuccess = { _careerStats.value = AsyncValue.Value(it) },
-                onFailure = { ex ->
-                    _careerStats.value = AsyncValue.Error(ex.title, ex.subtitle)
-                    _error.value = ex
-                },
-            )
+            coroutineScope {
+                val careerDeferred = async {
+                    repository.getDriverCareerStats(driverId, currentConstructors)
+                }
+                val espnDeferred = async {
+                    espnRepository.driverCardData(loadedDriver.givenName, loadedDriver.familyName)
+                }
+
+                careerDeferred.await().applyUnlessCached(
+                    current = _careerStats.value,
+                    onSuccess = { _careerStats.value = AsyncValue.Value(it) },
+                    onFailure = { ex ->
+                        _careerStats.value = AsyncValue.Error(ex.title, ex.subtitle)
+                        _error.value = ex
+                    },
+                )
+                _espnCard.value = espnDeferred.await()
+            }
         }
     }
 }
@@ -259,6 +283,7 @@ class DriverDetailViewModel(
 class ConstructorDetailViewModel(
     private val constructorId: String,
     private val repository: F1Repository,
+    private val espnRepository: EspnRepository,
 ) : ViewModel() {
     private val loadJob = LoadJobHolder()
 
@@ -267,6 +292,9 @@ class ConstructorDetailViewModel(
 
     private val _careerStats = MutableStateFlow<AsyncValue<com.example.f1_kmp.data.model.CareerStats<com.example.f1_kmp.data.model.DriverModel>>>(AsyncValue.Loading)
     val careerStats: StateFlow<AsyncValue<com.example.f1_kmp.data.model.CareerStats<com.example.f1_kmp.data.model.DriverModel>>> = _careerStats.asStateFlow()
+
+    private val _news = MutableStateFlow<List<NewsArticle>>(emptyList())
+    val news: StateFlow<List<NewsArticle>> = _news.asStateFlow()
 
     private val _error = MutableStateFlow<AppException?>(null)
     val error: StateFlow<AppException?> = _error.asStateFlow()
@@ -281,6 +309,7 @@ class ConstructorDetailViewModel(
             _error.value = null
             _constructor.value = AsyncValue.Loading
             _careerStats.value = AsyncValue.Loading
+            _news.value = emptyList()
 
             val currentDrivers = repository.currentDriversForConstructor(constructorId)
             val constructorResult = repository.getConstructor(constructorId)
@@ -297,14 +326,24 @@ class ConstructorDetailViewModel(
             }
             _constructor.value = AsyncValue.Value(loaded)
 
-            repository.getConstructorCareerStats(constructorId, currentDrivers).applyUnlessCached(
-                current = _careerStats.value,
-                onSuccess = { _careerStats.value = AsyncValue.Value(it) },
-                onFailure = { ex ->
-                    _careerStats.value = AsyncValue.Error(ex.title, ex.subtitle)
-                    _error.value = ex
-                },
-            )
+            coroutineScope {
+                val careerDeferred = async {
+                    repository.getConstructorCareerStats(constructorId, currentDrivers)
+                }
+                val newsDeferred = async {
+                    espnRepository.constructorNews(loaded.constructorId, loaded.name)
+                }
+
+                careerDeferred.await().applyUnlessCached(
+                    current = _careerStats.value,
+                    onSuccess = { _careerStats.value = AsyncValue.Value(it) },
+                    onFailure = { ex ->
+                        _careerStats.value = AsyncValue.Error(ex.title, ex.subtitle)
+                        _error.value = ex
+                    },
+                )
+                _news.value = newsDeferred.await()
+            }
         }
     }
 }

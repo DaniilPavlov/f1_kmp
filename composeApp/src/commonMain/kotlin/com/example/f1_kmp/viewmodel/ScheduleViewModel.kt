@@ -9,6 +9,7 @@ import com.example.f1_kmp.domain.AppException
 import com.example.f1_kmp.domain.AsyncValue
 import com.example.f1_kmp.domain.SessionStrings
 import com.example.f1_kmp.util.DateUtils
+import com.example.f1_kmp.util.RaceDateTimeHelper
 import com.example.f1_kmp.util.YearMonth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.todayIn
 
 /**
@@ -56,8 +58,8 @@ class ScheduleViewModel(
     private val _scheduleItems = MutableStateFlow<List<ScheduleSessionItem>>(emptyList())
     val scheduleItems: StateFlow<List<ScheduleSessionItem>> = _scheduleItems.asStateFlow()
 
-    private val _allDataLoaded = MutableStateFlow(false)
-    val allDataLoaded: StateFlow<Boolean> = _allDataLoaded.asStateFlow()
+    private val _upcomingRace = MutableStateFlow<RaceModel?>(null)
+    val upcomingRace: StateFlow<RaceModel?> = _upcomingRace.asStateFlow()
 
     private val _error = MutableStateFlow<AppException?>(null)
     val error: StateFlow<AppException?> = _error.asStateFlow()
@@ -73,26 +75,24 @@ class ScheduleViewModel(
 
             repository.peekScheduleCache()?.let {
                 _races.value = AsyncValue.Value(it)
+                refreshUpcoming()
                 onSelectDay(today)
-                _allDataLoaded.value = true
             } ?: run {
                 _races.value = AsyncValue.Loading
-                _allDataLoaded.value = false
             }
 
             repository.getCurrentSchedule().applyUnlessCached(
                 current = _races.value,
                 onSuccess = { races ->
                     _races.value = AsyncValue.Value(races)
+                    refreshUpcoming()
                     onSelectDay(today)
-                    _allDataLoaded.value = true
                 },
                 onFailure = { ex ->
                     if (_races.value !is AsyncValue.Value) {
                         _races.value = AsyncValue.Error(ex.title, ex.subtitle)
                         _error.value = ex
                     }
-                    _allDataLoaded.value = _races.value is AsyncValue.Value
                 },
             )
         }
@@ -113,6 +113,17 @@ class ScheduleViewModel(
     /** Перестраивает список сессий после смены языка. */
     fun refreshScheduleForCurrentDay() {
         buildScheduleForDate(_selectedDate.value)
+    }
+
+    private fun refreshUpcoming() {
+        val races = _races.value.getOrNull() ?: run {
+            _upcomingRace.value = null
+            return
+        }
+        val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+        _upcomingRace.value = races
+            .filter { RaceDateTimeHelper.isUpcoming(it, now) }
+            .minByOrNull { RaceDateTimeHelper.raceLocal(it) }
     }
 
     /** Иконка под днём: финиш — день гонки, машина — день сессии. */

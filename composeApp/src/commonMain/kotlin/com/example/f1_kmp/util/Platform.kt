@@ -11,6 +11,6 @@ expect fun isDebugBuild(): Boolean
 
 /**
  * После смены языка: на Android пересобираем напоминания (тексты сессий зависят от локали).
- * На iOS — no-op.
+ * На iOS пересобираем UNUserNotificationCenter-напоминания.
  */
 expect fun onLocaleChanged()

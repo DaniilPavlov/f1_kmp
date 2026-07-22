@@ -1,5 +1,7 @@
 package com.example.f1_kmp.domain
 
+import platform.Foundation.NSCurrentLocaleDidChangeNotification
+import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSUserDefaults
 
 actual class LocalePreferences {
@@ -21,6 +23,12 @@ actual class LocalePreferences {
 }
 
 internal actual fun applyPlatformLocale(language: String) {
-    val langKey = "AppleLanguages"
-    NSUserDefaults.standardUserDefaults.setObject(listOf(language), langKey)
+    val defaults = NSUserDefaults.standardUserDefaults
+    // arrayListOf → NSArray; listOf иногда плохо бриджится в setObject.
+    defaults.setObject(arrayListOf(language), "AppleLanguages")
+    defaults.synchronize()
+    NSNotificationCenter.defaultCenter.postNotificationName(
+        aName = NSCurrentLocaleDidChangeNotification,
+        `object` = null,
+    )
 }

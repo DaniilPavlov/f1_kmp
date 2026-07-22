@@ -22,7 +22,10 @@ val F1Pink = Color(0xFFF3B2AE)
 val F1White = Color(0xFFFFFFFF)
 val F1GrayBg = Color(0xFFF6F6F6)
 val F1StrokeGray = Color(0xFFD8D8D8)
+val F1TextGray = Color(0xFFB6B6B6)
 val F1ShadowColor = Color(0xFFD7D7D7)
+val F1ShimmerBase = Color(0xFFC8C8C8)
+val F1ShimmerHighlight = Color(0xFFE0E0E0)
 
 /**
  * FontFamily из composeResources.
@@ -30,8 +33,10 @@ val F1ShadowColor = Color(0xFFD7D7D7)
  * [Font] — composable, поэтому семейства собираем внутри @Composable.
  */
 @Composable
-private fun helveticaBoldFamily(): FontFamily =
-    FontFamily(Font(Res.font.helvetica_neue_cyr_bold, weight = FontWeight.Bold))
+fun HelveticaBold(): FontFamily = FontFamily(Font(Res.font.helvetica_neue_cyr_bold, weight = FontWeight.Bold))
+
+@Composable
+private fun helveticaBoldFamily(): FontFamily = HelveticaBold()
 
 @Composable
 private fun interRegularFamily(): FontFamily =

@@ -2,8 +2,10 @@ package com.example.f1_kmp
 
 import androidx.compose.ui.window.ComposeUIViewController
 import com.example.f1_kmp.di.appModule
+import com.example.f1_kmp.di.iosModule
 import com.example.f1_kmp.domain.LocaleController
 import com.example.f1_kmp.domain.LocalePreferences
+import com.example.f1_kmp.notifications.RaceReminderBridge
 import org.koin.core.context.startKoin
 import platform.UIKit.UIColor
 import platform.UIKit.UIViewController
@@ -20,8 +22,9 @@ fun MainViewController(): UIViewController {
     if (!koinStarted) {
         LocaleController.init(LocalePreferences())
         startKoin {
-            modules(appModule)
+            modules(appModule, iosModule)
         }
+        runCatching { RaceReminderBridge.sync() }
         koinStarted = true
     }
     val controller = ComposeUIViewController { App() }

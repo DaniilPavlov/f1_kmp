@@ -20,7 +20,8 @@ object LocaleController {
     fun init(preferences: LocalePreferences) {
         this.preferences = preferences
         val saved = preferences.loadLanguage()
-        applyLanguage(saved, persist = false)
+        // Persist сразу: на iOS Swift читает app_locale до Compose и выставляет AppleLanguages.
+        applyLanguage(saved, persist = true)
     }
 
     /** Переключает ru ↔ en, сохраняет выбор и возвращает новый код языка. */
