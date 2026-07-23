@@ -1,7 +1,7 @@
 package com.example.f1_kmp.viewmodel
 
 import com.example.f1_kmp.data.model.FinishStatusItem
-import com.example.f1_kmp.data.repository.F1Repository
+import com.example.f1_kmp.data.repository.IF1Repository
 import com.example.f1_kmp.domain.AsyncValue
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -24,7 +24,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class FinishStatusViewModelTest {
     private val dispatcher = StandardTestDispatcher()
-    private lateinit var repository: F1Repository
+    private lateinit var repository: IF1Repository
 
     @Before
     fun setUp() {

@@ -8,6 +8,9 @@ import com.example.f1_kmp.data.local.CacheJsonMapper
 import com.example.f1_kmp.data.local.FileCacheDao
 import com.example.f1_kmp.data.repository.EspnRepository
 import com.example.f1_kmp.data.repository.F1Repository
+import com.example.f1_kmp.data.repository.IEspnRepository
+import com.example.f1_kmp.data.repository.IF1Repository
+import com.example.f1_kmp.domain.AppDataRefresh
 import com.example.f1_kmp.platform.createPlatformHttpClient
 import com.example.f1_kmp.util.isDebugBuild
 import com.example.f1_kmp.viewmodel.CircuitDetailViewModel
@@ -72,6 +75,12 @@ internal fun HttpClientConfig<*>.installJsonClient(
     }
 }
 
+/**
+ * Общая фабрика Ktor-клиента (Jolpica / ESPN).
+ *
+ * GoF Creational Factory Method — [createApiClient] собирает [HttpClient] с таймаутами
+ * и JSON; платформенный движок скрыт за [createPlatformHttpClient].
+ */
 private fun createApiClient(
     json: Json,
     baseUrl: String,
@@ -138,23 +147,24 @@ val networkModule = module {
 
     single { F1ApiService(get()) }
     single { EspnApiService(get(named("espn"))) }
-    single { EspnRepository(get()) }
+    single<IEspnRepository> { EspnRepository(get()) }
     single { CircuitStatsRepository(get()) }
 
     // region offline-кэш (файлы вместо Room)
     single<CacheDao> { FileCacheDao() }
     single { CacheJsonMapper(get()) }
-    single { F1Repository(get(), get(), get()) }
+    single<IF1Repository> { F1Repository(get(), get(), get()) }
+    single { AppDataRefresh(get(), get()) }
 }
 
 val viewModelModule = module {
-    viewModel { HomeViewModel(get()) }
-    viewModel { ResultsViewModel(get(), get()) }
+    viewModel { HomeViewModel(get(), get()) }
+    viewModel { ResultsViewModel(get(), get(), get()) }
     viewModel { HallOfFameViewModel(get()) }
     viewModel { ScheduleViewModel(get()) }
-    viewModel { CircuitsViewModel(get()) }
+    viewModel { CircuitsViewModel(get(), get()) }
     viewModel { RaceSearchViewModel(get()) }
-    viewModel { NewsViewModel(get()) }
+    viewModel { NewsViewModel(get(), get()) }
     viewModel { H2hDriversViewModel(get()) }
     viewModel { H2hConstructorsViewModel(get()) }
     viewModel { FinishStatusViewModel(get()) }

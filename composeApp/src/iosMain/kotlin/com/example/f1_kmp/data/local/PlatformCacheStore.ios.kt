@@ -39,4 +39,13 @@ actual class PlatformCacheStore {
             error = null,
         )
     }
+
+    actual fun clearAll() {
+        val manager = NSFileManager.defaultManager
+        val contents = manager.contentsOfDirectoryAtPath(dirPath, error = null).orEmpty()
+        for (name in contents) {
+            val fileName = name as? String ?: continue
+            manager.removeItemAtPath("$dirPath/$fileName", error = null)
+        }
+    }
 }

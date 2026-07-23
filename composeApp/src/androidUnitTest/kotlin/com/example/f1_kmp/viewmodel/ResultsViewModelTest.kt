@@ -1,12 +1,12 @@
 package com.example.f1_kmp.viewmodel
 
 import androidx.lifecycle.ViewModel
-import com.example.f1_kmp.data.model.CircuitLocationModel
-import com.example.f1_kmp.data.model.CircuitModel
+import com.example.f1_kmp.domain.model.CircuitLocation
+import com.example.f1_kmp.domain.model.Circuit
 import com.example.f1_kmp.data.model.EspnScoreboardEvent
-import com.example.f1_kmp.data.model.RaceModel
-import com.example.f1_kmp.data.repository.EspnRepository
-import com.example.f1_kmp.data.repository.F1Repository
+import com.example.f1_kmp.domain.model.Race
+import com.example.f1_kmp.data.repository.IEspnRepository
+import com.example.f1_kmp.data.repository.IF1Repository
 import com.example.f1_kmp.domain.AppException
 import com.example.f1_kmp.domain.AsyncValue
 import io.mockk.coEvery
@@ -33,8 +33,8 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class ResultsViewModelTest {
     private val dispatcher = StandardTestDispatcher()
-    private lateinit var repository: F1Repository
-    private lateinit var espnRepository: EspnRepository
+    private lateinit var repository: IF1Repository
+    private lateinit var espnRepository: IEspnRepository
 
     @Before
     fun setUp() {
@@ -48,7 +48,7 @@ class ResultsViewModelTest {
         Dispatchers.resetMain()
     }
 
-    /** Успешный [F1Repository.getLastRace] → [AsyncValue.Value] с названием гонки. */
+    /** Успешный [IF1Repository.getLastRace] → [AsyncValue.Value] с названием гонки. */
     @Test
     fun loadAllData_success_updatesLastRace() = runTest {
         val race = sampleRace()
@@ -58,7 +58,7 @@ class ResultsViewModelTest {
         coEvery { espnRepository.peekScoreboard } returns null
         coEvery { espnRepository.getScoreboardEvent(forceRefresh = false) } returns Result.success(null)
 
-        val viewModel = ResultsViewModel(repository, espnRepository)
+        val viewModel = ResultsViewModel(repository, espnRepository, mockk(relaxed = true))
         advanceUntilIdle()
 
         val state = viewModel.lastRace.value
@@ -77,7 +77,7 @@ class ResultsViewModelTest {
         coEvery { espnRepository.peekScoreboard } returns null
         coEvery { espnRepository.getScoreboardEvent(forceRefresh = false) } returns Result.success(null)
 
-        val viewModel = ResultsViewModel(repository, espnRepository)
+        val viewModel = ResultsViewModel(repository, espnRepository, mockk(relaxed = true))
         advanceUntilIdle()
 
         assertTrue(viewModel.lastRace.value is AsyncValue.Error)
@@ -94,7 +94,7 @@ class ResultsViewModelTest {
         coEvery { espnRepository.peekScoreboard } returns null
         coEvery { espnRepository.getScoreboardEvent(forceRefresh = false) } returns Result.success(scoreboard)
 
-        val viewModel = ResultsViewModel(repository, espnRepository)
+        val viewModel = ResultsViewModel(repository, espnRepository, mockk(relaxed = true))
         advanceUntilIdle()
 
         assertTrue(viewModel.scoreboard.value is AsyncValue.Value)
@@ -111,24 +111,24 @@ class ResultsViewModelTest {
         coEvery { espnRepository.peekScoreboard } returns null
         coEvery { espnRepository.getScoreboardEvent(forceRefresh = false) } returns Result.success(sampleScoreboard())
 
-        val viewModel = ResultsViewModel(repository, espnRepository)
+        val viewModel = ResultsViewModel(repository, espnRepository, mockk(relaxed = true))
         advanceUntilIdle()
 
         invokeOnCleared(viewModel)
         assertTrue(viewModel.scoreboard.value is AsyncValue.Value)
     }
 
-    /** Минимальная заготовка [RaceModel] — не тянем полный JSON из API. */
-    private fun sampleRace() = RaceModel(
+    /** Минимальная заготовка [Race] — не тянем полный JSON из API. */
+    private fun sampleRace() = Race(
         season = "2026",
         round = "5",
         url = "",
         raceName = "Monaco Grand Prix",
-        circuit = CircuitModel(
+        circuit = Circuit(
             circuitId = "monaco",
             url = "",
             circuitName = "Monaco",
-            location = CircuitLocationModel("43.7", "7.4", "Monte Carlo", "Monaco"),
+            location = CircuitLocation("43.7", "7.4", "Monte Carlo", "Monaco"),
         ),
         date = "2026-05-25",
         results = emptyList(),

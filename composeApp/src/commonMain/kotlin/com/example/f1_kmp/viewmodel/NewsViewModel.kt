@@ -3,7 +3,8 @@ package com.example.f1_kmp.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.f1_kmp.data.model.NewsArticle
-import com.example.f1_kmp.data.repository.EspnRepository
+import com.example.f1_kmp.data.repository.IEspnRepository
+import com.example.f1_kmp.domain.AppDataRefresh
 import com.example.f1_kmp.domain.AsyncValue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -11,7 +12,8 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /** ViewModel вкладки «Новости» (ESPN). */
 class NewsViewModel(
-    private val espnRepository: EspnRepository,
+    private val espnRepository: IEspnRepository,
+    private val appDataRefresh: AppDataRefresh,
 ) : ViewModel() {
     private val loadJob = LoadJobHolder()
 
@@ -29,6 +31,7 @@ class NewsViewModel(
         loadJob.launch(viewModelScope) {
             if (forceRefresh) {
                 _isRefreshing.value = true
+                appDataRefresh.clearAll()
             }
             try {
                 if (!forceRefresh) {

@@ -14,10 +14,13 @@ import kotlinx.datetime.Clock
 
 /**
  * ESPN F1 news + scoreboard + driver/constructor media с in-memory TTL/cache.
+ *
+ * GoF Structural Adapter на уровне мапперов ([toDomain]): DTO → UI-модели.
+ * GoF Structural Proxy для новостей/scoreboard: TTL-кэш отдаётся до сети.
  */
 class EspnRepository(
     private val api: EspnApiService,
-) {
+) : IEspnRepository {
     private val newsMutex = Mutex()
     private val scoreboardMutex = Mutex()
 
@@ -34,20 +37,20 @@ class EspnRepository(
     private val constructorNewsCache = mutableMapOf<String, List<NewsArticle>>()
     private val constructorNewsCacheMutex = Mutex()
 
-    val peekNews: List<NewsArticle>? get() = newsCache
+    override val peekNews: List<NewsArticle>? get() = newsCache
 
-    val isNewsFresh: Boolean
+    override val isNewsFresh: Boolean
         get() = newsCache != null &&
             Clock.System.now().toEpochMilliseconds() - newsCachedAtMs < EspnApiService.NEWS_CACHE_TTL_MS
 
-    val peekScoreboard: EspnScoreboardEvent? get() = scoreboardCache
+    override val peekScoreboard: EspnScoreboardEvent? get() = scoreboardCache
 
     /** Fresh включает пустой ответ events (null event). */
-    val isScoreboardFresh: Boolean
+    override val isScoreboardFresh: Boolean
         get() = scoreboardHasCache &&
             Clock.System.now().toEpochMilliseconds() - scoreboardCachedAtMs < EspnApiService.SCOREBOARD_CACHE_TTL_MS
 
-    suspend fun getNews(forceRefresh: Boolean = false): Result<List<NewsArticle>> {
+    override suspend fun getNews(forceRefresh: Boolean): Result<List<NewsArticle>> {
         if (!forceRefresh && isNewsFresh) {
             return Result.success(newsCache!!)
         }
@@ -69,7 +72,7 @@ class EspnRepository(
      * Первый event из scoreboard или `null`, если список пуст.
      * Ошибки — [Result.failure]; на Results scoreboard скрывается молча.
      */
-    suspend fun getScoreboardEvent(forceRefresh: Boolean = false): Result<EspnScoreboardEvent?> {
+    override suspend fun getScoreboardEvent(forceRefresh: Boolean): Result<EspnScoreboardEvent?> {
         if (!forceRefresh && isScoreboardFresh) {
             return Result.success(scoreboardCache)
         }
@@ -96,7 +99,7 @@ class EspnRepository(
     }
 
     /** Фото + новости пилота (search → athlete → overview). Ошибки → пустая карточка. */
-    suspend fun driverCardData(givenName: String, familyName: String): EspnDriverCardData {
+    override suspend fun driverCardData(givenName: String, familyName: String): EspnDriverCardData {
         val cacheKey = normalize("$givenName|$familyName")
         driverCardCacheMutex.withLock { driverCardCache[cacheKey] }?.let { return it }
 
@@ -118,7 +121,7 @@ class EspnRepository(
     }
 
     /** Новости команды (до 5). Ошибки / пусто → []. */
-    suspend fun constructorNews(constructorId: String, constructorName: String): List<NewsArticle> {
+    override suspend fun constructorNews(constructorId: String, constructorName: String): List<NewsArticle> {
         val cacheKey = normalize("$constructorId|$constructorName")
         constructorNewsCacheMutex.withLock { constructorNewsCache[cacheKey] }?.let { return it }
 
@@ -138,7 +141,7 @@ class EspnRepository(
         }
     }
 
-    fun clearCaches() {
+    override fun clearCaches() {
         newsCache = null
         newsCachedAtMs = 0L
         scoreboardCache = null

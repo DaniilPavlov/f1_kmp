@@ -1,9 +1,9 @@
 package com.example.f1_kmp.viewmodel
 
-import com.example.f1_kmp.data.model.CircuitLocationModel
-import com.example.f1_kmp.data.model.CircuitModel
-import com.example.f1_kmp.data.model.RaceModel
-import com.example.f1_kmp.data.repository.F1Repository
+import com.example.f1_kmp.domain.model.CircuitLocation
+import com.example.f1_kmp.domain.model.Circuit
+import com.example.f1_kmp.domain.model.Race
+import com.example.f1_kmp.data.repository.IF1Repository
 import com.example.f1_kmp.domain.AsyncValue
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -29,7 +29,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class RaceSearchViewModelTest {
     private val dispatcher = StandardTestDispatcher()
-    private lateinit var repository: F1Repository
+    private lateinit var repository: IF1Repository
 
     @Before
     fun setUp() {
@@ -75,16 +75,16 @@ class RaceSearchViewModelTest {
         assertEquals("Monaco Grand Prix", (state as AsyncValue.Value).value?.raceName)
     }
 
-    private fun sampleRace() = RaceModel(
+    private fun sampleRace() = Race(
         season = "2026",
         round = "5",
         url = "",
         raceName = "Monaco Grand Prix",
-        circuit = CircuitModel(
+        circuit = Circuit(
             circuitId = "monaco",
             url = "",
             circuitName = "Monaco",
-            location = CircuitLocationModel("43.7", "7.4", "Monte Carlo", "Monaco"),
+            location = CircuitLocation("43.7", "7.4", "Monte Carlo", "Monaco"),
         ),
         date = "2026-05-25",
         results = emptyList(),

@@ -20,8 +20,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import com.example.f1_kmp.data.model.DriverModel
-import com.example.f1_kmp.data.model.RaceModel
+import com.example.f1_kmp.domain.model.Driver
+import com.example.f1_kmp.domain.model.Race
 import com.example.f1_kmp.domain.AsyncValue
 import com.example.f1_kmp.ui.components.BlackButton
 import com.example.f1_kmp.ui.components.ErrorBody
@@ -73,8 +73,8 @@ fun ResultsScreen(
     onH2hDrivers: () -> Unit,
     onH2hConstructors: () -> Unit,
     onFinishStatus: () -> Unit,
-    onRaceDetails: (RaceModel) -> Unit,
-    onDriverClick: (DriverModel) -> Unit,
+    onRaceDetails: (Race) -> Unit,
+    onDriverClick: (Driver) -> Unit,
 ) {
     val lastRace by viewModel.lastRace.collectAsState()
     val scoreboard by viewModel.scoreboard.collectAsState()
@@ -92,7 +92,7 @@ fun ResultsScreen(
             is AsyncValue.Error -> ErrorBody(
                 state.message,
                 state.subtitle,
-                onRetry = viewModel::loadAllData,
+                onRetry = viewModel::refreshAll,
                 modifier = Modifier.padding(horizontal = AppDimens.horizontalPadding.dp),
             )
             is AsyncValue.Value -> Column(
@@ -139,8 +139,8 @@ fun ResultsScreen(
 @Composable
 fun RaceSearchScreen(
     viewModel: RaceSearchViewModel,
-    onRaceDetails: (RaceModel) -> Unit,
-    onDriverClick: (DriverModel) -> Unit,
+    onRaceDetails: (Race) -> Unit,
+    onDriverClick: (Driver) -> Unit,
 ) {
     val year by viewModel.year.collectAsState()
     val raceDisplay by viewModel.raceDisplay.collectAsState()
@@ -205,7 +205,7 @@ fun RaceSearchScreen(
 @Composable
 fun RaceInfoScreen(
     viewModel: RaceInfoScreenViewModel,
-    onDriverClick: (DriverModel) -> Unit,
+    onDriverClick: (Driver) -> Unit,
 ) {
     val race by viewModel.race.collectAsState()
     val qualifying by viewModel.qualifying.collectAsState()

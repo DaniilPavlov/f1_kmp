@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.interop.UIKitView
 import androidx.compose.ui.unit.dp
-import com.example.f1_kmp.data.model.CircuitModel
+import com.example.f1_kmp.domain.model.Circuit
 import com.example.f1_kmp.ui.theme.F1Red
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.CoreLocation.CLLocationCoordinate2DMake
@@ -27,7 +27,7 @@ import platform.darwin.NSObject
 @OptIn(ExperimentalForeignApi::class)
 @Composable
 actual fun CircuitsMapContent(
-    circuits: List<CircuitModel>,
+    circuits: List<Circuit>,
     onCircuitClick: (String) -> Unit,
 ) {
     val delegate = remember(onCircuitClick) { CircuitsMapDelegate(onCircuitClick) }

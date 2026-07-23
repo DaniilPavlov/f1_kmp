@@ -222,6 +222,10 @@ data class EspnFlagDto(
 
 // region Mappers
 
+/**
+ * GoF Structural Adapter — чужой JSON ESPN приводится к доменной/UI-модели
+ * ([NewsArticle], [EspnScoreboardEvent], …) без протекания DTO в ViewModel.
+ */
 fun EspnArticleDto.toDomain(): NewsArticle? {
     val headline = headline?.trim().orEmpty()
     val webUrl = links?.web?.href?.trim().orEmpty()

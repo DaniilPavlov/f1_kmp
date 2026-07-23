@@ -27,9 +27,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.example.f1_kmp.data.model.CareerStats
-import com.example.f1_kmp.data.model.CircuitModel
-import com.example.f1_kmp.data.model.ConstructorModel
-import com.example.f1_kmp.data.model.DriverModel
+import com.example.f1_kmp.domain.model.Circuit
+import com.example.f1_kmp.domain.model.Constructor
+import com.example.f1_kmp.domain.model.Driver
 import com.example.f1_kmp.data.model.EspnDriverCardData
 import com.example.f1_kmp.domain.AsyncValue
 import com.example.f1_kmp.domain.LocaleController
@@ -65,8 +65,8 @@ import kotlinx.datetime.LocalDate
 @Composable
 fun DriverDetailScreen(
     viewModel: DriverDetailViewModel,
-    onConstructorClick: (ConstructorModel) -> Unit,
-    onCircuitClick: (CircuitModel) -> Unit,
+    onConstructorClick: (Constructor) -> Unit,
+    onCircuitClick: (Circuit) -> Unit,
 ) {
     val driver by viewModel.driver.collectAsState()
     val career by viewModel.careerStats.collectAsState()
@@ -96,11 +96,11 @@ fun DriverDetailScreen(
 
 @Composable
 private fun DriverContent(
-    driver: DriverModel,
-    stats: CareerStats<ConstructorModel>,
+    driver: Driver,
+    stats: CareerStats<Constructor>,
     espnCard: EspnDriverCardData,
-    onConstructorClick: (ConstructorModel) -> Unit,
-    onCircuitClick: (CircuitModel) -> Unit,
+    onConstructorClick: (Constructor) -> Unit,
+    onCircuitClick: (Circuit) -> Unit,
     onWikipediaClick: () -> Unit,
 ) {
     RegisterShareAction(

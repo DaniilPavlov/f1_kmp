@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.f1_kmp.data.model.CareerRaceResult
 import com.example.f1_kmp.data.model.CareerStats
-import com.example.f1_kmp.data.model.CircuitModel
+import com.example.f1_kmp.domain.model.Circuit
 import com.example.f1_kmp.ui.theme.AppStyles
 import f1_kmp.composeapp.generated.resources.Res
 import f1_kmp.composeapp.generated.resources.career_stat_podiums
@@ -31,7 +31,7 @@ fun <T> CareerDetailSections(
     relatedSectionTitle: String,
     relatedItemTitle: (T) -> String,
     onRelatedItemClick: (T) -> Unit,
-    onCircuitClick: (CircuitModel) -> Unit,
+    onCircuitClick: (Circuit) -> Unit,
     relatedItemTrailing: @Composable (T) -> Unit = {},
 ) {
     var sheetTitle by remember { mutableStateOf<String?>(null) }

@@ -3,10 +3,8 @@ package com.example.f1_kmp.domain
 /**
  * Универсальная обёртка для асинхронных данных в UI.
  *
- * Вместо отдельных флагов `isLoading`, `error`, `data` ViewModel хранит одно поле
- * типа [AsyncValue], и экран через `when` решает, что показать: спиннер, ошибку или контент.
- *
- * Это sealed class: компилятор заставляет обработать все варианты.
+ * GoF Behavioral State — поведение экрана зависит от текущего варианта
+ * (Loading / Value / Error) вместо разрозненных флагов `isLoading`, `error`, `data`.
  *
  * @param T тип успешных данных (список гонщиков, гонка и т.д.)
  */
@@ -27,14 +25,3 @@ sealed class AsyncValue<out T> {
     /** Безопасно достаёт значение или возвращает null, если это не [Value]. */
     fun getOrNull(): T? = (this as? Value)?.value
 }
-
-/**
- * Доменное исключение с пользовательским текстом на русском.
- *
- * [ApiCallHandler.safeCall] превращает сетевые/парсинг-ошибки в [AppException],
- * чтобы UI не показывал сырой stack trace.
- */
-data class AppException(
-    val title: String,
-    val subtitle: String? = null,
-) : Exception(title)

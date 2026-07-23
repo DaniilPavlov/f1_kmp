@@ -1,7 +1,7 @@
 package com.example.f1_kmp.util
 
-import com.example.f1_kmp.data.model.RaceDateModel
-import com.example.f1_kmp.data.model.RaceModel
+import com.example.f1_kmp.domain.model.RaceSession
+import com.example.f1_kmp.domain.model.Race
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDateTime
@@ -14,19 +14,19 @@ import kotlinx.datetime.toLocalDateTime
  */
 object RaceDateTimeHelper {
     /**
-     * Парсит [RaceDateModel] (дата + время в UTC) в локальный [LocalDateTime].
+     * Парсит [RaceSession] (дата + время в UTC) в локальный [LocalDateTime].
      * Пустое время трактуется как полночь UTC указанного дня.
      */
-    fun toLocal(date: RaceDateModel): LocalDateTime =
+    fun toLocal(date: RaceSession): LocalDateTime =
         DateUtils.parseUtcSession(date.date, date.time)
             .toLocalDateTime(TimeZone.currentSystemDefault())
 
     /** Локальное время старта основной гонки. */
-    fun raceLocal(race: RaceModel): LocalDateTime =
-        toLocal(RaceDateModel(date = race.date, time = race.time))
+    fun raceLocal(race: Race): LocalDateTime =
+        toLocal(RaceSession(date = race.date, time = race.time))
 
     /** Цель countdown: FP1, иначе первая доступная сессия, иначе гонка. */
-    fun countdownTarget(race: RaceModel): LocalDateTime {
+    fun countdownTarget(race: Race): LocalDateTime {
         for (session in orderedSessions(race)) {
             if (session != null) return toLocal(session)
         }
@@ -35,14 +35,14 @@ object RaceDateTimeHelper {
 
     /** Гонка ещё не стартовала (по времени race). */
     fun isUpcoming(
-        race: RaceModel,
+        race: Race,
         now: LocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()),
     ): Boolean = raceLocal(race) > now
 
     /** Начало уикенда (первая сессия или гонка). */
-    fun weekendStart(race: RaceModel): LocalDateTime = countdownTarget(race)
+    fun weekendStart(race: Race): LocalDateTime = countdownTarget(race)
 
-    private fun orderedSessions(race: RaceModel): List<RaceDateModel?> = listOf(
+    private fun orderedSessions(race: Race): List<RaceSession?> = listOf(
         race.firstPractice,
         race.secondPractice,
         race.thirdPractice,

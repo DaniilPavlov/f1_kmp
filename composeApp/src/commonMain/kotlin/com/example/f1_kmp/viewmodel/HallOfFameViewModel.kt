@@ -2,10 +2,10 @@ package com.example.f1_kmp.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.f1_kmp.data.model.ConstructorStandingsModel
-import com.example.f1_kmp.data.model.DriverStandingsModel
-import com.example.f1_kmp.data.repository.F1Repository
-import com.example.f1_kmp.domain.AppException
+import com.example.f1_kmp.domain.model.ConstructorStanding
+import com.example.f1_kmp.domain.model.DriverStanding
+import com.example.f1_kmp.data.repository.IF1Repository
+import com.example.f1_kmp.domain.AppError
 import com.example.f1_kmp.domain.AsyncValue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,15 +18,15 @@ import kotlinx.coroutines.launch
  * Исторические standings за выбранный год. Список сезонов — picker, при смене года данные обновляются.
  */
 class HallOfFameViewModel(
-    private val repository: F1Repository,
+    private val repository: IF1Repository,
 ) : ViewModel() {
     private val loadJob = LoadJobHolder()
 
-    private val _drivers = MutableStateFlow<AsyncValue<List<DriverStandingsModel>>>(AsyncValue.Loading)
-    val drivers: StateFlow<AsyncValue<List<DriverStandingsModel>>> = _drivers.asStateFlow()
+    private val _drivers = MutableStateFlow<AsyncValue<List<DriverStanding>>>(AsyncValue.Loading)
+    val drivers: StateFlow<AsyncValue<List<DriverStanding>>> = _drivers.asStateFlow()
 
-    private val _constructors = MutableStateFlow<AsyncValue<List<ConstructorStandingsModel>>>(AsyncValue.Loading)
-    val constructors: StateFlow<AsyncValue<List<ConstructorStandingsModel>>> = _constructors.asStateFlow()
+    private val _constructors = MutableStateFlow<AsyncValue<List<ConstructorStanding>>>(AsyncValue.Loading)
+    val constructors: StateFlow<AsyncValue<List<ConstructorStanding>>> = _constructors.asStateFlow()
 
     private val _year = MutableStateFlow("")
     val year: StateFlow<String> = _year.asStateFlow()
@@ -37,8 +37,8 @@ class HallOfFameViewModel(
     private val _activeTable = MutableStateFlow(0)
     val activeTable: StateFlow<Int> = _activeTable.asStateFlow()
 
-    private val _error = MutableStateFlow<AppException?>(null)
-    val error: StateFlow<AppException?> = _error.asStateFlow()
+    private val _error = MutableStateFlow<AppError?>(null)
+    val error: StateFlow<AppError?> = _error.asStateFlow()
 
     init {
         viewModelScope.launch {

@@ -23,8 +23,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.f1_kmp.data.model.RaceModel
-import com.example.f1_kmp.data.model.RaceResultModel
+import com.example.f1_kmp.domain.model.Race
+import com.example.f1_kmp.domain.model.RaceResult
 import com.example.f1_kmp.ui.theme.AppStyles
 import com.example.f1_kmp.ui.theme.F1Black
 import com.example.f1_kmp.ui.theme.F1GrayBg
@@ -88,7 +88,7 @@ fun ShareCareerCard(
 }
 
 @Composable
-fun ShareRaceResultsCard(race: RaceModel, topN: Int = 10) {
+fun ShareRaceResultsCard(race: Race, topN: Int = 10) {
     val results = race.results.orEmpty()
     val rows = results.take(topN)
     ShareCardShell {
@@ -157,7 +157,7 @@ private fun ShareStatCell(label: String, value: String, modifier: Modifier = Mod
 }
 
 @Composable
-private fun ShareResultRow(result: RaceResultModel) {
+private fun ShareResultRow(result: RaceResult) {
     val classified = result.time != null || result.status.equals("Finished", ignoreCase = true)
     val timeOrStatus = result.time?.time ?: result.status
     Row(

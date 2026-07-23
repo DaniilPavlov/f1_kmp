@@ -16,14 +16,16 @@ Same idea, other stacks:
 
 | Layer | Tech |
 |------|------------|
-| UI | Compose Multiplatform, Navigation |
-| DI | Koin |
-| Network | Ktor + kotlinx.serialization (Jolpica + ESPN clients) |
+| UI | Compose Multiplatform, type-safe Navigation (`kotlinx.serialization` routes) |
+| Presentation | One ViewModel file per screen; multiple `StateFlow` + `AsyncValue` |
+| Domain | Plain Jolpica models; `AppError` / `toAppError()`; `ApiCallHandler`; `AppDataRefresh` |
+| DI | Koin; `IF1Repository` / `IEspnRepository` |
+| Network | Ktor + kotlinx.serialization DTOs; mappers DTO → domain (`JolpicaMappers`) |
 | Images | Coil 3 |
-| Cache | JSON files (offline peek → refresh); ESPN in-memory TTL |
+| Cache | JSON files (offline peek → refresh); ESPN in-memory TTL; `AppDataRefresh.clearAll` |
 | Time | kotlinx-datetime |
-| Android map | OSMDroid + OSMBonusPack (Carto tiles) |
-| iOS map | MapKit pins |
+| Android map | OSMDroid + OSMBonusPack (Carto tiles, clustering) |
+| iOS map | MapKit pins (no clustering) |
 
 ### Differences from f1_kotlin
 
@@ -31,8 +33,18 @@ Same idea, other stacks:
 - Retrofit/Moshi → Ktor  
 - Room → file cache  
 - java.time → kotlinx-datetime  
-- OSM map on Android only; MapKit pins on iOS  
+- OSM map on Android; MapKit pins on iOS  
 - Session reminders: AlarmManager (Android) / UNUserNotificationCenter (iOS)
+
+## Architecture
+
+- **Navigation** — `@Serializable` routes in `F1Routes.kt`; destinations use `toRoute<T>()` / `hasRoute`.
+- **Domain** — UI/ViewModel работают с `domain.model` (`Driver`, `Race`, …). Jolpica отдаёт JSON → kotlinx DTO (`data.model`) → `JolpicaMappers.toDomain()`.
+- **Errors** — repositories return `Result`; failures map via `Throwable.toAppError()` → `AppError` for UI.
+- **Repositories** — `IF1Repository` + `IEspnRepository`; concrete impls bound in Koin.
+- **ViewModels** — one file per screen under `viewmodel/` (no giant shared files).
+- **Refresh** — `AppDataRefresh.clearAll()` (Facade) resets ESPN TTL + file cache; `refreshAll()` on main screens calls it before reload (ErrorBody / pull-to-refresh).
+- **Patterns (GoF)** — Factory (`HttpClient`), Facade (`AppDataRefresh`), Template Method (`ApiCallHandler`), Proxy (peek cache), Adapter (ESPN/`JolpicaMappers`), State (`AsyncValue`), Command (`ErrorBody`), Bridge (map expect/actual).
 
 ## Structure
 
@@ -42,7 +54,7 @@ f1_kmp/
 │   └── src/
 │       ├── commonMain/  # UI, ViewModel, API, repository, circuit assets
 │       ├── androidMain/ # Activity, OSMDroid, OkHttp, reminders, share
-│       ├── iosMain/     # MainViewController, Darwin HTTP
+│       ├── iosMain/     # MainViewController, Darwin HTTP, MapKit
 │       ├── commonTest/
 │       └── androidUnitTest/
 ├── iosApp/              # Xcode host (SwiftUI → Compose)
@@ -98,7 +110,10 @@ Kotlin framework for the simulator only (Apple Silicon), without installing the 
 
 ```bash
 ./gradlew :composeApp:testDebugUnitTest
+./gradlew detekt
 ```
+
+Covered areas include ViewModels (Home, Results, Schedule, News, Race search, H2H drivers, Finish status, Race info, Circuit detail), Jolpica mappers, CareerLoader, `ApiCallHandler`, date/flag utils.
 
 ## CI / CD
 
@@ -106,7 +121,7 @@ Kotlin framework for the simulator only (Apple Silicon), without installing the 
 
 | Workflow | When | What it does |
 |----------|-------|------------|
-| `ci.yml` | push / PR to `master` | build debug APK, unit tests |
+| `ci.yml` | push / PR to `master` | detekt, build debug APK, unit tests |
 | `release.yml` | tag `v*` or manual | Android APK (+ GitHub Release) |
 
 Release:
@@ -119,28 +134,29 @@ git push origin v1.2.0
 
 For release APK signing (optional) — `ANDROID_KEYSTORE_*` secrets in GitHub Actions.
 
-## Circuits map on iOS
+## Circuits map
 
-On Android, the **Circuits → On map** tab shows OSMDroid with pins and clusters.
+On Android, **Circuits → On map** shows OSMDroid with pins and clusters (Carto tiles).
 
-On iOS the map uses **MapKit** with pins (no clustering).  
+On iOS the same tab uses **MapKit** with pins (no clustering).  
 The circuit list and circuit card work on both platforms.
 
 ## Offline
 
 The app reads the local JSON cache first (peek), then refreshes from the network.  
 If the network is unavailable but cache exists, the UI keeps the last known data.  
-ESPN news/scoreboard use a short in-memory TTL.
+ESPN news/scoreboard use a short in-memory TTL.  
+Forced reload (`refreshAll`) clears ESPN + file caches via `AppDataRefresh`.
 
 ## Features
 
 - **Home** — current season driver and constructor standings  
 - **Results** — weekend scoreboard (ESPN, live poll), latest race, race search, hall of fame, H2H (drivers / constructors), finish statuses  
-- **Calendar** — monthly calendar with session times; on empty days shows next GP card (layout + countdown); local reminders 30 min before (Android)  
+- **Calendar** — monthly calendar with session times; on empty days shows next GP card (layout + countdown); local reminders 30 min before (Android + iOS)  
 - **News** — F1 headlines from ESPN  
-- **Circuits** — list and map (OSMDroid + Carto on Android; stub on iOS), track layouts, length/laps/turns/speed/elevation, Wikipedia, winners history  
+- **Circuits** — list and map (OSMDroid + Carto on Android; MapKit pins on iOS), track layouts, length/laps/turns/speed/elevation, Wikipedia, winners history  
 - **Driver / Constructor cards** — ESPN photos/news, career stats with tappable wins / podiums / poles lists  
-- **Localization** — Russian and English, toggle in the app bar without restarting the app  
+- **Localization** — Russian (default) and English, toggle in the app bar without restarting the app  
 - **Reminders** — local notifications 30 minutes before a session (up to 10 upcoming; Android AlarmManager / iOS UNUserNotificationCenter)  
 - **Schedule cache** — shared file JSON cache for the calendar and reminders  
 - **Offline** — file JSON cache with instant peek and network refresh  

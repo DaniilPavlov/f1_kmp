@@ -13,7 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.content.FileProvider
-import com.example.f1_kmp.data.model.RaceModel
+import com.example.f1_kmp.domain.model.Race
 import com.example.f1_kmp.ui.share.ShareCareerCard
 import com.example.f1_kmp.ui.share.ShareRaceResultsCard
 import com.example.f1_kmp.ui.theme.F1Theme
@@ -46,7 +46,7 @@ actual fun shareCareerCard(title: String, races: Int, wins: Int, podiums: Int, p
     }
 }
 
-actual fun shareRaceResultsCard(race: RaceModel) {
+actual fun shareRaceResultsCard(race: Race) {
     val context = shareContext ?: return
     shareScope?.launch {
         ShareHelper.shareComposableAsPng(

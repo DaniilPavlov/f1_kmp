@@ -40,6 +40,9 @@ interface CacheDao {
 
     /** Записывает или перезаписывает JSON по ключу. */
     suspend fun insert(entry: CacheEntry)
+
+    /** Удаляет все файлы кэша (pull-to-refresh / [AppDataRefresh.clearAll]). */
+    suspend fun clearAll()
 }
 
 /**
@@ -52,6 +55,9 @@ expect class PlatformCacheStore() {
 
     /** Записывает JSON в файл кэша. */
     fun writeText(fileName: String, content: String)
+
+    /** Удаляет все файлы в каталоге кэша. */
+    fun clearAll()
 }
 
 /**
@@ -74,6 +80,12 @@ class FileCacheDao(
     override suspend fun insert(entry: CacheEntry) = withContext(Dispatchers.IO) {
         mutex.withLock {
             store.writeText(fileName(entry.key), entry.json)
+        }
+    }
+
+    override suspend fun clearAll() = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            store.clearAll()
         }
     }
 

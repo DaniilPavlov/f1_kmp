@@ -1,11 +1,11 @@
 package com.example.f1_kmp.viewmodel
 
-import com.example.f1_kmp.data.model.ConstructorModel
-import com.example.f1_kmp.data.model.ConstructorStandingsModel
-import com.example.f1_kmp.data.model.DriverModel
-import com.example.f1_kmp.data.model.DriverStandingsModel
-import com.example.f1_kmp.data.model.StandingsListsModel
-import com.example.f1_kmp.data.repository.F1Repository
+import com.example.f1_kmp.domain.model.Constructor
+import com.example.f1_kmp.domain.model.ConstructorStanding
+import com.example.f1_kmp.domain.model.Driver
+import com.example.f1_kmp.domain.model.DriverStanding
+import com.example.f1_kmp.domain.model.StandingsMeta
+import com.example.f1_kmp.data.repository.IF1Repository
 import com.example.f1_kmp.domain.AsyncValue
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -25,7 +25,7 @@ import org.junit.Test
 /**
  * Unit-тесты [HomeViewModel] — без реальной сети и Android UI.
  *
- * **MockK** подменяет [F1Repository]: через [coEvery] задаём ответ, ViewModel
+ * **MockK** подменяет [IF1Repository]: через [coEvery] задаём ответ, ViewModel
  * думает, что это настоящий API.
  *
  * **StandardTestDispatcher** + [Dispatchers.setMain] — корутины ViewModel
@@ -34,7 +34,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
     private val dispatcher = StandardTestDispatcher()
-    private lateinit var repository: F1Repository
+    private lateinit var repository: IF1Repository
 
     /** Перед каждым тестом: подменяем Main-dispatcher и создаём mock Repository. */
     @Before
@@ -57,23 +57,23 @@ class HomeViewModelTest {
     @Test
     fun loadAllData_success_setsSeasonAndDrivers() = runTest {
         val drivers = listOf(
-            DriverStandingsModel(
+            DriverStanding(
                 position = "1",
                 positionText = "1",
                 points = "100",
                 wins = "5",
-                driver = DriverModel("verstappen", "", "Max", "Verstappen", "", "Dutch"),
-                constructors = listOf(ConstructorModel("red_bull", "", "Red Bull", "Austrian")),
+                driver = Driver("verstappen", "", "Max", "Verstappen", "", "Dutch"),
+                constructors = listOf(Constructor("red_bull", "", "Red Bull", "Austrian")),
             ),
         )
-        val meta = StandingsListsModel("2026", "5", drivers, null)
+        val meta = StandingsMeta("2026", "5")
         val constructors = listOf(
-            ConstructorStandingsModel(
+            ConstructorStanding(
                 position = "1",
                 positionText = "1",
                 points = "200",
                 wins = "6",
-                constructor = ConstructorModel("red_bull", "", "Red Bull", "Austrian"),
+                constructor = Constructor("red_bull", "", "Red Bull", "Austrian"),
             ),
         )
 
@@ -82,7 +82,7 @@ class HomeViewModelTest {
         coEvery { repository.getCurrentDriverStandings() } returns Result.success(Pair(drivers, meta))
         coEvery { repository.getCurrentConstructorStandings() } returns Result.success(constructors)
 
-        val viewModel = HomeViewModel(repository)
+        val viewModel = HomeViewModel(repository, mockk(relaxed = true))
         advanceUntilIdle()
 
         assertEquals("2026", viewModel.season.value)

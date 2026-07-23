@@ -15,8 +15,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.f1_kmp.data.model.ConstructorModel
-import com.example.f1_kmp.data.model.DriverModel
+import com.example.f1_kmp.domain.model.Constructor
+import com.example.f1_kmp.domain.model.Driver
 import com.example.f1_kmp.domain.AsyncValue
 import com.example.f1_kmp.ui.components.CustomSwitcher
 import com.example.f1_kmp.ui.components.ErrorBody
@@ -39,8 +39,8 @@ import com.example.f1_kmp.domain.stringResource
 @Composable
 fun HallOfFameScreen(
     viewModel: HallOfFameViewModel,
-    onDriverClick: (DriverModel) -> Unit,
-    onConstructorClick: (ConstructorModel) -> Unit,
+    onDriverClick: (Driver) -> Unit,
+    onConstructorClick: (Constructor) -> Unit,
 ) {
     val drivers by viewModel.drivers.collectAsState()
     val constructors by viewModel.constructors.collectAsState()

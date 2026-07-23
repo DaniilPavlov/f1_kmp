@@ -3,8 +3,8 @@ package com.example.f1_kmp.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.f1_kmp.data.model.FinishStatusItem
-import com.example.f1_kmp.data.repository.F1Repository
-import com.example.f1_kmp.domain.AppException
+import com.example.f1_kmp.data.repository.IF1Repository
+import com.example.f1_kmp.domain.toAppError
 import com.example.f1_kmp.domain.AsyncValue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 
 /** ViewModel экрана «Статусы финиша» за сезон. */
 class FinishStatusViewModel(
-    private val repository: F1Repository,
+    private val repository: IF1Repository,
 ) : ViewModel() {
     private val loadJob = LoadJobHolder()
 
@@ -48,7 +48,7 @@ class FinishStatusViewModel(
             repository.getSeasonFinishStatuses(_year.value).fold(
                 onSuccess = { _statuses.value = AsyncValue.Value(it) },
                 onFailure = { e ->
-                    val ex = e as AppException
+                    val ex = e.toAppError()
                     _statuses.value = AsyncValue.Error(ex.title, ex.subtitle)
                 },
             )

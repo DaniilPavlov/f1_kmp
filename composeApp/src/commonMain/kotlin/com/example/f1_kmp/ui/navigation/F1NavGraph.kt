@@ -25,15 +25,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavDestination
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavType
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
-import com.example.f1_kmp.data.model.ConstructorModel
-import com.example.f1_kmp.data.model.DriverModel
+import androidx.navigation.toRoute
+import com.example.f1_kmp.domain.model.Circuit
+import com.example.f1_kmp.domain.model.Constructor
+import com.example.f1_kmp.domain.model.Driver
+import com.example.f1_kmp.domain.stringResource
 import com.example.f1_kmp.ui.components.F1AppBar
 import com.example.f1_kmp.ui.screens.circuits.CircuitDetailScreen
 import com.example.f1_kmp.ui.screens.circuits.CircuitsScreen
@@ -76,29 +80,30 @@ import f1_kmp.composeapp.generated.resources.race_search_title
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
-import com.example.f1_kmp.domain.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import kotlin.reflect.KClass
 
-/** Описание вкладки нижней навигации. */
+/** Описание вкладки нижней навигации (type-safe route). */
 sealed class BottomTab(
-    val route: String,
+    val route: Any,
+    val routeClass: KClass<out Any>,
     val labelRes: StringResource,
     val iconRes: DrawableResource,
 ) {
-    data object Home : BottomTab("home", Res.string.nav_home, Res.drawable.nav_home)
-    data object Results : BottomTab("results", Res.string.nav_results, Res.drawable.nav_racing_car)
-    data object Schedule : BottomTab("schedule", Res.string.nav_calendar, Res.drawable.nav_lights)
-    data object News : BottomTab("news", Res.string.nav_news, Res.drawable.nav_trophy)
-    data object Circuits : BottomTab("circuits", Res.string.nav_circuits, Res.drawable.nav_circuit)
+    data object HomeTab : BottomTab(Home, Home::class, Res.string.nav_home, Res.drawable.nav_home)
+    data object ResultsTab : BottomTab(Results, Results::class, Res.string.nav_results, Res.drawable.nav_racing_car)
+    data object ScheduleTab : BottomTab(Schedule, Schedule::class, Res.string.nav_calendar, Res.drawable.nav_lights)
+    data object NewsTab : BottomTab(News, News::class, Res.string.nav_news, Res.drawable.nav_trophy)
+    data object CircuitsTab : BottomTab(Circuits, Circuits::class, Res.string.nav_circuits, Res.drawable.nav_circuit)
 }
 
 private val tabs = listOf(
-    BottomTab.Home,
-    BottomTab.Results,
-    BottomTab.Schedule,
-    BottomTab.News,
-    BottomTab.Circuits,
+    BottomTab.HomeTab,
+    BottomTab.ResultsTab,
+    BottomTab.ScheduleTab,
+    BottomTab.NewsTab,
+    BottomTab.CircuitsTab,
 )
 
 /** Корневой Composable: Scaffold + NavHost + нижняя панель. */
@@ -106,56 +111,35 @@ private val tabs = listOf(
 fun F1App() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route
-    val showBottomBar = currentRoute in tabs.map { it.route }
+    val destination = backStackEntry?.destination
+    val showBottomBar = tabs.any { destination?.hasRoute(it.routeClass) == true }
     val popBack: () -> Unit = { navController.popBackStack() }
     var shareAction by remember { mutableStateOf<(() -> Unit)?>(null) }
 
-    val onDriverClick: (DriverModel) -> Unit = { driver ->
-        navController.navigate("driver/${driver.driverId}")
+    val onDriverClick: (Driver) -> Unit = { driver ->
+        navController.navigate(DriverDetail(driver.driverId))
     }
-    val onConstructorClick: (ConstructorModel) -> Unit = { constructor ->
-        navController.navigate("constructor/${constructor.constructorId}")
+    val onConstructorClick: (Constructor) -> Unit = { constructor ->
+        navController.navigate(ConstructorDetail(constructor.constructorId))
     }
-    val onCircuitClick: (com.example.f1_kmp.data.model.CircuitModel) -> Unit = { circuit ->
-        navController.navigate("circuit/${circuit.circuitId}")
+    val onCircuitClick: (Circuit) -> Unit = { circuit ->
+        navController.navigate(CircuitDetail(circuit.circuitId))
     }
 
     CompositionLocalProvider(LocalShareActionSetter provides { shareAction = it }) {
         Scaffold(
             topBar = {
-                when {
-                    currentRoute in tabs.map { it.route } -> F1AppBar()
-                    currentRoute == "race_search" -> F1AppBar(title = stringResource(Res.string.race_search_title), onBack = popBack)
-                    currentRoute == "hall_of_fame" -> F1AppBar(title = stringResource(Res.string.hall_of_fame_title), onBack = popBack)
-                    currentRoute == "h2h" -> F1AppBar(title = stringResource(Res.string.h2h_title), onBack = popBack)
-                    currentRoute == "h2h_constructors" -> F1AppBar(title = stringResource(Res.string.h2h_constructors_title), onBack = popBack)
-                    currentRoute == "finish_status" -> F1AppBar(title = stringResource(Res.string.finish_status_title), onBack = popBack)
-                    currentRoute?.startsWith("race_info/") == true -> F1AppBar(
-                        title = stringResource(Res.string.detailed_info),
-                        onBack = popBack,
-                        onShare = shareAction,
-                    )
-                    currentRoute?.startsWith("circuit/") == true -> F1AppBar(
-                        title = stringResource(Res.string.circuit_info_title),
-                        onBack = popBack,
-                    )
-                    currentRoute?.startsWith("driver/") == true -> F1AppBar(
-                        title = stringResource(Res.string.driver),
-                        onBack = popBack,
-                        onShare = shareAction,
-                    )
-                    currentRoute?.startsWith("constructor/") == true -> F1AppBar(
-                        title = stringResource(Res.string.constructor),
-                        onBack = popBack,
-                        onShare = shareAction,
-                    )
-                }
+                F1TopBar(
+                    destination = destination,
+                    showBottomBar = showBottomBar,
+                    popBack = popBack,
+                    shareAction = shareAction,
+                )
             },
             bottomBar = {
                 if (showBottomBar) {
                     F1BottomBar(
-                        currentRoute = currentRoute,
+                        currentDestination = destination,
                         onTabSelected = { tab ->
                             navController.navigate(tab.route) {
                                 popUpTo(navController.graph.findStartDestination().id) { saveState = true }
@@ -167,130 +151,181 @@ fun F1App() {
                 }
             },
         ) { padding ->
-            NavHost(
+            F1NavHost(
                 navController = navController,
-                startDestination = BottomTab.Home.route,
+                onDriverClick = onDriverClick,
+                onConstructorClick = onConstructorClick,
+                onCircuitClick = onCircuitClick,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-            ) {
-                composable(BottomTab.Home.route) {
-                    HomeScreen(
-                        viewModel = koinViewModel(),
-                        onDriverClick = onDriverClick,
-                        onConstructorClick = onConstructorClick,
-                    )
-                }
-                composable(BottomTab.Results.route) {
-                    ResultsScreen(
-                        viewModel = koinViewModel(),
-                        onSearchRace = { navController.navigate("race_search") },
-                        onHallOfFame = { navController.navigate("hall_of_fame") },
-                        onH2hDrivers = { navController.navigate("h2h") },
-                        onH2hConstructors = { navController.navigate("h2h_constructors") },
-                        onFinishStatus = { navController.navigate("finish_status") },
-                        onRaceDetails = { race ->
-                            navController.navigate("race_info/${race.season}/${race.round}")
-                        },
-                        onDriverClick = onDriverClick,
-                    )
-                }
-                composable("race_search") {
-                    RaceSearchScreen(
-                        viewModel = koinViewModel(),
-                        onRaceDetails = { race ->
-                            navController.navigate("race_info/${race.season}/${race.round}")
-                        },
-                        onDriverClick = onDriverClick,
-                    )
-                }
-                composable("hall_of_fame") {
-                    HallOfFameScreen(
-                        viewModel = koinViewModel(),
-                        onDriverClick = onDriverClick,
-                        onConstructorClick = onConstructorClick,
-                    )
-                }
-                composable("h2h") {
-                    H2hDriversScreen(viewModel = koinViewModel())
-                }
-                composable("h2h_constructors") {
-                    H2hConstructorsScreen(viewModel = koinViewModel())
-                }
-                composable("finish_status") {
-                    FinishStatusScreen(viewModel = koinViewModel())
-                }
-                composable(
-                    route = "race_info/{season}/{round}",
-                    arguments = listOf(
-                        navArgument("season") { type = NavType.StringType },
-                        navArgument("round") { type = NavType.StringType },
-                    ),
-                ) { entry ->
-                    val season = entry.arguments?.getString("season").orEmpty()
-                    val round = entry.arguments?.getString("round").orEmpty()
-                    RaceInfoScreen(
-                        viewModel = koinViewModel { parametersOf(season, round) },
-                        onDriverClick = onDriverClick,
-                    )
-                }
-                composable(BottomTab.Schedule.route) {
-                    ScheduleScreen(koinViewModel())
-                }
-                composable(BottomTab.News.route) {
-                    NewsScreen(viewModel = koinViewModel())
-                }
-                composable(BottomTab.Circuits.route) {
-                    CircuitsScreen(
-                        viewModel = koinViewModel(),
-                        onCircuitClick = { circuitId -> navController.navigate("circuit/$circuitId") },
-                    )
-                }
-                composable(
-                    route = "circuit/{circuitId}",
-                    arguments = listOf(
-                        navArgument("circuitId") { type = NavType.StringType },
-                    ),
-                ) { entry ->
-                    val circuitId = entry.arguments?.getString("circuitId").orEmpty()
-                    CircuitDetailScreen(
-                        viewModel = koinViewModel { parametersOf(circuitId) },
-                        onDriverClick = onDriverClick,
-                    )
-                }
-                composable(
-                    route = "driver/{driverId}",
-                    arguments = listOf(
-                        navArgument("driverId") { type = NavType.StringType },
-                    ),
-                ) { entry ->
-                    val driverId = entry.arguments?.getString("driverId").orEmpty()
-                    DriverDetailScreen(
-                        viewModel = koinViewModel { parametersOf(driverId) },
-                        onConstructorClick = onConstructorClick,
-                        onCircuitClick = onCircuitClick,
-                    )
-                }
-                composable(
-                    route = "constructor/{constructorId}",
-                    arguments = listOf(
-                        navArgument("constructorId") { type = NavType.StringType },
-                    ),
-                ) { entry ->
-                    val constructorId = entry.arguments?.getString("constructorId").orEmpty()
-                    ConstructorDetailScreen(
-                        viewModel = koinViewModel { parametersOf(constructorId) },
-                        onDriverClick = onDriverClick,
-                        onCircuitClick = onCircuitClick,
-                    )
-                }
-            }
+            )
         }
     }
 }
 
 @Composable
-private fun F1BottomBar(currentRoute: String?, onTabSelected: (BottomTab) -> Unit) {
+private fun F1TopBar(
+    destination: NavDestination?,
+    showBottomBar: Boolean,
+    popBack: () -> Unit,
+    shareAction: (() -> Unit)?,
+) {
+    when {
+        showBottomBar -> F1AppBar()
+        destination?.hasRoute<RaceSearch>() == true -> F1AppBar(
+            title = stringResource(Res.string.race_search_title),
+            onBack = popBack,
+        )
+        destination?.hasRoute<HallOfFame>() == true -> F1AppBar(
+            title = stringResource(Res.string.hall_of_fame_title),
+            onBack = popBack,
+        )
+        destination?.hasRoute<H2hDrivers>() == true -> F1AppBar(
+            title = stringResource(Res.string.h2h_title),
+            onBack = popBack,
+        )
+        destination?.hasRoute<H2hConstructors>() == true -> F1AppBar(
+            title = stringResource(Res.string.h2h_constructors_title),
+            onBack = popBack,
+        )
+        destination?.hasRoute<FinishStatus>() == true -> F1AppBar(
+            title = stringResource(Res.string.finish_status_title),
+            onBack = popBack,
+        )
+        destination?.hasRoute<RaceInfo>() == true -> F1AppBar(
+            title = stringResource(Res.string.detailed_info),
+            onBack = popBack,
+            onShare = shareAction,
+        )
+        destination?.hasRoute<CircuitDetail>() == true -> F1AppBar(
+            title = stringResource(Res.string.circuit_info_title),
+            onBack = popBack,
+        )
+        destination?.hasRoute<DriverDetail>() == true -> F1AppBar(
+            title = stringResource(Res.string.driver),
+            onBack = popBack,
+            onShare = shareAction,
+        )
+        destination?.hasRoute<ConstructorDetail>() == true -> F1AppBar(
+            title = stringResource(Res.string.constructor),
+            onBack = popBack,
+            onShare = shareAction,
+        )
+    }
+}
+
+@Composable
+private fun F1NavHost(
+    navController: NavHostController,
+    onDriverClick: (Driver) -> Unit,
+    onConstructorClick: (Constructor) -> Unit,
+    onCircuitClick: (Circuit) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    NavHost(
+        navController = navController,
+        startDestination = Home,
+        modifier = modifier,
+    ) {
+        composable<Home> {
+            HomeScreen(
+                viewModel = koinViewModel(),
+                onDriverClick = onDriverClick,
+                onConstructorClick = onConstructorClick,
+            )
+        }
+        composable<Results> {
+            ResultsScreen(
+                viewModel = koinViewModel(),
+                onSearchRace = { navController.navigate(RaceSearch) },
+                onHallOfFame = { navController.navigate(HallOfFame) },
+                onH2hDrivers = { navController.navigate(H2hDrivers) },
+                onH2hConstructors = { navController.navigate(H2hConstructors) },
+                onFinishStatus = { navController.navigate(FinishStatus) },
+                onRaceDetails = { race ->
+                    navController.navigate(RaceInfo(race.season, race.round))
+                },
+                onDriverClick = onDriverClick,
+            )
+        }
+        composable<RaceSearch> {
+            RaceSearchScreen(
+                viewModel = koinViewModel(),
+                onRaceDetails = { race ->
+                    navController.navigate(RaceInfo(race.season, race.round))
+                },
+                onDriverClick = onDriverClick,
+            )
+        }
+        composable<HallOfFame> {
+            HallOfFameScreen(
+                viewModel = koinViewModel(),
+                onDriverClick = onDriverClick,
+                onConstructorClick = onConstructorClick,
+            )
+        }
+        composable<H2hDrivers> {
+            H2hDriversScreen(viewModel = koinViewModel())
+        }
+        composable<H2hConstructors> {
+            H2hConstructorsScreen(viewModel = koinViewModel())
+        }
+        composable<FinishStatus> {
+            FinishStatusScreen(viewModel = koinViewModel())
+        }
+        composable<RaceInfo> { entry ->
+            val args = entry.toRoute<RaceInfo>()
+            RaceInfoScreen(
+                viewModel = koinViewModel { parametersOf(args.season, args.round) },
+                onDriverClick = onDriverClick,
+            )
+        }
+        composable<Schedule> {
+            ScheduleScreen(koinViewModel())
+        }
+        composable<News> {
+            NewsScreen(viewModel = koinViewModel())
+        }
+        composable<Circuits> {
+            CircuitsScreen(
+                viewModel = koinViewModel(),
+                onCircuitClick = { circuitId ->
+                    navController.navigate(CircuitDetail(circuitId))
+                },
+            )
+        }
+        composable<CircuitDetail> { entry ->
+            val args = entry.toRoute<CircuitDetail>()
+            CircuitDetailScreen(
+                viewModel = koinViewModel { parametersOf(args.circuitId) },
+                onDriverClick = onDriverClick,
+            )
+        }
+        composable<DriverDetail> { entry ->
+            val args = entry.toRoute<DriverDetail>()
+            DriverDetailScreen(
+                viewModel = koinViewModel { parametersOf(args.driverId) },
+                onConstructorClick = onConstructorClick,
+                onCircuitClick = onCircuitClick,
+            )
+        }
+        composable<ConstructorDetail> { entry ->
+            val args = entry.toRoute<ConstructorDetail>()
+            ConstructorDetailScreen(
+                viewModel = koinViewModel { parametersOf(args.constructorId) },
+                onDriverClick = onDriverClick,
+                onCircuitClick = onCircuitClick,
+            )
+        }
+    }
+}
+
+@Composable
+private fun F1BottomBar(
+    currentDestination: NavDestination?,
+    onTabSelected: (BottomTab) -> Unit,
+) {
     Column {
         Box(modifier = Modifier.fillMaxWidth().height(4.dp).background(F1Red))
         Row(
@@ -302,9 +337,9 @@ private fun F1BottomBar(currentRoute: String?, onTabSelected: (BottomTab) -> Uni
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             tabs.forEach { tab ->
-                val selected = currentRoute == tab.route
-                val contentColor = if (selected) F1Red else F1White
                 val label = stringResource(tab.labelRes)
+                val selected = currentDestination?.hasRoute(tab.routeClass) == true
+                val contentColor = if (selected) F1Red else F1White
                 Column(
                     modifier = Modifier
                         .clickable { onTabSelected(tab) }

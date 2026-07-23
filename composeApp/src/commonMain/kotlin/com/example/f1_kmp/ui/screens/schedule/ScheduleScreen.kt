@@ -17,7 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.f1_kmp.data.model.RaceModel
+import com.example.f1_kmp.domain.model.Race
 import com.example.f1_kmp.domain.AsyncValue
 import com.example.f1_kmp.domain.LocaleController
 import com.example.f1_kmp.ui.components.ErrorBody
@@ -44,7 +44,7 @@ fun ScheduleScreen(viewModel: ScheduleViewModel) {
     val upcomingRace by viewModel.upcomingRace.collectAsState()
     val error by viewModel.error.collectAsState()
     val language by LocaleController.language.collectAsState()
-    var sessionsRace by remember { mutableStateOf<RaceModel?>(null) }
+    var sessionsRace by remember { mutableStateOf<Race?>(null) }
 
     LaunchedEffect(language) {
         viewModel.refreshScheduleForCurrentDay()

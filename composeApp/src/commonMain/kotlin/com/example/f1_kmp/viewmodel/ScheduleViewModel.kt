@@ -2,10 +2,10 @@ package com.example.f1_kmp.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.f1_kmp.data.model.RaceDateModel
-import com.example.f1_kmp.data.model.RaceModel
-import com.example.f1_kmp.data.repository.F1Repository
-import com.example.f1_kmp.domain.AppException
+import com.example.f1_kmp.domain.model.RaceSession
+import com.example.f1_kmp.domain.model.Race
+import com.example.f1_kmp.data.repository.IF1Repository
+import com.example.f1_kmp.domain.AppError
 import com.example.f1_kmp.domain.AsyncValue
 import com.example.f1_kmp.domain.SessionStrings
 import com.example.f1_kmp.util.DateUtils
@@ -27,7 +27,7 @@ import kotlinx.datetime.todayIn
 data class ScheduleSessionItem(
     val raceName: String,
     val title: String,
-    val date: RaceDateModel,
+    val date: RaceSession,
 )
 
 /**
@@ -37,13 +37,13 @@ data class ScheduleSessionItem(
  * и подсказывает иконки для дней (практика / гонка).
  */
 class ScheduleViewModel(
-    private val repository: F1Repository,
+    private val repository: IF1Repository,
 ) : ViewModel() {
     private val loadJob = LoadJobHolder()
     private val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
 
-    private val _races = MutableStateFlow<AsyncValue<List<RaceModel>>>(AsyncValue.Loading)
-    val races: StateFlow<AsyncValue<List<RaceModel>>> = _races.asStateFlow()
+    private val _races = MutableStateFlow<AsyncValue<List<Race>>>(AsyncValue.Loading)
+    val races: StateFlow<AsyncValue<List<Race>>> = _races.asStateFlow()
 
     private val _selectedDate = MutableStateFlow(today)
     val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
@@ -58,11 +58,11 @@ class ScheduleViewModel(
     private val _scheduleItems = MutableStateFlow<List<ScheduleSessionItem>>(emptyList())
     val scheduleItems: StateFlow<List<ScheduleSessionItem>> = _scheduleItems.asStateFlow()
 
-    private val _upcomingRace = MutableStateFlow<RaceModel?>(null)
-    val upcomingRace: StateFlow<RaceModel?> = _upcomingRace.asStateFlow()
+    private val _upcomingRace = MutableStateFlow<Race?>(null)
+    val upcomingRace: StateFlow<Race?> = _upcomingRace.asStateFlow()
 
-    private val _error = MutableStateFlow<AppException?>(null)
-    val error: StateFlow<AppException?> = _error.asStateFlow()
+    private val _error = MutableStateFlow<AppError?>(null)
+    val error: StateFlow<AppError?> = _error.asStateFlow()
 
     init {
         loadAllData()
@@ -134,10 +134,10 @@ class ScheduleViewModel(
         return null
     }
 
-    private fun hasSessionOnDay(race: RaceModel, day: LocalDate): Boolean =
+    private fun hasSessionOnDay(race: Race, day: LocalDate): Boolean =
         sessions(race).any { it?.date?.let { d -> LocalDate.parse(d) == day } == true }
 
-    private fun sessions(race: RaceModel) = listOf(
+    private fun sessions(race: Race) = listOf(
         race.firstPractice,
         race.secondPractice,
         race.thirdPractice,
@@ -159,13 +159,13 @@ class ScheduleViewModel(
                         ScheduleSessionItem(
                             raceName = race.raceName,
                             title = SessionStrings.race,
-                            date = RaceDateModel(date = race.date, time = race.time),
+                            date = RaceSession(date = race.date, time = race.time),
                         ),
                     )
                 }
                 if (items.isNotEmpty()) {
                     _scheduleItems.value = listOf(
-                        ScheduleSessionItem(raceName = race.raceName, title = "", date = RaceDateModel("", null)),
+                        ScheduleSessionItem(raceName = race.raceName, title = "", date = RaceSession("", null)),
                     ) + items
                     return
                 }
@@ -174,7 +174,7 @@ class ScheduleViewModel(
         _scheduleItems.value = emptyList()
     }
 
-    private fun addSessionsForDay(race: RaceModel, day: LocalDate, items: MutableList<ScheduleSessionItem>) {
+    private fun addSessionsForDay(race: Race, day: LocalDate, items: MutableList<ScheduleSessionItem>) {
         val sessionPairs = listOf(
             race.firstPractice to SessionStrings.firstPractice,
             race.secondPractice to SessionStrings.secondPractice,

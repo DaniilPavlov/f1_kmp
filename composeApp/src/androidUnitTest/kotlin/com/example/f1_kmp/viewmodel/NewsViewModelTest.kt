@@ -1,7 +1,7 @@
 package com.example.f1_kmp.viewmodel
 
 import com.example.f1_kmp.data.model.NewsArticle
-import com.example.f1_kmp.data.repository.EspnRepository
+import com.example.f1_kmp.data.repository.IEspnRepository
 import com.example.f1_kmp.domain.AsyncValue
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -27,7 +27,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class NewsViewModelTest {
     private val dispatcher = StandardTestDispatcher()
-    private lateinit var espnRepository: EspnRepository
+    private lateinit var espnRepository: IEspnRepository
 
     @Before
     fun setUp() {
@@ -47,7 +47,7 @@ class NewsViewModelTest {
         every { espnRepository.peekNews } returns cached
         every { espnRepository.isNewsFresh } returns true
 
-        val viewModel = NewsViewModel(espnRepository)
+        val viewModel = NewsViewModel(espnRepository, mockk(relaxed = true))
         advanceUntilIdle()
 
         assertTrue(viewModel.articles.value is AsyncValue.Value)
@@ -62,7 +62,7 @@ class NewsViewModelTest {
         every { espnRepository.peekNews } returns null
         coEvery { espnRepository.getNews(forceRefresh = false) } returns Result.success(articles)
 
-        val viewModel = NewsViewModel(espnRepository)
+        val viewModel = NewsViewModel(espnRepository, mockk(relaxed = true))
         advanceUntilIdle()
 
         assertTrue(viewModel.articles.value is AsyncValue.Value)
@@ -78,7 +78,7 @@ class NewsViewModelTest {
         every { espnRepository.isNewsFresh } returns true
         coEvery { espnRepository.getNews(forceRefresh = true) } returns Result.success(refreshed)
 
-        val viewModel = NewsViewModel(espnRepository)
+        val viewModel = NewsViewModel(espnRepository, mockk(relaxed = true))
         advanceUntilIdle()
 
         viewModel.refreshAll()

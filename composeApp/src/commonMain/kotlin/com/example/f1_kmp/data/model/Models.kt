@@ -1,5 +1,8 @@
 package com.example.f1_kmp.data.model
 
+import com.example.f1_kmp.domain.model.Circuit
+import com.example.f1_kmp.domain.model.Constructor
+import com.example.f1_kmp.domain.model.Driver
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -8,6 +11,9 @@ import kotlinx.serialization.Serializable
  *
  * В JSON поля часто в PascalCase (`MRData`, `DriverStandings`),
  * в Kotlin — camelCase. [@SerialName] связывает их при парсинге.
+ *
+ * Агрегаты карьеры / H2H / статусов ([CareerStats], [H2hStats] и т.п.) —
+ * не JSON DTO; внутри используют domain-типы.
  */
 
 /** Обёртка всех ответов API: `{ "MRData": { ... } }`. */
@@ -344,9 +350,9 @@ data class CareerRaceResult(
     val round: String,
     val raceName: String,
     val position: Int,
-    val constructor: ConstructorModel,
-    val circuit: CircuitModel,
-    val driver: DriverModel? = null,
+    val constructor: Constructor,
+    val circuit: Circuit,
+    val driver: Driver? = null,
 ) {
     /** Подзаголовок строки: пилот (если есть) или конструктор. */
     val entityName: String
@@ -371,8 +377,8 @@ data class CircuitRaceWin(
     val season: String,
     val round: String,
     val raceName: String,
-    val driver: DriverModel,
-    val constructor: ConstructorModel,
+    val driver: Driver,
+    val constructor: Constructor,
 )
 
 /** Кэш списка сезонов (обновляется раз в сутки). */

@@ -1,7 +1,7 @@
 package com.example.f1_kmp.util
 
-import com.example.f1_kmp.data.model.RaceModel
-import com.example.f1_kmp.data.model.RaceResultModel
+import com.example.f1_kmp.domain.model.Race
+import com.example.f1_kmp.domain.model.RaceResult
 import com.example.f1_kmp.domain.LocaleController
 import platform.UIKit.UIActivityViewController
 import platform.UIKit.UIApplication
@@ -38,12 +38,12 @@ actual fun shareCareerCard(title: String, races: Int, wins: Int, podiums: Int, p
     presentShareSheet(text)
 }
 
-actual fun shareRaceResultsCard(race: RaceModel) {
+actual fun shareRaceResultsCard(race: Race) {
     presentShareSheet(formatRaceResultsText(race))
 }
 
 /** Формирует текстовую сводку результатов гонки для системного share sheet. */
-internal fun formatRaceResultsText(race: RaceModel, topN: Int = 10): String {
+internal fun formatRaceResultsText(race: Race, topN: Int = 10): String {
     val en = LocaleController.language.value == "en"
     val results = race.results.orEmpty()
     val rows = results.take(topN)
@@ -76,7 +76,7 @@ internal fun formatRaceResultsText(race: RaceModel, topN: Int = 10): String {
     }
 }
 
-private fun formatResultLine(result: RaceResultModel): String {
+private fun formatResultLine(result: RaceResult): String {
     val classified = result.time != null || result.status.equals("Finished", ignoreCase = true)
     val timeOrStatus = result.time?.time ?: result.status
     return buildString {

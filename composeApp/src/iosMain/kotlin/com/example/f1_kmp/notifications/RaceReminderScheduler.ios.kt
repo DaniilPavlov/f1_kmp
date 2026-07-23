@@ -1,8 +1,8 @@
 package com.example.f1_kmp.notifications
 
-import com.example.f1_kmp.data.model.RaceDateModel
-import com.example.f1_kmp.data.model.RaceModel
-import com.example.f1_kmp.data.repository.F1Repository
+import com.example.f1_kmp.domain.model.RaceSession
+import com.example.f1_kmp.domain.model.Race
+import com.example.f1_kmp.data.repository.IF1Repository
 import com.example.f1_kmp.domain.SessionStrings
 import com.example.f1_kmp.util.DateUtils
 import kotlinx.coroutines.CoroutineScope
@@ -28,7 +28,7 @@ import platform.UserNotifications.UNUserNotificationCenter
  * Sync: старт приложения / смена языка.
  */
 class RaceReminderScheduler(
-    private val repository: F1Repository,
+    private val repository: IF1Repository,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var lastScheduledIds: Set<Int> = emptySet()
@@ -59,7 +59,7 @@ class RaceReminderScheduler(
         ) { _, _ -> }
     }
 
-    private fun sessions(races: List<RaceModel>): List<Reminder> = buildList {
+    private fun sessions(races: List<Race>): List<Reminder> = buildList {
         races.forEach { race ->
             listOf(
                 Triple("fp1", SessionStrings.firstPractice, race.firstPractice),
@@ -68,7 +68,7 @@ class RaceReminderScheduler(
                 Triple("sprint_qualifying", SessionStrings.sprintQualifying, race.sprintQualifying),
                 Triple("sprint", SessionStrings.sprint, race.sprint),
                 Triple("qualifying", SessionStrings.qualifying, race.qualifying),
-                Triple("race", SessionStrings.race, RaceDateModel(race.date, race.time)),
+                Triple("race", SessionStrings.race, RaceSession(race.date, race.time)),
             ).forEach { (key, title, date) ->
                 val session = date ?: return@forEach
                 val local = DateUtils.toLocalDateTime(session.date, session.time) ?: return@forEach

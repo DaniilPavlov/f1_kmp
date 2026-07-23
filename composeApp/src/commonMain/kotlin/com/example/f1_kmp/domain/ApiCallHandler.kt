@@ -2,9 +2,7 @@ package com.example.f1_kmp.domain
 
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.network.sockets.SocketTimeoutException
-import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.HttpRequestTimeoutException
-import io.ktor.http.HttpStatusCode
 import io.ktor.util.network.UnresolvedAddressException
 import kotlinx.coroutines.delay
 import kotlinx.io.IOException
@@ -12,10 +10,11 @@ import kotlinx.io.IOException
 /**
  * Единая обёртка для сетевых вызовов в Repository.
  *
- * При сетевой ошибке ([IOException] и родственные) — один повтор через [RETRY_DELAY_MS].
- * Типичный случай: первый запрос упал (холодный DNS/SSL), повтор сразу прошёл.
+ * GoF Behavioral Template Method — фиксированный скелет: попытка → при
+ * сетевой ошибке один retry → иначе [Throwable.toAppError] → [Result.failure].
+ * Конкретный запрос передаётся как [block].
  *
- * Все ошибки превращаются в [AppException] с локализованным текстом для UI.
+ * Типичный случай retry: первый запрос упал (холодный DNS/SSL), повтор сразу прошёл.
  */
 object ApiCallHandler {
 
@@ -35,7 +34,7 @@ object ApiCallHandler {
             try {
                 return Result.success(block())
             } catch (e: Exception) {
-                lastError = mapException(e)
+                lastError = e.toAppError().asException()
                 val canRetry = attempt < retries && isRetryable(e)
                 if (canRetry) {
                     delay(RETRY_DELAY_MS)
@@ -54,35 +53,6 @@ object ApiCallHandler {
             e is SocketTimeoutException ||
             e is ConnectTimeoutException ||
             e is HttpRequestTimeoutException
-
-    /** Сетевые/парсинг-ошибки → понятный [AppException] для UI. */
-    private fun mapException(e: Exception): AppException = when (e) {
-        is SocketTimeoutException,
-        is ConnectTimeoutException,
-        is HttpRequestTimeoutException,
-        -> AppException(
-            title = ErrorStrings.serverSlow,
-            subtitle = ErrorStrings.noConnectionSubtitle,
-        )
-        is UnresolvedAddressException,
-        is IOException,
-        -> AppException(
-            title = ErrorStrings.noConnection,
-            subtitle = ErrorStrings.noConnectionSubtitle,
-        )
-        is ClientRequestException -> AppException(
-            title = if (e.response.status == HttpStatusCode.TooManyRequests) {
-                ErrorStrings.tooManyRequests
-            } else {
-                ErrorStrings.responseParseError
-            },
-            subtitle = e.message,
-        )
-        else -> AppException(
-            title = ErrorStrings.responseParseError,
-            subtitle = e.message,
-        )
-    }
 }
 
 /** Локализованные сообщения для domain/repository без Context. */

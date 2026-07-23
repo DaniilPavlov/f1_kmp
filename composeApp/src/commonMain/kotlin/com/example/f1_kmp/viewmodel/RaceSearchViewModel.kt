@@ -2,9 +2,9 @@ package com.example.f1_kmp.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.f1_kmp.data.model.RaceModel
-import com.example.f1_kmp.data.repository.F1Repository
-import com.example.f1_kmp.domain.AppException
+import com.example.f1_kmp.domain.model.Race
+import com.example.f1_kmp.data.repository.IF1Repository
+import com.example.f1_kmp.domain.toAppError
 import com.example.f1_kmp.domain.ErrorStrings
 import com.example.f1_kmp.domain.AsyncValue
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * Пользователь выбирает сезон и гонку из picker; по кнопке «Найти» — запрос без кэша.
  */
 class RaceSearchViewModel(
-    private val repository: F1Repository,
+    private val repository: IF1Repository,
 ) : ViewModel() {
     private val loadJob = LoadJobHolder()
 
@@ -30,8 +30,8 @@ class RaceSearchViewModel(
     private val _raceDisplay = MutableStateFlow("")
     val raceDisplay: StateFlow<String> = _raceDisplay.asStateFlow()
 
-    private val _searchedRace = MutableStateFlow<AsyncValue<RaceModel?>>(AsyncValue.Value(null))
-    val searchedRace: StateFlow<AsyncValue<RaceModel?>> = _searchedRace.asStateFlow()
+    private val _searchedRace = MutableStateFlow<AsyncValue<Race?>>(AsyncValue.Value(null))
+    val searchedRace: StateFlow<AsyncValue<Race?>> = _searchedRace.asStateFlow()
 
     private val _fieldsInputted = MutableStateFlow(false)
     val fieldsInputted: StateFlow<Boolean> = _fieldsInputted.asStateFlow()
@@ -66,7 +66,7 @@ class RaceSearchViewModel(
     suspend fun loadSeasonYears(): Result<List<String>> = repository.getSeasonYears()
 
     /** Список гонок сезона для [RacePickerField]. */
-    suspend fun loadSeasonRaces(year: String): Result<List<RaceModel>> = repository.getSeasonRaces(year)
+    suspend fun loadSeasonRaces(year: String): Result<List<Race>> = repository.getSeasonRaces(year)
 
     /** Запрос результатов выбранной гонки (без кэша). */
     fun loadRaceResults() {
@@ -84,7 +84,7 @@ class RaceSearchViewModel(
                     }
                 }
                 .onFailure { e ->
-                    val ex = e as AppException
+                    val ex = e.toAppError()
                     _searchedRace.value = AsyncValue.Error(ex.title, ex.subtitle)
                     _errorMessage.value = ex.title
                 }

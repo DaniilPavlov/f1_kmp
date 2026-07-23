@@ -15,8 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.f1_kmp.data.model.CareerStats
-import com.example.f1_kmp.data.model.CircuitModel
-import com.example.f1_kmp.data.model.DriverModel
+import com.example.f1_kmp.domain.model.Circuit
+import com.example.f1_kmp.domain.model.Driver
 import com.example.f1_kmp.data.model.NewsArticle
 import com.example.f1_kmp.domain.AsyncValue
 import com.example.f1_kmp.ui.components.CareerDetailSections
@@ -43,8 +43,8 @@ import com.example.f1_kmp.domain.stringResource
 @Composable
 fun ConstructorDetailScreen(
     viewModel: ConstructorDetailViewModel,
-    onDriverClick: (DriverModel) -> Unit,
-    onCircuitClick: (CircuitModel) -> Unit,
+    onDriverClick: (Driver) -> Unit,
+    onCircuitClick: (Circuit) -> Unit,
 ) {
     val constructor by viewModel.constructor.collectAsState()
     val career by viewModel.careerStats.collectAsState()
@@ -81,10 +81,10 @@ private fun ConstructorContent(
     name: String,
     nationality: String,
     url: String,
-    stats: CareerStats<DriverModel>,
+    stats: CareerStats<Driver>,
     news: List<NewsArticle>,
-    onDriverClick: (DriverModel) -> Unit,
-    onCircuitClick: (CircuitModel) -> Unit,
+    onDriverClick: (Driver) -> Unit,
+    onCircuitClick: (Circuit) -> Unit,
     onWikipediaClick: () -> Unit,
 ) {
     RegisterShareAction(

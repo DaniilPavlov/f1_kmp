@@ -30,7 +30,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.f1_kmp.R
-import com.example.f1_kmp.data.model.CircuitModel
+import com.example.f1_kmp.domain.model.Circuit
 import com.example.f1_kmp.platform.OsmdroidInitializer
 import com.example.f1_kmp.ui.theme.F1Red
 import org.osmdroid.bonuspack.clustering.RadiusMarkerClusterer
@@ -56,7 +56,7 @@ private const val MAP_MAX_ZOOM = 18.0
  */
 @Composable
 actual fun CircuitsMapContent(
-    circuits: List<CircuitModel>,
+    circuits: List<Circuit>,
     onCircuitClick: (String) -> Unit,
 ) {
     val context = LocalContext.current
@@ -139,7 +139,7 @@ private fun configureCircuitsMapView(mapView: MapView, initialCenter: GeoPoint?)
 
 private fun populateCircuitsMap(
     mapView: MapView,
-    circuits: List<CircuitModel>,
+    circuits: List<Circuit>,
     onCircuitClick: (String) -> Unit,
 ) {
     mapView.overlays.removeAll { it is F1CircuitsClusterer }

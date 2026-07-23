@@ -1,10 +1,10 @@
 package com.example.f1_kmp.viewmodel
 
-import com.example.f1_kmp.data.model.CircuitLocationModel
-import com.example.f1_kmp.data.model.CircuitModel
-import com.example.f1_kmp.data.model.RaceDateModel
-import com.example.f1_kmp.data.model.RaceModel
-import com.example.f1_kmp.data.repository.F1Repository
+import com.example.f1_kmp.domain.model.CircuitLocation
+import com.example.f1_kmp.domain.model.Circuit
+import com.example.f1_kmp.domain.model.RaceSession
+import com.example.f1_kmp.domain.model.Race
+import com.example.f1_kmp.data.repository.IF1Repository
 import com.example.f1_kmp.domain.AsyncValue
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -28,7 +28,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class ScheduleViewModelTest {
     private val dispatcher = StandardTestDispatcher()
-    private lateinit var repository: F1Repository
+    private lateinit var repository: IF1Repository
 
     @Before
     fun setUp() {
@@ -56,7 +56,7 @@ class ScheduleViewModelTest {
     fun logoForDay_practiceDay_returnsCar() = runTest {
         val race = sampleRace(
             date = "2026-05-11",
-            firstPractice = RaceDateModel("2026-05-10", "12:00:00Z"),
+            firstPractice = RaceSession("2026-05-10", "12:00:00Z"),
         )
         stubSchedule(listOf(race))
 
@@ -70,7 +70,7 @@ class ScheduleViewModelTest {
     fun onSelectDay_buildsScheduleItemsForPractice() = runTest {
         val race = sampleRace(
             date = "2026-05-11",
-            firstPractice = RaceDateModel("2026-05-10", "12:00:00Z"),
+            firstPractice = RaceSession("2026-05-10", "12:00:00Z"),
         )
         stubSchedule(listOf(race))
 
@@ -98,24 +98,24 @@ class ScheduleViewModelTest {
         assertEquals(1, (viewModel.races.value as AsyncValue.Value).value.size)
     }
 
-    private fun stubSchedule(races: List<RaceModel>) {
+    private fun stubSchedule(races: List<Race>) {
         coEvery { repository.peekScheduleCache() } returns null
         coEvery { repository.getCurrentSchedule() } returns Result.success(races)
     }
 
     private fun sampleRace(
         date: String,
-        firstPractice: RaceDateModel? = null,
-    ) = RaceModel(
+        firstPractice: RaceSession? = null,
+    ) = Race(
         season = "2026",
         round = "7",
         url = "",
         raceName = "Monaco Grand Prix",
-        circuit = CircuitModel(
+        circuit = Circuit(
             circuitId = "monaco",
             url = "",
             circuitName = "Monaco",
-            location = CircuitLocationModel("43.7", "7.4", "Monte Carlo", "Monaco"),
+            location = CircuitLocation("43.7", "7.4", "Monte Carlo", "Monaco"),
         ),
         date = date,
         time = "13:00:00Z",

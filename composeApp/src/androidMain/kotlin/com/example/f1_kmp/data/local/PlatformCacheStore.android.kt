@@ -20,4 +20,8 @@ actual class PlatformCacheStore {
     actual fun writeText(fileName: String, content: String) {
         File(dir, fileName).writeText(content)
     }
+
+    actual fun clearAll() {
+        dir.listFiles()?.forEach { it.delete() }
+    }
 }

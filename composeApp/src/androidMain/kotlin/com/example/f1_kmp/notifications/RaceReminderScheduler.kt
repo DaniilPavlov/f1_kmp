@@ -12,9 +12,9 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.f1_kmp.R
-import com.example.f1_kmp.data.model.RaceDateModel
-import com.example.f1_kmp.data.model.RaceModel
-import com.example.f1_kmp.data.repository.F1Repository
+import com.example.f1_kmp.domain.model.RaceSession
+import com.example.f1_kmp.domain.model.Race
+import com.example.f1_kmp.data.repository.IF1Repository
 import com.example.f1_kmp.domain.SessionStrings
 import com.example.f1_kmp.util.DateUtils
 import kotlinx.coroutines.CoroutineScope
@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicReference
  */
 class RaceReminderScheduler(
     private val context: Context,
-    private val repository: F1Repository,
+    private val repository: IF1Repository,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val lastScheduledIds = AtomicReference<Set<Int>>(emptySet())
@@ -56,7 +56,7 @@ class RaceReminderScheduler(
         }
     }
 
-    private fun sessions(races: List<RaceModel>): List<Reminder> = buildList {
+    private fun sessions(races: List<Race>): List<Reminder> = buildList {
         races.forEach { race ->
             listOf(
                 Triple("fp1", SessionStrings.firstPractice, race.firstPractice),
@@ -65,7 +65,7 @@ class RaceReminderScheduler(
                 Triple("sprint_qualifying", SessionStrings.sprintQualifying, race.sprintQualifying),
                 Triple("sprint", SessionStrings.sprint, race.sprint),
                 Triple("qualifying", SessionStrings.qualifying, race.qualifying),
-                Triple("race", SessionStrings.race, RaceDateModel(race.date, race.time)),
+                Triple("race", SessionStrings.race, RaceSession(race.date, race.time)),
             ).forEach { (key, title, date) ->
                 val session = date ?: return@forEach
                 val local = DateUtils.toLocalDateTime(session.date, session.time) ?: return@forEach

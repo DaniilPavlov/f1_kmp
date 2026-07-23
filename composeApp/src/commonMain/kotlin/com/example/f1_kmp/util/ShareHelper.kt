@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
-import com.example.f1_kmp.data.model.RaceModel
+import com.example.f1_kmp.domain.model.Race
 
 /** Экраны регистрируют share-действие для app bar; сбрасывается при dispose. */
 val LocalShareActionSetter = staticCompositionLocalOf<(((() -> Unit)?) -> Unit)> {
@@ -28,7 +28,7 @@ fun rememberShareCareerAction(title: String, races: Int, wins: Int, podiums: Int
     }
 
 @Composable
-fun rememberShareRaceAction(race: RaceModel): () -> Unit =
+fun rememberShareRaceAction(race: Race): () -> Unit =
     remember(race.season, race.round, race.raceName, race.results) {
         { shareRaceResultsCard(race) }
     }
@@ -36,4 +36,4 @@ fun rememberShareRaceAction(race: RaceModel): () -> Unit =
 /** Платформенная реализация: рендер карточки и системный share sheet. */
 expect fun shareCareerCard(title: String, races: Int, wins: Int, podiums: Int, poles: Int)
 
-expect fun shareRaceResultsCard(race: RaceModel)
+expect fun shareRaceResultsCard(race: Race)

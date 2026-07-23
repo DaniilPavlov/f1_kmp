@@ -1,8 +1,8 @@
 package com.example.f1_kmp.viewmodel
 
-import com.example.f1_kmp.data.model.DriverModel
+import com.example.f1_kmp.domain.model.Driver
 import com.example.f1_kmp.data.model.H2hStats
-import com.example.f1_kmp.data.repository.F1Repository
+import com.example.f1_kmp.data.repository.IF1Repository
 import com.example.f1_kmp.domain.AsyncValue
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -25,7 +25,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class H2hDriversViewModelTest {
     private val dispatcher = StandardTestDispatcher()
-    private lateinit var repository: F1Repository
+    private lateinit var repository: IF1Repository
 
     @Before
     fun setUp() {
@@ -38,11 +38,11 @@ class H2hDriversViewModelTest {
         Dispatchers.resetMain()
     }
 
-    /** Успешный [F1Repository.getDriverH2hStats] для обоих пилотов → [AsyncValue.Value]. */
+    /** Успешный [IF1Repository.getDriverH2hStats] для обоих пилотов → [AsyncValue.Value]. */
     @Test
     fun compare_success_setsComparison() = runTest {
-        val driverA = DriverModel("hamilton", "", "Lewis", "Hamilton", "", "British")
-        val driverB = DriverModel("russell", "", "George", "Russell", "", "British")
+        val driverA = Driver("hamilton", "", "Lewis", "Hamilton", "", "British")
+        val driverB = Driver("russell", "", "George", "Russell", "", "British")
         val statsA = H2hStats(races = 100, wins = 50, podiums = 80, poles = 40)
         val statsB = H2hStats(races = 80, wins = 5, podiums = 30, poles = 2)
 

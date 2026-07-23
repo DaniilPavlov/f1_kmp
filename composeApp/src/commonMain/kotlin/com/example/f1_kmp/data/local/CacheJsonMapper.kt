@@ -8,7 +8,7 @@ import kotlinx.serialization.serializer
  * Преобразует Kotlin-объекты в JSON для файлового кэша и обратно.
  *
  * [reified T] нужен, чтобы kotlinx.serialization знал конкретный тип
- * (в том числе для `List<RaceModel>`).
+ * (в том числе для `List<Race>`).
  */
 class CacheJsonMapper(val json: Json) {
 

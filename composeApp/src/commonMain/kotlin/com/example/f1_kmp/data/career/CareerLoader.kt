@@ -1,13 +1,14 @@
 package com.example.f1_kmp.data.career
 
 import com.example.f1_kmp.data.api.F1ApiService
+import com.example.f1_kmp.data.mapper.toDomain
 import com.example.f1_kmp.data.model.CareerRaceResult
 import com.example.f1_kmp.data.model.CareerStats
-import com.example.f1_kmp.data.model.ConstructorModel
-import com.example.f1_kmp.data.model.DriverModel
 import com.example.f1_kmp.data.model.H2hStats
 import com.example.f1_kmp.data.model.MrDataTotalModel
 import com.example.f1_kmp.data.model.RaceModel
+import com.example.f1_kmp.domain.model.Constructor
+import com.example.f1_kmp.domain.model.Driver
 import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
 
@@ -21,8 +22,8 @@ object CareerLoader {
     suspend fun loadDriverCareer(
         api: F1ApiService,
         driverId: String,
-        current: List<ConstructorModel> = emptyList(),
-    ): CareerStats<ConstructorModel> {
+        current: List<Constructor> = emptyList(),
+    ): CareerStats<Constructor> {
         val prefix = "drivers/$driverId"
         val totals = getThrottled(
             api,
@@ -58,7 +59,7 @@ object CareerLoader {
             podiums = wins + second + third,
             poles = totalOf(totals[4]),
             current = current,
-            related = totals[5].constructorTable?.constructors.orEmpty(),
+            related = totals[5].constructorTable?.constructors.orEmpty().map { it.toDomain() },
             winRaces = winRaces,
             podiumRaces = podiumRaces,
             poleRaces = poleRaces,
@@ -68,8 +69,8 @@ object CareerLoader {
     suspend fun loadConstructorCareer(
         api: F1ApiService,
         constructorId: String,
-        current: List<DriverModel> = emptyList(),
-    ): CareerStats<DriverModel> {
+        current: List<Driver> = emptyList(),
+    ): CareerStats<Driver> {
         val prefix = "constructors/$constructorId"
         val allResultsPages = fetchAllPages(api, "$prefix/results")
         val winPages = fetchAllPages(api, "$prefix/results/1")
@@ -100,7 +101,7 @@ object CareerLoader {
             podiums = podiumRaces.size,
             poles = if (polesTotal > 0) polesTotal else poleRaces.size,
             current = current,
-            related = driversResponse.driverTable?.drivers.orEmpty(),
+            related = driversResponse.driverTable?.drivers.orEmpty().map { it.toDomain() },
             winRaces = winRaces,
             podiumRaces = podiumRaces,
             poleRaces = poleRaces,
@@ -220,9 +221,9 @@ object CareerLoader {
                 round = race.round,
                 raceName = race.raceName,
                 position = position,
-                constructor = entry.constructor,
-                circuit = race.circuit,
-                driver = entry.driver,
+                constructor = entry.constructor.toDomain(),
+                circuit = race.circuit.toDomain(),
+                driver = entry.driver.toDomain(),
             )
         }
 
@@ -234,9 +235,9 @@ object CareerLoader {
                 round = race.round,
                 raceName = race.raceName,
                 position = 1,
-                constructor = entry.constructor,
-                circuit = race.circuit,
-                driver = entry.driver,
+                constructor = entry.constructor.toDomain(),
+                circuit = race.circuit.toDomain(),
+                driver = entry.driver.toDomain(),
             )
         }
 

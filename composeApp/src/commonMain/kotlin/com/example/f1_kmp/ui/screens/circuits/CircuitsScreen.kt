@@ -29,8 +29,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.f1_kmp.data.circuits.CircuitLayoutAssets
-import com.example.f1_kmp.data.model.CircuitModel
-import com.example.f1_kmp.data.model.DriverModel
+import com.example.f1_kmp.domain.model.Circuit
+import com.example.f1_kmp.domain.model.Driver
 import com.example.f1_kmp.domain.AsyncValue
 import com.example.f1_kmp.ui.components.CareerListTile
 import com.example.f1_kmp.ui.components.CountryFlag
@@ -72,7 +72,7 @@ fun CircuitsScreen(
 
     when (val state = circuits) {
         is AsyncValue.Loading -> CircuitsShimmer(modifier = Modifier.fillMaxSize())
-        is AsyncValue.Error -> ErrorBody(state.message, state.subtitle, onRetry = viewModel::loadCircuits, modifier = Modifier.fillMaxSize())
+        is AsyncValue.Error -> ErrorBody(state.message, state.subtitle, onRetry = viewModel::refreshAll, modifier = Modifier.fillMaxSize())
         is AsyncValue.Value -> Column(modifier = Modifier.fillMaxSize()) {
             Spacer(Modifier.height(12.dp))
             CustomSwitcher(
@@ -96,7 +96,7 @@ fun CircuitsScreen(
 }
 
 @Composable
-private fun CircuitsList(circuits: List<CircuitModel>, onCircuitClick: (String) -> Unit) {
+private fun CircuitsList(circuits: List<Circuit>, onCircuitClick: (String) -> Unit) {
     LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = AppDimens.horizontalPadding.dp)) {
         items(circuits) { circuit ->
             Row(
@@ -138,7 +138,7 @@ private fun CircuitsList(circuits: List<CircuitModel>, onCircuitClick: (String) 
 @Composable
 fun CircuitDetailScreen(
     viewModel: CircuitDetailViewModel,
-    onDriverClick: (DriverModel) -> Unit,
+    onDriverClick: (Driver) -> Unit,
 ) {
     val circuitState by viewModel.circuit.collectAsState()
     val winnersState by viewModel.winners.collectAsState()
