@@ -11,6 +11,9 @@ struct iOSApp: App {
         let language = (saved == "en" || saved == "ru") ? saved! : "ru"
         defaults.set([language], forKey: "AppleLanguages")
         defaults.synchronize()
+
+        // Firebase / AppMetrica bridges до старта Compose + Koin.
+        AnalyticsBootstrap.configure()
     }
 
     var body: some Scene {

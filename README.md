@@ -21,6 +21,7 @@ Same idea, other stacks:
 | Domain | Plain Jolpica models; `AppError` / `toAppError()`; `ApiCallHandler`; `AppDataRefresh` |
 | DI | Koin; `IF1Repository` / `IEspnRepository` |
 | Network | Ktor + kotlinx.serialization DTOs; mappers DTO → domain (`JolpicaMappers`) |
+| Backend | Firebase (Analytics, Crashlytics, Remote Config), AppMetrica |
 | Images | Coil 3 |
 | Cache | JSON files (offline peek → refresh); ESPN in-memory TTL; `AppDataRefresh.clearAll` |
 | Time | kotlinx-datetime |
@@ -44,7 +45,83 @@ Same idea, other stacks:
 - **Repositories** — `IF1Repository` + `IEspnRepository`; concrete impls bound in Koin.
 - **ViewModels** — one file per screen under `viewmodel/` (no giant shared files).
 - **Refresh** — `AppDataRefresh.clearAll()` (Facade) resets ESPN TTL + file cache; `refreshAll()` on main screens calls it before reload (ErrorBody / pull-to-refresh).
-- **Patterns (GoF)** — Factory (`HttpClient`), Facade (`AppDataRefresh`), Template Method (`ApiCallHandler`), Proxy (peek cache), Adapter (ESPN/`JolpicaMappers`), State (`AsyncValue`), Command (`ErrorBody`), Bridge (map expect/actual).
+- **Patterns (GoF)** — Factory (`HttpClient`), Facade (`AppDataRefresh`), Template Method (`ApiCallHandler`), Proxy (peek cache), Adapter (ESPN/`JolpicaMappers`/`IRemoteConfigService`), State (`AsyncValue`), Command (`ErrorBody`), Bridge (map expect/actual), Singleton (`LocaleController` / Firebase·AppMetrica bootstrap / `ForceUpdateGate`).
+- **Firebase** — project `f1-kmp`; Android `composeApp/google-services.json` (gitignored); iOS `GoogleService-Info.plist` (gitignored) + SPM. Analytics/Crashlytics off in debug.
+- **AppMetrica** — Android `local.properties` (`appmetrica.apiKey`); iOS `Config.local.xcconfig` (`APPMETRICA_API_KEY`). Empty → skip; crashes via Crashlytics.
+- **Remote Config** — `min_app_version` (force update), `local_notifications_enabled` (reminder kill-switch).
+
+## Secrets
+
+Not in git.
+
+### Firebase (`f1-kmp`)
+
+1. [Firebase Console](https://console.firebase.google.com/project/f1-kmp/overview) → Project settings → Your apps  
+2. Android package **`com.example.f1_kmp`** → `composeApp/google-services.json` (gitignored)  
+3. iOS bundle **`com.example.f1kmp`** → `iosApp/iosApp/GoogleService-Info.plist` (gitignored)  
+4. Enable **Analytics**, **Crashlytics**, **Remote Config**  
+
+Without a real Android JSON, Gradle copies `tool/ci/google-services.stub.json` so CI/local still builds.
+
+CI secret `GOOGLE_SERVICES_JSON` — полное содержимое `google-services.json` (release workflow).
+
+Remote Config keys: `local_notifications_enabled` (bool), `min_app_version` (string semver).
+
+### AppMetrica
+
+Android — optional in `local.properties` (gitignored):
+
+```properties
+appmetrica.apiKey=...
+```
+
+iOS — copy example and fill:
+
+```bash
+cp iosApp/Configuration/Config.local.xcconfig.example iosApp/Configuration/Config.local.xcconfig
+# set APPMETRICA_API_KEY=...
+```
+
+`Config.xcconfig` includes `Config.local.xcconfig` optionally; ключ в Info.plist через `$(APPMETRICA_API_KEY)`.
+
+CI secret `APPMETRICA_API_KEY` — для Android release (пишется в `local.properties`).
+
+### iOS SPM packages (Xcode)
+
+File → Add Package Dependencies:
+
+- `https://github.com/firebase/firebase-ios-sdk` → FirebaseAnalytics, FirebaseCrashlytics, FirebaseRemoteConfig  
+- `https://github.com/appmetrica/appmetrica-sdk-ios` → AppMetricaCore  
+
+Without packages the app still builds (`#if canImport`); Firebase/AppMetrica stay inactive and RC uses defaults.
+
+### Release keystore
+
+Локально (gitignored):
+
+- `composeApp/upload-keystore.jks`
+- `key.properties` в корне (`storeFile=upload-keystore.jks`, alias `upload`)
+
+Сборка:
+
+```bash
+./gradlew :composeApp:assembleRelease
+```
+
+Для GitHub Release secrets:
+
+```bash
+base64 -i composeApp/upload-keystore.jks | pbcopy   # → ANDROID_KEYSTORE_BASE64
+```
+
+| Secret | Purpose |
+|--------|---------|
+| `ANDROID_KEYSTORE_BASE64` | Base64 of `upload-keystore.jks` |
+| `ANDROID_KEYSTORE_PASSWORD` | store password |
+| `ANDROID_KEY_ALIAS` | `upload` |
+| `ANDROID_KEY_PASSWORD` | key password |
+
+Без secrets release APK в CI уходит с **debug**-подписью. Пароли — в `key.properties`; файл и `.jks` не коммитить.
 
 ## Structure
 
@@ -110,10 +187,10 @@ Kotlin framework for the simulator only (Apple Silicon), without installing the 
 
 ```bash
 ./gradlew :composeApp:testDebugUnitTest
-./gradlew detekt
+./gradlew :composeApp:detekt
 ```
 
-Covered areas include ViewModels (Home, Results, Schedule, News, Race search, H2H drivers, Finish status, Race info, Circuit detail), Jolpica mappers, CareerLoader, `ApiCallHandler`, date/flag utils.
+Covered areas include ViewModels (Home, Results, Schedule, News, Race search, H2H drivers, Finish status, Race info, Circuit detail), Jolpica mappers, CareerLoader, `ApiCallHandler`, `AppVersion`, date/flag utils.
 
 ## CI / CD
 
@@ -121,7 +198,7 @@ Covered areas include ViewModels (Home, Results, Schedule, News, Race search, H2
 
 | Workflow | When | What it does |
 |----------|-------|------------|
-| `ci.yml` | push / PR to `master` | detekt, build debug APK, unit tests |
+| `ci.yml` | push / PR to `master` | Firebase stub, detekt, debug APK, unit tests |
 | `release.yml` | tag `v*` or manual | Android APK (+ GitHub Release) |
 
 Release:
@@ -132,7 +209,8 @@ git tag v1.2.0
 git push origin v1.2.0
 ```
 
-For release APK signing (optional) — `ANDROID_KEYSTORE_*` secrets in GitHub Actions.
+For release APK signing (optional) — `ANDROID_KEYSTORE_*` secrets in GitHub Actions.  
+Also: `GOOGLE_SERVICES_JSON`, `APPMETRICA_API_KEY` (else stub / skip).
 
 ## Circuits map
 
@@ -157,7 +235,8 @@ Forced reload (`refreshAll`) clears ESPN + file caches via `AppDataRefresh`.
 - **Circuits** — list and map (OSMDroid + Carto on Android; MapKit pins on iOS), track layouts, length/laps/turns/speed/elevation, Wikipedia, winners history  
 - **Driver / Constructor cards** — ESPN photos/news, career stats with tappable wins / podiums / poles lists  
 - **Localization** — Russian (default) and English, toggle in the app bar without restarting the app  
-- **Reminders** — local notifications 30 minutes before a session (up to 10 upcoming; Android AlarmManager / iOS UNUserNotificationCenter)  
+- **Reminders** — local notifications 30 minutes before a session (up to 10 upcoming; Android AlarmManager / iOS UNUserNotificationCenter); Remote Config kill-switch  
+- **Force update** — blocking screen when app version is below Remote Config `min_app_version`  
 - **Schedule cache** — shared file JSON cache for the calendar and reminders  
 - **Offline** — file JSON cache with instant peek and network refresh  
 - **Share** — career stats and race results (PNG on Android, text share sheet on iOS)  

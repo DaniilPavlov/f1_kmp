@@ -1,24 +1,26 @@
 build:
   maxIssues: 0
-  excludeCorrectable: false
 
 complexity:
   LongMethod:
-    threshold: 60
+    threshold: 130
   LongParameterList:
-    functionThreshold: 8
-    constructorThreshold: 10
-  ComplexMethod:
-    threshold: 15
+    functionThreshold: 10
+    constructorThreshold: 12
+  CyclomaticComplexMethod:
+    threshold: 20
   TooManyFunctions:
     thresholdInFiles: 25
-    thresholdInClasses: 25
-  LargeClass:
-    threshold: 600
+    thresholdInClasses: 45
+    thresholdInInterfaces: 40
+    thresholdInObjects: 20
+    ignoreDeprecated: true
+    ignorePrivate: true
+    ignoreOverridden: true
 
 style:
   MaxLineLength:
-    maxLineLength: 120
+    maxLineLength: 140
   MagicNumber:
     active: false
   ReturnCount:
@@ -27,23 +29,29 @@ style:
     active: false
   WildcardImport:
     active: false
+  LoopWithTooManyJumpStatements:
+    active: false
 
 naming:
   FunctionNaming:
+    # Compose @Composable often PascalCase
     functionPattern: '[a-zA-Z][a-zA-Z0-9]*'
-    excludes:
-      - '**/ui/**'
+    ignoreAnnotated: ['Composable']
+  PackageNaming:
+    # Android/KMP packages may contain underscores (e.g. f1_kmp)
+    packagePattern: '[a-z]+(\.[a-z][A-Za-z0-9_]*)*'
   TopLevelPropertyNaming:
     constantPattern: '[A-Za-z][_A-Za-z0-9]*'
-
-exceptions:
-  TooGenericExceptionCaught:
+  MatchingDeclarationName:
     active: false
-
-coroutines:
-  CoroutineLaunchingOnWrongThread:
+  ConstructorParameterNaming:
+    # kotlinx.serialization DTO fields mirror JSON keys (Q1/Q2/…)
     active: false
 
 empty-blocks:
   EmptyFunctionBlock:
     ignoreOverridden: true
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false

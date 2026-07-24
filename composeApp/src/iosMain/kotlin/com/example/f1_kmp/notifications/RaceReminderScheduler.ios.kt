@@ -2,6 +2,7 @@ package com.example.f1_kmp.notifications
 
 import com.example.f1_kmp.domain.model.RaceSession
 import com.example.f1_kmp.domain.model.Race
+import com.example.f1_kmp.data.firebase.IRemoteConfigService
 import com.example.f1_kmp.data.repository.IF1Repository
 import com.example.f1_kmp.domain.SessionStrings
 import com.example.f1_kmp.util.DateUtils
@@ -26,9 +27,12 @@ import platform.UserNotifications.UNUserNotificationCenter
  *
  * Держим только [MAX_SCHEDULED_REMINDERS] ближайших сессий (rolling window).
  * Sync: старт приложения / смена языка.
+ *
+ * Флаг Remote Config [IRemoteConfigService.localNotificationsEnabled] — kill-switch.
  */
 class RaceReminderScheduler(
     private val repository: IF1Repository,
+    private val remoteConfig: IRemoteConfigService,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var lastScheduledIds: Set<Int> = emptySet()
@@ -39,6 +43,11 @@ class RaceReminderScheduler(
         ensureNotificationPermission()
         scope.launch {
             runCatching {
+                if (!remoteConfig.localNotificationsEnabled) {
+                    cancelIds(lastScheduledIds)
+                    lastScheduledIds = emptySet()
+                    return@runCatching
+                }
                 val races = repository.getCurrentSchedule().getOrNull() ?: return@runCatching
                 val upcoming = sessions(races).sortedBy { it.triggerAt }
                 val window = upcoming.take(MAX_SCHEDULED_REMINDERS)

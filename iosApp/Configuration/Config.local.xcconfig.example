@@ -1,0 +1,2 @@
+// Copy to Config.local.xcconfig and fill in (gitignored).
+APPMETRICA_API_KEY=

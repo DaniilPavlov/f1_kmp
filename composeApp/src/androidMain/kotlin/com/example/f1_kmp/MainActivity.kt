@@ -12,19 +12,22 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import com.example.f1_kmp.domain.ForceUpdateGate
 import com.example.f1_kmp.notifications.RaceReminderScheduler
 import com.example.f1_kmp.ui.theme.F1Black
 import com.example.f1_kmp.util.initShareHelper
+import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 
 /**
  * Единственная Activity.
  *
  * Splash → edge-to-edge → статус-бар F1-чёрный → [App].
- * На resume синхронизируем напоминания о сессиях.
+ * На resume: Remote Config + force-update gate; напоминания — если обновление не требуется.
  */
 class MainActivity : ComponentActivity() {
     private val reminderScheduler: RaceReminderScheduler by inject()
+    private val forceUpdateGate: ForceUpdateGate by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -47,7 +50,12 @@ class MainActivity : ComponentActivity() {
         }
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) {
-                reminderScheduler.sync()
+                lifecycleScope.launch {
+                    forceUpdateGate.onResume()
+                    if (!forceUpdateGate.required.value) {
+                        reminderScheduler.sync()
+                    }
+                }
             }
         })
         initShareHelper(this, lifecycleScope)

@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * Смена языка без пересоздания Activity/ViewController и без `key(locale)`
  * вокруг всего UI (иначе моргание, как при recreate).
  *
+ * GoF Creational Singleton — один общий экземпляр на всё приложение:
  * Compose слушает [language] через [stringResource] / [AppEnvironment].
  */
 object LocaleController {

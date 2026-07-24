@@ -11,15 +11,15 @@ private const val LANG_KEY = "AppleLanguages"
 
 actual object LocalAppLocale {
     // Дефолт приложения — русский, не системный язык устройства.
-    private val default: String = "ru"
-    private val LocalAppLocaleState = staticCompositionLocalOf { default }
+    private const val DEFAULT = "ru"
+    private val LocalAppLocaleState = staticCompositionLocalOf { DEFAULT }
 
     actual val current: String
         @Composable get() = LocalAppLocaleState.current
 
     @Composable
     actual infix fun provides(value: String?): ProvidedValue<*> {
-        val new = value ?: default
+        val new = value ?: DEFAULT
         val defaults = NSUserDefaults.standardUserDefaults
         if (value == null) {
             defaults.removeObjectForKey(LANG_KEY)

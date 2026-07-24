@@ -12,3 +12,17 @@ xcuserdata/
 captures/
 .externalNativeBuild/
 .cxx/
+
+# Firebase / signing (secrets)
+composeApp/google-services.json
+iosApp/iosApp/GoogleService-Info.plist
+iosApp/Configuration/Config.local.xcconfig
+*.jks
+*.keystore
+key.properties
+
+# Firebase CLI
+firebase-debug.log
+firebase-debug.*.log
+.firebase/
+

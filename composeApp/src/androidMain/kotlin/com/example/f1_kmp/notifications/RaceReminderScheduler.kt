@@ -12,6 +12,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.f1_kmp.R
+import com.example.f1_kmp.data.firebase.IRemoteConfigService
 import com.example.f1_kmp.domain.model.RaceSession
 import com.example.f1_kmp.domain.model.Race
 import com.example.f1_kmp.data.repository.IF1Repository
@@ -33,10 +34,14 @@ import java.util.concurrent.atomic.AtomicReference
  *
  * В AlarmManager держим только [MAX_SCHEDULED_REMINDERS] ближайших сессий (rolling window).
  * Sync: старт приложения / resume / смена языка / boot / timezone.
+ *
+ * Флаг Remote Config [IRemoteConfigService.localNotificationsEnabled] запрещает создание
+ * новых напоминаний (kill-switch).
  */
 class RaceReminderScheduler(
     private val context: Context,
     private val repository: IF1Repository,
+    private val remoteConfig: IRemoteConfigService,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val lastScheduledIds = AtomicReference<Set<Int>>(emptySet())
@@ -45,6 +50,11 @@ class RaceReminderScheduler(
     fun sync() {
         scope.launch {
             runCatching {
+                if (!remoteConfig.localNotificationsEnabled) {
+                    cancelIds(lastScheduledIds.get())
+                    lastScheduledIds.set(emptySet())
+                    return@runCatching
+                }
                 val races = repository.getCurrentSchedule().getOrNull() ?: return@runCatching
                 val upcoming = sessions(races).sortedBy { it.triggerAt }
                 val window = upcoming.take(MAX_SCHEDULED_REMINDERS)

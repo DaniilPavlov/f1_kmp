@@ -18,6 +18,7 @@ mockk = "1.13.12"
 junit = "4.13.2"
 detekt = "1.23.7"
 coil = "3.1.0"
+appmetrica = "8.4.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -53,6 +54,12 @@ osmbonuspack = { module = "com.github.MKergall:OSMBonusPack", version.ref = "osm
 
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
+
+# Pinned like f1_kotlin (Google Maven CDN flaky for BOM ranges).
+firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics-ktx", version = "22.1.2" }
+firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics", version = "20.0.3" }
+firebase-config = { group = "com.google.firebase", name = "firebase-config-ktx", version = "22.0.1" }
+appmetrica-analytics = { group = "io.appmetrica.analytics", name = "analytics", version.ref = "appmetrica" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

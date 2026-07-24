@@ -41,8 +41,11 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      - name: Write Firebase stub
+        run: cp tool/ci/google-services.stub.json composeApp/google-services.json
+
       - name: Detekt
-        run: ./gradlew detekt --stacktrace
+        run: ./gradlew :composeApp:detekt --stacktrace
 
       - name: Build debug APK
         run: ./gradlew :composeApp:assembleDebug --stacktrace
@@ -63,5 +66,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: detekt-report
-          path: build/reports/detekt/
+          path: composeApp/build/reports/detekt/
           if-no-files-found: ignore

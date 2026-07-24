@@ -9,7 +9,18 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.detekt)
 }
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        load(FileInputStream(file))
+    }
+}
+
+fun prop(name: String, default: String = ""): String =
+    localProperties.getProperty(name, System.getProperty(name, default))
 
 kotlin {
     androidTarget {
@@ -40,6 +51,10 @@ kotlin {
             implementation(libs.koin.android)
             implementation(libs.osmdroid)
             implementation(libs.osmbonuspack)
+            implementation(libs.firebase.analytics)
+            implementation(libs.firebase.crashlytics)
+            implementation(libs.firebase.config)
+            implementation(libs.appmetrica.analytics)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -99,10 +114,12 @@ android {
         applicationId = "com.example.f1_kmp"
         minSdk = 30
         targetSdk = 36
-        versionCode = 202607230
-        versionName = "1.4.0"
+        versionCode = 202607240
+        versionName = "1.5.0"
         // Не тянуть чужие values-en как «системный английский» вместо нашего дефолта ru.
         resourceConfigurations += listOf("ru", "en")
+        // Empty until set in local.properties / CI — bootstrap skips AppMetrica.
+        buildConfigField("String", "APPMETRICA_API_KEY", "\"${prop("appmetrica.apiKey")}\"")
     }
 
     val keystorePropertiesFile = rootProject.file("key.properties")
@@ -147,4 +164,49 @@ android {
 
 dependencies {
     debugImplementation(compose.uiTooling)
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    config.setFrom("$rootDir/config/detekt/detekt.yml")
+    parallel = true
+    // KMP: default source set is empty without explicit paths.
+    source.setFrom(
+        "src/commonMain/kotlin",
+        "src/androidMain/kotlin",
+        "src/iosMain/kotlin",
+        "src/commonTest/kotlin",
+        "src/androidUnitTest/kotlin",
+    )
+}
+
+tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+    jvmTarget = "11"
+    exclude("**/build/**")
+    exclude("**/generated/**")
+}
+
+// Must be applied after the Android Application plugin (AGP Variant API).
+apply(plugin = "com.google.gms.google-services")
+apply(plugin = "com.google.firebase.crashlytics")
+
+// google-services.json is gitignored; use CI stub when missing.
+val googleServicesFile = file("google-services.json")
+val googleServicesStub = rootProject.file("tool/ci/google-services.stub.json")
+tasks.register("ensureGoogleServicesJson") {
+    doLast {
+        if (!googleServicesFile.exists()) {
+            googleServicesStub.copyTo(googleServicesFile, overwrite = true)
+            logger.lifecycle("Copied tool/ci/google-services.stub.json → composeApp/google-services.json")
+        }
+    }
+}
+tasks.matching { it.name.startsWith("process") && it.name.endsWith("GoogleServices") }.configureEach {
+    dependsOn("ensureGoogleServicesJson")
+}
+tasks.named("preBuild").configure { dependsOn("ensureGoogleServicesJson") }
+
+if (googleServicesFile.exists() && googleServicesFile.readText().contains("\"project_id\": \"ci-stub\"")) {
+    logger.lifecycle("Firebase google-services.json is CI stub — Crashlytics mapping upload disabled")
 }

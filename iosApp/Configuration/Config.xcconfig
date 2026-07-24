@@ -1,3 +1,6 @@
 TEAM_ID=
 BUNDLE_ID=com.example.f1kmp
 APP_NAME=F1 KMP
+// Empty by default; real key in gitignored Config.local.xcconfig
+APPMETRICA_API_KEY=
+#include? "Config.local.xcconfig"

@@ -33,7 +33,8 @@ import com.example.f1_kmp.domain.model.StandingsMeta
 
 /**
  * Jolpica API-модели (`data.model`, kotlinx DTO) → domain (`domain.model`).
- * HTTP/JSON парсятся в DTO; сюда — маппинг в domain для ViewModel/UI.
+ *
+ * GoF Structural Adapter — HTTP/JSON парсятся в DTO; сюда — маппинг в domain для ViewModel/UI.
  */
 
 fun DriverModel.toDomain() = Driver(
