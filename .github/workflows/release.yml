@@ -74,11 +74,12 @@ jobs:
           fi
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > composeApp/upload-keystore.jks
           cat > key.properties <<EOF
-storePassword=$ANDROID_KEYSTORE_PASSWORD
-keyPassword=$ANDROID_KEY_PASSWORD
-keyAlias=$ANDROID_KEY_ALIAS
-storeFile=upload-keystore.jks
-EOF
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyPassword=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=upload-keystore.jks
+          EOF
+          sed -i 's/^[[:space:]]*//' key.properties
 
       - name: Build release APK
         run: ./gradlew :composeApp:assembleRelease --stacktrace

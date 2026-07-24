@@ -114,7 +114,7 @@ android {
         applicationId = "com.example.f1_kmp"
         minSdk = 30
         targetSdk = 36
-        versionCode = 202607240
+        versionCode = 202607241
         versionName = "1.5.0"
         // Не тянуть чужие values-en как «системный английский» вместо нашего дефолта ru.
         resourceConfigurations += listOf("ru", "en")
