@@ -32,19 +32,16 @@ object TrustedUrl {
 
         val url = runCatching { Url(trimmed) }.getOrNull() ?: return null
         val host = url.host.takeIf { it.isNotEmpty() } ?: return null
-        val protocol = url.protocol.name.lowercase()
-
-        val httpsUrl = when (protocol) {
+        val httpsUrl = when (url.protocol.name.lowercase()) {
             "https" -> url
             "http" -> URLBuilder(url).apply {
                 this.protocol = URLProtocol.HTTPS
                 // Ktor keeps :80 from http; drop so https uses default 443.
                 port = 0
             }.build()
-            else -> return null
+            else -> null
         }
-        if (!isAllowedHost(host)) return null
-        return httpsUrl.toString()
+        return httpsUrl?.takeIf { isAllowedHost(host) }?.toString()
     }
 
     /** Для загрузки изображений: http → https без проверки allowlist. */
