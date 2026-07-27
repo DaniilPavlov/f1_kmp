@@ -1,9 +1,8 @@
 package com.example.f1_kmp.data.firebase
 
+import com.example.f1_kmp.util.AppLogger
 import com.example.f1_kmp.util.AppVersion
 import com.example.f1_kmp.util.appVersionName
-import com.example.f1_kmp.util.isDebugBuild
-import platform.Foundation.NSLog
 
 /**
  * iOS Remote Config: значения приходят из Swift после fetch Firebase RC
@@ -20,31 +19,31 @@ class RemoteConfigService : IRemoteConfigService {
         get() = IosRemoteConfigBridge.minAppVersion
 
     override suspend fun init() {
-        if (isDebugBuild()) {
-            NSLog(
-                "RemoteConfig iOS values: " +
-                    "${IRemoteConfigService.LOCAL_NOTIFICATIONS_ENABLED_KEY}=$localNotificationsEnabled, " +
-                    "${IRemoteConfigService.MIN_APP_VERSION_KEY}=$minAppVersion",
-            )
-        }
+        AppLogger.d(
+            TAG,
+            "RemoteConfig iOS values: " +
+                "${IRemoteConfigService.LOCAL_NOTIFICATIONS_ENABLED_KEY}=$localNotificationsEnabled, " +
+                "${IRemoteConfigService.MIN_APP_VERSION_KEY}=$minAppVersion",
+        )
     }
 
     override suspend fun refresh() {
         // Повторный fetch делает Swift при старте; здесь перечитываем уже применённые значения.
-        if (isDebugBuild()) {
-            NSLog("RemoteConfig iOS refresh: using last applied bridge values")
-        }
+        AppLogger.d(TAG, "RemoteConfig iOS refresh: using last applied bridge values")
     }
 
     override fun isUpdateRequired(): Boolean {
         val installed = appVersionName()
         val required = AppVersion.isLowerThan(installed, minAppVersion)
-        if (isDebugBuild()) {
-            NSLog(
-                "Version check: installed=$installed, min=$minAppVersion, updateRequired=$required",
-            )
-        }
+        AppLogger.d(
+            TAG,
+            "Version check: installed=$installed, min=$minAppVersion, updateRequired=$required",
+        )
         return required
+    }
+
+    private companion object {
+        const val TAG = "RemoteConfig"
     }
 }
 
@@ -65,14 +64,20 @@ object IosRemoteConfigBridge {
 }
 
 actual object FirebaseBootstrap {
+    private const val TAG = "FirebaseBootstrap"
+
     actual fun initializeSync() {
         // FirebaseApp.configure() вызывается из Swift до Compose (см. AnalyticsBootstrap).
-        if (isDebugBuild()) {
-            NSLog("FirebaseBootstrap iOS: core init delegated to Swift")
-        }
+        AppLogger.d(TAG, "FirebaseBootstrap iOS: core init delegated to Swift")
     }
 
     actual suspend fun fetchRemoteConfig(remoteConfig: IRemoteConfigService) {
         remoteConfig.init()
+    }
+
+    actual fun recordNonFatal(throwable: Throwable) {
+        if (!CrashlyticsReporting.shouldReportUncaughtError(throwable)) return
+        // Crashlytics record на iOS — через Swift bridge при необходимости.
+        AppLogger.w(TAG, "recordNonFatal skipped on iOS Kotlin side: ${throwable.message}")
     }
 }

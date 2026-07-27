@@ -1,23 +1,24 @@
 [versions]
 agp = "9.3.0"
-kotlin = "2.2.10"
-compose-multiplatform = "1.7.3"
-androidx-activityCompose = "1.9.3"
-androidx-lifecycle = "2.8.4"
-androidx-navigation = "2.8.0-alpha10"
+kotlin = "2.3.21"
+compose-multiplatform = "1.11.1"
+androidx-activityCompose = "1.13.0"
+androidx-lifecycle = "2.11.0"
+androidx-lifecycle-android = "2.9.4"
+androidx-navigation = "2.9.2"
 coreSplashscreen = "1.0.1"
-ktor = "3.0.3"
-koin = "4.0.0"
-kotlinx-serialization = "1.7.3"
-kotlinx-datetime = "0.6.1"
-kotlinx-coroutines = "1.9.0"
+ktor = "3.5.1"
+koin = "4.1.1"
+kotlinx-serialization = "1.11.0"
+kotlinx-datetime = "0.6.2"
+kotlinx-coroutines = "1.10.2"
 osmdroid = "6.1.18"
 osmbonuspack = "6.9.0"
-coroutines-test = "1.9.0"
-mockk = "1.13.12"
+coroutines-test = "1.10.2"
+mockk = "1.14.5"
 junit = "4.13.2"
-detekt = "1.23.7"
-coil = "3.1.0"
+detekt = "1.23.8"
+coil = "3.5.0"
 appmetrica = "8.4.0"
 
 [libraries]
@@ -33,7 +34,7 @@ androidx-activity-compose = { module = "androidx.activity:activity-compose", ver
 androidx-lifecycle-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-runtime-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidx-lifecycle" }
-androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "androidx-lifecycle" }
+androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "androidx-lifecycle-android" }
 androidx-navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "androidx-navigation" }
 androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
 
@@ -56,7 +57,7 @@ coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" 
 coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
 
 # Pinned like f1_kotlin (Google Maven CDN flaky for BOM ranges).
-firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics-ktx", version = "22.1.2" }
+firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics-ktx", version = "22.5.0" }
 firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics", version = "20.0.3" }
 firebase-config = { group = "com.google.firebase", name = "firebase-config-ktx", version = "22.0.1" }
 appmetrica-analytics = { group = "io.appmetrica.analytics", name = "analytics", version.ref = "appmetrica" }

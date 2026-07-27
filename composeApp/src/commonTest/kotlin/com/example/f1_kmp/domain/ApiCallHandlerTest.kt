@@ -6,7 +6,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 /**
  * Unit-тесты [ApiCallHandler]:
@@ -51,10 +50,11 @@ class ApiCallHandlerTest {
     }
 
     @Test
-    fun safeCall_genericException_returnsParseError() = runTest {
+    fun safeCall_genericException_returnsUnexpectedError() = runTest {
         val result = ApiCallHandler.safeCall { throw IllegalStateException("bad json") }
         val error = result.exceptionOrNull() as AppException
-        assertTrue(error.title.contains("Ошибка при обработке"))
+        assertEquals("Неожиданная ошибка", error.title)
+        assertEquals("Попробуйте обновить экран.", error.subtitle)
     }
 
     @Test

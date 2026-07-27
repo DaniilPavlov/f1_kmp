@@ -13,9 +13,18 @@ actual fun onLocaleChanged() {
     runCatching { RaceReminderBridge.sync() }
 }
 
-/** iOS: открываем URL через [UIApplication.openURL]. */
+/** iOS: открываем только доверенную https-ссылку через [UIApplication.openURL]. */
 actual fun openUrl(url: String) {
-    val nsUrl = NSURL.URLWithString(url) ?: return
+    val normalized = TrustedUrl.parse(url)
+    if (normalized == null) {
+        TrustedUrl.logOpenFailure(url)
+        return
+    }
+    val nsUrl = NSURL.URLWithString(normalized)
+    if (nsUrl == null) {
+        TrustedUrl.logOpenFailure(url)
+        return
+    }
     UIApplication.sharedApplication.openURL(
         url = nsUrl,
         options = emptyMap<Any?, Any>(),

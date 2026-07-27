@@ -22,16 +22,29 @@ val localProperties = Properties().apply {
 fun prop(name: String, default: String = ""): String =
     localProperties.getProperty(name, System.getProperty(name, default))
 
+// google-services.json is gitignored. Copy CI stub at configuration time so bare
+// `./gradlew assemble` (CodeQL default autobuild) works without a pre-step.
+val googleServicesFile = file("google-services.json")
+val googleServicesStub = rootProject.file("tool/ci/google-services.stub.json")
+if (!googleServicesFile.exists()) {
+    googleServicesStub.copyTo(googleServicesFile)
+    logger.lifecycle("Copied tool/ci/google-services.stub.json → composeApp/google-services.json")
+}
+val isFirebaseCiStub =
+    googleServicesFile.readText().contains("\"project_id\": \"ci-stub\"")
+if (isFirebaseCiStub) {
+    logger.lifecycle("Firebase google-services.json is CI stub — Crashlytics mapping upload disabled")
+}
+
 kotlin {
     androidTarget {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
+            jvmTarget.set(JvmTarget.JVM_17)
         }
     }
 
     listOf(
-        iosX64(),
         iosArm64(),
         iosSimulatorArm64(),
     ).forEach { iosTarget ->
@@ -104,7 +117,7 @@ kotlin {
 
 android {
     namespace = "com.example.f1_kmp"
-    compileSdk = 36
+    compileSdk = 37
 
     buildFeatures {
         buildConfig = true
@@ -113,9 +126,9 @@ android {
     defaultConfig {
         applicationId = "com.example.f1_kmp"
         minSdk = 30
-        targetSdk = 36
-        versionCode = 202607241
-        versionName = "1.5.0"
+        targetSdk = 37
+        versionCode = 202607271
+        versionName = "1.6.0"
         // Не тянуть чужие values-en как «системный английский» вместо нашего дефолта ru.
         resourceConfigurations += listOf("ru", "en")
         // Empty until set in local.properties / CI — bootstrap skips AppMetrica.
@@ -147,7 +160,12 @@ android {
 
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
             signingConfig = if (keystorePropertiesFile.exists()) {
                 signingConfigs.getByName("release")
             } else {
@@ -157,8 +175,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
 
@@ -182,7 +200,7 @@ detekt {
 }
 
 tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
-    jvmTarget = "11"
+    jvmTarget = "17"
     exclude("**/build/**")
     exclude("**/generated/**")
 }
@@ -191,9 +209,6 @@ tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
 apply(plugin = "com.google.gms.google-services")
 apply(plugin = "com.google.firebase.crashlytics")
 
-// google-services.json is gitignored; use CI stub when missing.
-val googleServicesFile = file("google-services.json")
-val googleServicesStub = rootProject.file("tool/ci/google-services.stub.json")
 tasks.register("ensureGoogleServicesJson") {
     doLast {
         if (!googleServicesFile.exists()) {
@@ -207,6 +222,10 @@ tasks.matching { it.name.startsWith("process") && it.name.endsWith("GoogleServic
 }
 tasks.named("preBuild").configure { dependsOn("ensureGoogleServicesJson") }
 
-if (googleServicesFile.exists() && googleServicesFile.readText().contains("\"project_id\": \"ci-stub\"")) {
-    logger.lifecycle("Firebase google-services.json is CI stub — Crashlytics mapping upload disabled")
+// Stub google-services.json has no real Firebase project — mapping upload would 400.
+afterEvaluate {
+    if (isFirebaseCiStub) {
+        tasks.matching { it.name.contains("uploadCrashlyticsMappingFile", ignoreCase = true) }
+            .configureEach { enabled = false }
+    }
 }

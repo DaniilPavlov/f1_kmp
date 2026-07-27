@@ -7,6 +7,7 @@ import com.example.f1_kmp.data.repository.IF1Repository
 import com.example.f1_kmp.domain.toAppError
 import com.example.f1_kmp.domain.ErrorStrings
 import com.example.f1_kmp.domain.AsyncValue
+import com.example.f1_kmp.util.F1InputValidation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -57,9 +58,10 @@ class RaceSearchViewModel(
         checkFields()
     }
 
-    /** Проверяет, что сезон и этап заполнены — кнопка «Найти» активна. */
+    /** Проверяет, что сезон и этап валидны — кнопка «Найти» активна. */
     fun checkFields() {
-        _fieldsInputted.value = _year.value.length == 4 && _round.value.isNotEmpty()
+        _fieldsInputted.value =
+            F1InputValidation.isValidYear(_year.value) && F1InputValidation.isValidRound(_round.value)
     }
 
     /** Список сезонов для [SeasonPickerField]. */

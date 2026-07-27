@@ -205,8 +205,8 @@ Release:
 
 ```bash
 # version in composeApp/build.gradle.kts must match the tag
-git tag v1.2.0
-git push origin v1.2.0
+git tag v1.6.0
+git push origin v1.6.0
 ```
 
 For release APK signing (optional) — `ANDROID_KEYSTORE_*` secrets in GitHub Actions.  

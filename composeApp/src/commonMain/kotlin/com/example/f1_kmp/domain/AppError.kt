@@ -56,10 +56,10 @@ fun Throwable.toAppError(): AppError = when (this) {
         } else {
             ErrorStrings.responseParseError
         },
-        subtitle = message,
+        subtitle = ErrorStrings.errorRetrySubtitle,
     )
     else -> AppError(
-        title = ErrorStrings.responseParseError,
-        subtitle = message,
+        title = ErrorStrings.unexpectedError,
+        subtitle = ErrorStrings.errorRetrySubtitle,
     )
 }

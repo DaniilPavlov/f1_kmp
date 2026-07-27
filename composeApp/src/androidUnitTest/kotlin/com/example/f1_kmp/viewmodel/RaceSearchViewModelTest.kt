@@ -43,10 +43,10 @@ class RaceSearchViewModelTest {
     }
 
     /**
-     * Кнопка «Найти» активна только при 4 цифрах года и непустом раунде.
+     * Кнопка «Найти» активна только при валидном годе (1950–2030) и раунде (1–99).
      */
     @Test
-    fun checkFields_requiresFourDigitYearAndRound() {
+    fun checkFields_requiresValidYearAndRound() {
         val viewModel = RaceSearchViewModel(repository)
 
         viewModel.onYearChanged("202")

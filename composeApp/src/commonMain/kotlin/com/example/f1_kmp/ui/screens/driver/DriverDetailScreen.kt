@@ -46,6 +46,7 @@ import com.example.f1_kmp.ui.theme.AppStyles
 import com.example.f1_kmp.ui.theme.F1GrayBg
 import com.example.f1_kmp.util.DateUtils
 import com.example.f1_kmp.util.RegisterShareAction
+import com.example.f1_kmp.util.TrustedUrl
 import com.example.f1_kmp.util.openUrl
 import com.example.f1_kmp.util.rememberShareCareerAction
 import com.example.f1_kmp.viewmodel.DriverDetailViewModel
@@ -121,7 +122,7 @@ private fun DriverContent(
     ) {
         espnCard.photoUrl?.let { url ->
             AsyncImage(
-                model = url,
+                model = TrustedUrl.preferHttps(url),
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxWidth()

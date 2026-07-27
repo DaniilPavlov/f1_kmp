@@ -1,8 +1,8 @@
 package com.example.f1_kmp.data.appmetrica
 
-import android.util.Log
 import com.example.f1_kmp.BuildConfig
 import com.example.f1_kmp.platform.AndroidContextHolder
+import com.example.f1_kmp.util.AppLogger
 import io.appmetrica.analytics.AppMetrica
 import io.appmetrica.analytics.AppMetricaConfig
 
@@ -17,9 +17,7 @@ actual object AppMetricaBootstrap {
     actual fun bootstrap() {
         val apiKey = BuildConfig.APPMETRICA_API_KEY
         if (apiKey.isBlank()) {
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "AppMetrica skipped (no appmetrica.apiKey in local.properties)")
-            }
+            AppLogger.d(TAG, "AppMetrica skipped (no appmetrica.apiKey in local.properties)")
             return
         }
 
@@ -32,11 +30,9 @@ actual object AppMetricaBootstrap {
                 builder.withLogs()
             }
             AppMetrica.activate(AndroidContextHolder.applicationContext, builder.build())
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "AppMetrica activated")
-            }
+            AppLogger.d(TAG, "AppMetrica activated")
         } catch (e: Exception) {
-            Log.e(TAG, "AppMetrica activate failed", e)
+            AppLogger.e(TAG, "AppMetrica activate failed", e)
         }
     }
 }

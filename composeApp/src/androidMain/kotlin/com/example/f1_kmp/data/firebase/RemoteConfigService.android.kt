@@ -1,8 +1,8 @@
 package com.example.f1_kmp.data.firebase
 
-import android.util.Log
 import com.example.f1_kmp.BuildConfig
 import com.example.f1_kmp.platform.AndroidContextHolder
+import com.example.f1_kmp.util.AppLogger
 import com.example.f1_kmp.util.AppVersion
 import com.example.f1_kmp.util.appVersionName
 import com.google.android.gms.tasks.Task
@@ -45,16 +45,14 @@ class RemoteConfigService : IRemoteConfigService {
         )
         try {
             val activated = awaitTask(remoteConfig.fetchAndActivate())
-            if (BuildConfig.DEBUG) {
-                Log.d(
-                    TAG,
-                    "Remote Config activated=$activated, " +
-                        "${IRemoteConfigService.LOCAL_NOTIFICATIONS_ENABLED_KEY}=$localNotificationsEnabled, " +
-                        "${IRemoteConfigService.MIN_APP_VERSION_KEY}=$minAppVersion",
-                )
-            }
+            AppLogger.d(
+                TAG,
+                "Remote Config activated=$activated, " +
+                    "${IRemoteConfigService.LOCAL_NOTIFICATIONS_ENABLED_KEY}=$localNotificationsEnabled, " +
+                    "${IRemoteConfigService.MIN_APP_VERSION_KEY}=$minAppVersion",
+            )
         } catch (e: Exception) {
-            Log.w(TAG, "Remote Config fetch failed, using defaults", e)
+            AppLogger.w(TAG, "Remote Config fetch failed, using defaults", e)
         }
     }
 
@@ -62,19 +60,17 @@ class RemoteConfigService : IRemoteConfigService {
         try {
             awaitTask(remoteConfig.fetchAndActivate())
         } catch (e: Exception) {
-            Log.w(TAG, "Remote Config refresh failed", e)
+            AppLogger.w(TAG, "Remote Config refresh failed", e)
         }
     }
 
     override fun isUpdateRequired(): Boolean {
         val installed = appVersionName()
         val required = AppVersion.isLowerThan(installed, minAppVersion)
-        if (BuildConfig.DEBUG) {
-            Log.d(
-                TAG,
-                "Version check: installed=$installed, min=$minAppVersion, updateRequired=$required",
-            )
-        }
+        AppLogger.d(
+            TAG,
+            "Version check: installed=$installed, min=$minAppVersion, updateRequired=$required",
+        )
         return required
     }
 
@@ -110,13 +106,22 @@ actual object FirebaseBootstrap {
         com.google.firebase.analytics.FirebaseAnalytics.getInstance(context)
             .setAnalyticsCollectionEnabled(!BuildConfig.DEBUG)
 
-        if (BuildConfig.DEBUG) {
-            val projectId = com.google.firebase.FirebaseApp.getInstance().options.projectId
-            Log.d(TAG, "Firebase core initialized ($projectId)")
-        }
+        AppLogger.d(
+            TAG,
+            "Firebase core initialized (${com.google.firebase.FirebaseApp.getInstance().options.projectId})",
+        )
     }
 
     actual suspend fun fetchRemoteConfig(remoteConfig: IRemoteConfigService) {
         remoteConfig.init()
+    }
+
+    /** Non-fatal: сетевые сбои не отправляем. */
+    actual fun recordNonFatal(throwable: Throwable) {
+        if (!CrashlyticsReporting.shouldReportUncaughtError(throwable)) return
+        runCatching {
+            com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance()
+                .recordException(throwable)
+        }
     }
 }

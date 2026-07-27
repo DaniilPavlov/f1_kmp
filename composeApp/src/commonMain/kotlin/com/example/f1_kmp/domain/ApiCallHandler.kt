@@ -69,6 +69,12 @@ object ErrorStrings {
     val serverSlow get() = if (isEnglish) "Server is taking too long to respond" else "Сервер долго не отвечает"
     val tooManyRequests get() = if (isEnglish) "Too many requests" else "Слишком много запросов"
     val responseParseError get() = if (isEnglish) "Error processing the server response" else "Ошибка при обработке ответа от сервера"
+    val unexpectedError get() = if (isEnglish) "Unexpected error" else "Неожиданная ошибка"
+    val errorRetrySubtitle get() = if (isEnglish) {
+        "Try refreshing the screen."
+    } else {
+        "Попробуйте обновить экран."
+    }
     val raceNotFoundTitle get() = if (isEnglish) "Race not found" else "Гонка не найдена"
     val raceNotFound get() = if (isEnglish) {
         "No races found for your query. Check the entered data and try again."

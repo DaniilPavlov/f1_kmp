@@ -29,6 +29,7 @@ import com.example.f1_kmp.ui.theme.F1GrayBg
 import com.example.f1_kmp.ui.theme.F1Red
 import com.example.f1_kmp.ui.theme.F1TextGray
 import com.example.f1_kmp.util.DateUtils
+import com.example.f1_kmp.util.TrustedUrl
 import com.example.f1_kmp.util.openUrl
 
 @Composable
@@ -36,7 +37,7 @@ fun NewsArticleTile(article: NewsArticle) {
     val language by LocaleController.language.collectAsState()
     val published = article.published?.let { DateUtils.formatMediumDate(it, language) }
     val hasMeta = !article.byline.isNullOrEmpty() || published != null
-    val imageUrl = article.imageUrl
+    val imageUrl = article.imageUrl?.let(TrustedUrl::preferHttps)
 
     Column(
         modifier = Modifier
