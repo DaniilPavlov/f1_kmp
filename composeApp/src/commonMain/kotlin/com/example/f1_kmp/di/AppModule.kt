@@ -12,6 +12,7 @@ import com.example.f1_kmp.data.repository.IEspnRepository
 import com.example.f1_kmp.data.repository.IF1Repository
 import com.example.f1_kmp.domain.AppDataRefresh
 import com.example.f1_kmp.platform.createPlatformHttpClient
+import com.example.f1_kmp.util.appVersionName
 import com.example.f1_kmp.util.isDebugBuild
 import com.example.f1_kmp.viewmodel.CircuitDetailViewModel
 import com.example.f1_kmp.viewmodel.CircuitsViewModel
@@ -45,6 +46,13 @@ import org.koin.dsl.module
 
 private const val BASE_URL = "https://api.jolpi.ca/ergast/f1/"
 private const val ESPN_BASE_URL = EspnApiService.BASE_URL
+
+/** Имя приложения в User-Agent для Jolpica F1 API. */
+private const val APP_USER_AGENT_NAME = "F1KMP"
+
+/** Jolpica F1 API — формат `AppName/version` (требование jolpica-f1 с 21.08.2026). */
+private val jolpicaUserAgent: String
+    get() = "$APP_USER_AGENT_NAME/${appVersionName()}"
 
 private data class ApiTimeouts(
     val connectMs: Long,
@@ -97,8 +105,10 @@ private fun createApiClient(
     defaultRequest {
         url(baseUrl)
         if (withAppHeaders) {
+            // header() заменяет дефолтный UA движка (OkHttp/Darwin), чтобы не попасть под блок default agents.
+            header("User-Agent", jolpicaUserAgent)
             header("system", "kmp")
-            header("version", "1.0")
+            header("version", appVersionName())
             header("build-number", "1")
             header("device-id", "deviceID")
         }
