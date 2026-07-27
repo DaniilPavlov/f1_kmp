@@ -8,7 +8,7 @@ androidx-lifecycle-android = "2.9.4"
 androidx-navigation = "2.9.2"
 coreSplashscreen = "1.0.1"
 ktor = "3.5.1"
-koin = "4.1.1"
+koin = "4.2.2"
 kotlinx-serialization = "1.11.0"
 kotlinx-datetime = "0.6.2"
 kotlinx-coroutines = "1.10.2"
@@ -58,8 +58,8 @@ coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.re
 
 # Pinned like f1_kotlin (Google Maven CDN flaky for BOM ranges).
 firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics-ktx", version = "22.5.0" }
-firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics", version = "20.0.3" }
-firebase-config = { group = "com.google.firebase", name = "firebase-config-ktx", version = "22.0.1" }
+firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics", version = "20.1.0" }
+firebase-config = { group = "com.google.firebase", name = "firebase-config-ktx", version = "22.1.2" }
 appmetrica-analytics = { group = "io.appmetrica.analytics", name = "analytics", version.ref = "appmetrica" }
 
 [plugins]
