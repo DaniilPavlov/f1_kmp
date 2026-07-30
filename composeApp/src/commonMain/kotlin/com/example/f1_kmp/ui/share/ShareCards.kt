@@ -23,6 +23,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
+import com.example.f1_kmp.data.model.EspnScoreboardEvent
 import com.example.f1_kmp.domain.model.Race
 import com.example.f1_kmp.domain.model.RaceResult
 import com.example.f1_kmp.ui.theme.AppStyles
@@ -39,9 +41,12 @@ import f1_kmp.composeapp.generated.resources.career_stat_podiums
 import f1_kmp.composeapp.generated.resources.career_stat_poles
 import f1_kmp.composeapp.generated.resources.career_stat_races
 import f1_kmp.composeapp.generated.resources.career_title
+import f1_kmp.composeapp.generated.resources.home_weekend_live
+import f1_kmp.composeapp.generated.resources.home_weekend_title
 import f1_kmp.composeapp.generated.resources.round_label
 import f1_kmp.composeapp.generated.resources.share_and_more
 import f1_kmp.composeapp.generated.resources.share_no_results
+import f1_kmp.composeapp.generated.resources.share_weekend_podium
 import f1_kmp.composeapp.generated.resources.wins
 import org.jetbrains.compose.resources.painterResource
 import com.example.f1_kmp.domain.stringResource
@@ -182,6 +187,85 @@ private fun ShareResultRow(result: RaceResult) {
             timeOrStatus,
             style = AppStyles.caption.copy(color = if (classified) F1Black else F1Red),
         )
+    }
+}
+
+@Composable
+fun ShareWeekendSummaryCard(event: EspnScoreboardEvent) {
+    val title = event.shortName.ifBlank { event.name }
+    val highlighted = event.highlightedSession
+    val podiumSession = event.sessions.firstOrNull {
+        it.abbreviation.contains("race", ignoreCase = true) && it.results.isNotEmpty()
+    } ?: highlighted?.takeIf { it.results.isNotEmpty() }
+    val podium = podiumSession?.results?.take(3).orEmpty()
+    val isLive = event.isLive || (highlighted?.isLive == true)
+    val statusLabel = when {
+        isLive -> stringResource(Res.string.home_weekend_live)
+        !highlighted?.statusDetail.isNullOrEmpty() -> highlighted!!.statusDetail
+        else -> event.statusDetail
+    }
+
+    ShareCardShell {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+            Text(
+                title,
+                style = AppStyles.h2.copy(fontSize = 24.sp, lineHeight = 28.sp),
+                modifier = Modifier.weight(1f),
+            )
+            if (statusLabel.isNotBlank()) {
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isLive) F1Red else F1Black)
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                ) {
+                    Text(statusLabel, style = AppStyles.caption.copy(color = F1White))
+                }
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            stringResource(Res.string.home_weekend_title),
+            style = AppStyles.body.copy(color = F1TextGray),
+        )
+        event.circuitName?.takeIf { it.isNotBlank() }?.let {
+            Spacer(Modifier.height(4.dp))
+            Text(it, style = AppStyles.body.copy(color = F1TextGray))
+        }
+        if (event.sessions.isNotEmpty()) {
+            Spacer(Modifier.height(16.dp))
+            event.sessions.forEachIndexed { index, session ->
+                if (index > 0) HorizontalDivider(color = F1StrokeGray)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(session.abbreviation, style = AppStyles.body)
+                    Text(
+                        session.statusDetail.ifBlank { if (session.isLive) "LIVE" else "" },
+                        style = AppStyles.caption.copy(
+                            color = if (session.isLive) F1Red else F1TextGray,
+                        ),
+                    )
+                }
+            }
+        }
+        if (podium.isNotEmpty()) {
+            Spacer(Modifier.height(16.dp))
+            Text(
+                stringResource(Res.string.share_weekend_podium),
+                style = AppStyles.body.copy(fontWeight = FontWeight.SemiBold),
+            )
+            Spacer(Modifier.height(8.dp))
+            podium.forEachIndexed { index, entry ->
+                Text("${index + 1}. ${entry.displayName}", style = AppStyles.caption)
+            }
+        }
+        Spacer(Modifier.height(20.dp))
+        ShareFooter()
     }
 }
 

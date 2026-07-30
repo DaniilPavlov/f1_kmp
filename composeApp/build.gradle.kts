@@ -127,8 +127,8 @@ android {
         applicationId = "com.example.f1_kmp"
         minSdk = 30
         targetSdk = 37
-        versionCode = 202607271
-        versionName = "1.6.0"
+        versionCode = 202607300
+        versionName = "1.7.0"
         // Не тянуть чужие values-en как «системный английский» вместо нашего дефолта ru.
         resourceConfigurations += listOf("ru", "en")
         // Empty until set in local.properties / CI — bootstrap skips AppMetrica.

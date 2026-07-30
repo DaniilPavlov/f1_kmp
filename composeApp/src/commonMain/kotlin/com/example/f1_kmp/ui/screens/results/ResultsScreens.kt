@@ -62,6 +62,7 @@ import f1_kmp.composeapp.generated.resources.finish_status_title
 import f1_kmp.composeapp.generated.resources.h2h_constructors_title
 import f1_kmp.composeapp.generated.resources.h2h_title
 import f1_kmp.composeapp.generated.resources.hall_of_fame_title
+import f1_kmp.composeapp.generated.resources.season_rewind_title
 import com.example.f1_kmp.domain.stringResource
 
 /** Вкладка «Результаты»: scoreboard, последняя гонка и переходы. */
@@ -70,6 +71,7 @@ fun ResultsScreen(
     viewModel: ResultsViewModel,
     onSearchRace: () -> Unit,
     onHallOfFame: () -> Unit,
+    onSeasonRewind: () -> Unit,
     onH2hDrivers: () -> Unit,
     onH2hConstructors: () -> Unit,
     onFinishStatus: () -> Unit,
@@ -126,6 +128,8 @@ fun ResultsScreen(
         BoxedAction(title = stringResource(Res.string.choose_specific_race), onClick = onSearchRace)
         Spacer(Modifier.height(12.dp))
         BoxedAction(title = stringResource(Res.string.hall_of_fame_title), onClick = onHallOfFame)
+        Spacer(Modifier.height(12.dp))
+        BoxedAction(title = stringResource(Res.string.season_rewind_title), onClick = onSeasonRewind)
         Spacer(Modifier.height(12.dp))
         BoxedAction(title = stringResource(Res.string.h2h_title), onClick = onH2hDrivers)
         Spacer(Modifier.height(12.dp))

@@ -42,6 +42,11 @@ actual fun shareRaceResultsCard(race: Race) {
     presentShareSheet(formatRaceResultsText(race))
 }
 
+actual fun shareCircuitDeepLink(circuitId: String, circuitName: String) {
+    val uri = com.example.f1_kmp.data.deeplink.F1PetDeepLinks.circuit(circuitId)
+    presentShareSheet("$circuitName\n$uri")
+}
+
 /** Формирует текстовую сводку результатов гонки для системного share sheet. */
 internal fun formatRaceResultsText(race: Race, topN: Int = 10): String {
     val en = LocaleController.language.value == "en"

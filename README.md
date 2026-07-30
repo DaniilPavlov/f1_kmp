@@ -35,7 +35,8 @@ Same idea, other stacks:
 - Room → file cache  
 - java.time → kotlinx-datetime  
 - OSM map on Android; MapKit pins on iOS  
-- Session reminders: AlarmManager (Android) / UNUserNotificationCenter (iOS)
+- Session reminders: AlarmManager (Android) / UNUserNotificationCenter (iOS)  
+- Home widgets: Android only (same Next GP + standings as f1_kotlin)  
 
 ## Architecture
 
@@ -229,16 +230,21 @@ Forced reload (`refreshAll`) clears ESPN + file caches via `AppDataRefresh`.
 ## Features
 
 - **Home** — current season driver and constructor standings  
-- **Results** — weekend scoreboard (ESPN, live poll), latest race, race search, hall of fame, H2H (drivers / constructors), finish statuses  
+- **Results** — weekend scoreboard (ESPN, live poll), latest race, race search, hall of fame, season rewind, H2H (drivers / constructors + points chart), finish statuses  
 - **Calendar** — monthly calendar with session times; on empty days shows next GP card (layout + countdown); local reminders 30 min before (Android + iOS)  
 - **News** — F1 headlines from ESPN  
 - **Circuits** — list and map (OSMDroid + Carto on Android; MapKit pins on iOS), track layouts, length/laps/turns/speed/elevation, Wikipedia, winners history  
 - **Driver / Constructor cards** — ESPN photos/news, career stats with tappable wins / podiums / poles lists  
+- **Themes** — system / light / dark cycle in the app bar  
 - **Localization** — Russian (default) and English, toggle in the app bar without restarting the app  
+- **Live banner** — red session-live strip above the bottom bar → Results  
+- **Deep links** — `f1pet://driver|constructor|circuit|race/...` (Android + iOS)  
+- **Home widgets** (Android) — next GP countdown + top-3 standings  
 - **Reminders** — local notifications 30 minutes before a session (up to 10 upcoming; Android AlarmManager / iOS UNUserNotificationCenter); Remote Config kill-switch  
 - **Force update** — blocking screen when app version is below Remote Config `min_app_version`  
+- **Analytics** — typed events to Firebase Analytics + AppMetrica  
 - **Schedule cache** — shared file JSON cache for the calendar and reminders  
 - **Offline** — file JSON cache with instant peek and network refresh  
-- **Share** — career stats and race results (PNG on Android, text share sheet on iOS)  
+- **Share** — career / race / weekend cards (PNG on Android), circuit `f1pet://` text; text share sheet on iOS  
 - **Shimmer skeletons** — loading placeholders for main screens  
 - **Country flags** — nationality / country as emoji in tables, career cards, circuits, scoreboard  

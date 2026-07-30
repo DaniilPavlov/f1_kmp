@@ -13,9 +13,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.content.FileProvider
+import com.example.f1_kmp.data.analytics.AnalyticsEvent
+import com.example.f1_kmp.data.analytics.AnalyticsGateway
+import com.example.f1_kmp.data.deeplink.F1PetDeepLinks
+import com.example.f1_kmp.data.model.EspnScoreboardEvent
 import com.example.f1_kmp.domain.model.Race
 import com.example.f1_kmp.ui.share.ShareCareerCard
 import com.example.f1_kmp.ui.share.ShareRaceResultsCard
+import com.example.f1_kmp.ui.share.ShareWeekendSummaryCard
 import com.example.f1_kmp.ui.theme.F1Theme
 import java.io.File
 import kotlin.coroutines.resume
@@ -43,6 +48,7 @@ actual fun shareCareerCard(title: String, races: Int, wins: Int, podiums: Int, p
         ) {
             ShareCareerCard(title = title, races = races, wins = wins, podiums = podiums, poles = poles)
         }
+        logShare("career")
     }
 }
 
@@ -55,6 +61,40 @@ actual fun shareRaceResultsCard(race: Race) {
         ) {
             ShareRaceResultsCard(race = race)
         }
+        logShare("race")
+    }
+}
+
+fun shareWeekendSummary(event: EspnScoreboardEvent) {
+    val context = shareContext ?: return
+    shareScope?.launch {
+        ShareHelper.shareComposableAsPng(
+            context = context,
+            fileName = "f1_weekend_${System.currentTimeMillis()}.png",
+        ) {
+            ShareWeekendSummaryCard(event = event)
+        }
+        logShare("weekend_summary")
+    }
+}
+
+actual fun shareCircuitDeepLink(circuitId: String, circuitName: String) {
+    val context = shareContext ?: return
+    val uri = F1PetDeepLinks.circuit(circuitId)
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, "$circuitName\n$uri")
+    }
+    context.startActivity(
+        Intent.createChooser(intent, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+    )
+    logShare("circuit")
+}
+
+private fun logShare(contentType: String) {
+    runCatching {
+        org.koin.mp.KoinPlatform.getKoin().get<AnalyticsGateway>()
+            .log(AnalyticsEvent.ShareTapped(contentType))
     }
 }
 

@@ -64,9 +64,25 @@ class F1ApiService(private val client: HttpClient) {
     suspend fun getDriverStandings(year: String, limit: Int = 100): MrDataResponse<StandingsModel> =
         client.get("$year/driverStandings.json") { parameter("limit", limit) }.body()
 
+    /** Standings пилотов после конкретного раунда. */
+    suspend fun getDriverStandingsAfterRound(
+        year: String,
+        round: String,
+        limit: Int = 100,
+    ): MrDataResponse<StandingsModel> =
+        client.get("$year/$round/driverStandings.json") { parameter("limit", limit) }.body()
+
     /** Итоговая таблица конструкторов за год. */
     suspend fun getConstructorStandings(year: String, limit: Int = 100): MrDataResponse<StandingsModel> =
         client.get("$year/constructorStandings.json") { parameter("limit", limit) }.body()
+
+    /** Standings конструкторов после конкретного раунда. */
+    suspend fun getConstructorStandingsAfterRound(
+        year: String,
+        round: String,
+        limit: Int = 100,
+    ): MrDataResponse<StandingsModel> =
+        client.get("$year/$round/constructorStandings.json") { parameter("limit", limit) }.body()
 
     /** Список всех F1-трасс с координатами. */
     suspend fun getCircuits(limit: Int = 100): MrDataResponse<CircuitsModel> =

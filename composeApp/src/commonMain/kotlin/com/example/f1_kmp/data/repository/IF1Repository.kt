@@ -83,6 +83,21 @@ interface IF1Repository {
 
     suspend fun getConstructorH2hStats(constructorId: String, season: String? = null): Result<H2hStats>
 
+    suspend fun getStandingsAfterRound(
+        year: String,
+        round: String,
+    ): Result<Pair<List<DriverStanding>, List<ConstructorStanding>>>
+
+    suspend fun getDriverH2hRoundScores(
+        driverId: String,
+        season: String? = null,
+    ): Result<List<com.example.f1_kmp.viewmodel.H2hRoundScore>>
+
+    suspend fun getConstructorH2hRoundScores(
+        constructorId: String,
+        season: String? = null,
+    ): Result<List<com.example.f1_kmp.viewmodel.H2hRoundScore>>
+
     suspend fun getSeasonFinishStatuses(year: String): Result<List<FinishStatusItem>>
 
     suspend fun getCurrentDrivers(): Result<List<Driver>>

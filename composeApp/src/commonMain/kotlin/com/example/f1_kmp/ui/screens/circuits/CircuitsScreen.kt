@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,7 +47,9 @@ import com.example.f1_kmp.ui.map.CircuitsMapContent
 import com.example.f1_kmp.ui.theme.AppDimens
 import com.example.f1_kmp.ui.theme.AppStyles
 import com.example.f1_kmp.ui.theme.F1Red
+import com.example.f1_kmp.util.RegisterShareAction
 import com.example.f1_kmp.util.openUrl
+import com.example.f1_kmp.util.shareCircuitDeepLink
 import com.example.f1_kmp.viewmodel.CircuitDetailViewModel
 import com.example.f1_kmp.viewmodel.CircuitsViewModel
 import f1_kmp.composeapp.generated.resources.Res
@@ -143,6 +146,15 @@ fun CircuitDetailScreen(
     val circuitState by viewModel.circuit.collectAsState()
     val winnersState by viewModel.winners.collectAsState()
     val stats by viewModel.stats.collectAsState()
+    val circuit = (circuitState as? AsyncValue.Value)?.value
+    val shareAction = if (circuit != null) {
+        remember(circuit.circuitId, circuit.circuitName) {
+            { shareCircuitDeepLink(circuit.circuitId, circuit.circuitName) }
+        }
+    } else {
+        null
+    }
+    RegisterShareAction(shareAction)
 
     when (val state = circuitState) {
         is AsyncValue.Loading -> CareerScreenShimmer(modifier = Modifier.fillMaxSize())

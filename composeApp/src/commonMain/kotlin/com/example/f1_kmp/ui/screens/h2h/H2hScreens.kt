@@ -27,6 +27,7 @@ import com.example.f1_kmp.ui.components.SeasonPickerField
 import com.example.f1_kmp.ui.components.shimmer.ListRowsShimmer
 import com.example.f1_kmp.ui.theme.AppDimens
 import com.example.f1_kmp.ui.theme.AppStyles
+import com.example.f1_kmp.ui.theme.F1Red
 import com.example.f1_kmp.ui.theme.F1StrokeGray
 import com.example.f1_kmp.ui.theme.F1TextGray
 import com.example.f1_kmp.viewmodel.H2hConstructorsViewModel
@@ -170,6 +171,14 @@ fun H2hDriversScreen(viewModel: H2hDriversViewModel) {
                     statsB = result.statsB,
                     season = result.season,
                 )
+                if (!result.timeline.isEmpty) {
+                    Spacer(Modifier.height(20.dp))
+                    H2hPointsChart(
+                        timeline = result.timeline,
+                        colorA = F1Red,
+                        colorB = F1TextGray,
+                    )
+                }
             }
         }
         Spacer(Modifier.height(32.dp))
@@ -290,6 +299,14 @@ fun H2hConstructorsScreen(viewModel: H2hConstructorsViewModel) {
                     statsB = result.statsB,
                     season = result.season,
                 )
+                if (!result.timeline.isEmpty) {
+                    Spacer(Modifier.height(20.dp))
+                    H2hPointsChart(
+                        timeline = result.timeline,
+                        colorA = F1Red,
+                        colorB = F1TextGray,
+                    )
+                }
             }
         }
         Spacer(Modifier.height(32.dp))

@@ -340,6 +340,43 @@ class F1Repository(
             CareerLoader.loadH2hStats(api, "constructors/$constructorId", season)
         }
 
+    override suspend fun getStandingsAfterRound(
+        year: String,
+        round: String,
+    ): Result<Pair<List<DriverStanding>, List<ConstructorStanding>>> =
+        ApiCallHandler.safeCall {
+            coroutineScope {
+                val driversDeferred = async {
+                    api.getDriverStandingsAfterRound(year, round).mrData.standingsTable.standingsLists
+                        .firstOrNull()?.driverStandings.orEmpty()
+                }
+                val constructorsDeferred = async {
+                    api.getConstructorStandingsAfterRound(year, round).mrData.standingsTable.standingsLists
+                        .firstOrNull()?.constructorStandings.orEmpty()
+                }
+                Pair(
+                    driversDeferred.await().toDriverStandingDomain(),
+                    constructorsDeferred.await().toConstructorStandingDomain(),
+                )
+            }
+        }
+
+    override suspend fun getDriverH2hRoundScores(
+        driverId: String,
+        season: String?,
+    ): Result<List<com.example.f1_kmp.viewmodel.H2hRoundScore>> =
+        ApiCallHandler.safeCall {
+            CareerLoader.loadH2hRoundScores(api, "drivers/$driverId", season)
+        }
+
+    override suspend fun getConstructorH2hRoundScores(
+        constructorId: String,
+        season: String?,
+    ): Result<List<com.example.f1_kmp.viewmodel.H2hRoundScore>> =
+        ApiCallHandler.safeCall {
+            CareerLoader.loadH2hRoundScores(api, "constructors/$constructorId", season)
+        }
+
     override suspend fun getSeasonFinishStatuses(year: String): Result<List<FinishStatusItem>> =
         ApiCallHandler.safeCall {
             api.getSeasonStatus(year).mrData.statusTable?.status.orEmpty()

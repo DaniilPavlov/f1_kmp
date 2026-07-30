@@ -152,5 +152,14 @@
     <string name="share">Share</string>
     <string name="share_no_results">No race results yet</string>
     <string name="share_and_more">…and %1$d more</string>
+    <string name="share_weekend_podium">Podium</string>
     <string name="driver_news_title">Latest news</string>
+
+    <string name="theme_toggle">Theme</string>
+    <string name="back">Back</string>
+    <string name="live_session_banner">Session live</string>
+    <string name="live_session_banner_with_session">Session live: %1$s</string>
+    <string name="season_rewind_title">Season rewind</string>
+    <string name="season_rewind_subtitle">Scrub standings round by round</string>
+    <string name="season_rewind_empty">No completed rounds for this season</string>
 </resources>
