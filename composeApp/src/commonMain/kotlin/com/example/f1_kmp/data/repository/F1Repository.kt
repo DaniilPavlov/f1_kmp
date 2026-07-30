@@ -33,7 +33,7 @@ import com.example.f1_kmp.domain.model.QualifyingResult
 import com.example.f1_kmp.domain.model.Race
 import com.example.f1_kmp.domain.model.RaceResult
 import com.example.f1_kmp.domain.model.StandingsMeta
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import kotlinx.coroutines.async

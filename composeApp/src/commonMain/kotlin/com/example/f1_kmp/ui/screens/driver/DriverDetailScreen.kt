@@ -60,6 +60,7 @@ import f1_kmp.composeapp.generated.resources.driver_teams_title
 import f1_kmp.composeapp.generated.resources.nationality
 import f1_kmp.composeapp.generated.resources.wins
 import com.example.f1_kmp.domain.stringResource
+import kotlinx.datetime.number
 import kotlinx.datetime.LocalDate
 
 /** Экран карточки пилота: профиль, карьера, команды и ESPN-новости. */
@@ -173,5 +174,5 @@ private fun DriverContent(
 private fun formatBirthDate(value: String): String = runCatching {
     val date = LocalDate.parse(value)
     val language = LocaleController.language.value
-    "${date.dayOfMonth} ${DateUtils.monthName(date.monthNumber, language)} ${date.year}"
+    "${date.day} ${DateUtils.monthName(date.month.number, language)} ${date.year}"
 }.getOrElse { displayValue(value) }

@@ -2,8 +2,8 @@ package com.example.f1_kmp.util
 
 import com.example.f1_kmp.domain.model.RaceSession
 import com.example.f1_kmp.domain.model.Race
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
+import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant

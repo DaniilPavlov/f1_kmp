@@ -10,7 +10,7 @@ import com.example.f1_kmp.domain.ApiCallHandler
 import io.ktor.http.Url
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 /**
  * ESPN F1 news + scoreboard + driver/constructor media с in-memory TTL/cache.

@@ -53,7 +53,7 @@ import f1_kmp.composeapp.generated.resources.sprint_qualifying
 import f1_kmp.composeapp.generated.resources.third_practice
 import com.example.f1_kmp.domain.stringResource
 import kotlinx.coroutines.delay
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.StringResource
@@ -83,7 +83,7 @@ fun ScheduleRaceFeaturedCard(
     val dateRange = if (start.date == end.date) {
         DateUtils.formatLongDate(end.date, language)
     } else {
-        "${start.dayOfMonth} – ${DateUtils.formatLongDate(end.date, language)}"
+        "${start.day} – ${DateUtils.formatLongDate(end.date, language)}"
     }
 
     Column(

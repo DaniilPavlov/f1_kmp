@@ -6,7 +6,7 @@ import com.example.f1_kmp.domain.model.Race
 import com.example.f1_kmp.util.DateUtils
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
 

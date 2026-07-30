@@ -323,7 +323,7 @@ fun ScheduleSessionCard(
                 Text(title, style = AppStyles.h3)
                 if (localDateTime != null) {
                     Text(
-                        "${localDateTime.dayOfMonth} ${DateUtils.monthName(localDateTime.month.number)} ${localDateTime.year}",
+                        "${localDateTime.day} ${DateUtils.monthName(localDateTime.month.number)} ${localDateTime.year}",
                         style = AppStyles.body,
                         modifier = Modifier.padding(vertical = 5.dp),
                     )

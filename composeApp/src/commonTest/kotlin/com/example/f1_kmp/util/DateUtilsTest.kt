@@ -1,5 +1,6 @@
 package com.example.f1_kmp.util
 
+import kotlinx.datetime.number
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
@@ -52,8 +53,8 @@ class DateUtilsTest {
     fun toLocalDateTime_validTime_returnsLocalDateTime() {
         val result = DateUtils.toLocalDateTime("2026-05-10", "14:00:00Z")
         assertEquals(2026, result!!.year)
-        assertEquals(5, result.monthNumber)
-        assertEquals(10, result.dayOfMonth)
+        assertEquals(5, result.month.number)
+        assertEquals(10, result.day)
     }
 
     @Test

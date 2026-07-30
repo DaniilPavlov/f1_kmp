@@ -10,7 +10,7 @@ import com.example.f1_kmp.data.model.RaceModel
 import com.example.f1_kmp.domain.model.Constructor
 import com.example.f1_kmp.domain.model.Driver
 import kotlinx.coroutines.delay
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 /**
  * Загрузка карьерной статистики через Jolpica (≤4 req/s → пауза 500 ms между запросами).

@@ -39,7 +39,7 @@ import com.example.f1_kmp.viewmodel.DayLogo
 import f1_kmp.composeapp.generated.resources.Res
 import f1_kmp.composeapp.generated.resources.calendar_car
 import f1_kmp.composeapp.generated.resources.calendar_finish
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
@@ -178,7 +178,7 @@ private fun CalendarDay(
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
             )
-            null -> Text(text = date.dayOfMonth.toString(), style = textStyle)
+            null -> Text(text = date.day.toString(), style = textStyle)
         }
     }
 }

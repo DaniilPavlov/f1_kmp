@@ -14,7 +14,8 @@ import com.example.f1_kmp.util.YearMonth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
+import kotlinx.datetime.number
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -52,7 +53,7 @@ class ScheduleViewModel(
     private val _userPickedDay = MutableStateFlow(false)
     val userPickedDay: StateFlow<Boolean> = _userPickedDay.asStateFlow()
 
-    private val _focusedMonth = MutableStateFlow(YearMonth(today.year, today.monthNumber))
+    private val _focusedMonth = MutableStateFlow(YearMonth(today.year, today.month.number))
     val focusedMonth: StateFlow<YearMonth> = _focusedMonth.asStateFlow()
 
     private val _scheduleItems = MutableStateFlow<List<ScheduleSessionItem>>(emptyList())

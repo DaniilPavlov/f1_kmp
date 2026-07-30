@@ -4,7 +4,8 @@ import com.example.f1_kmp.domain.model.Circuit
 import com.example.f1_kmp.domain.model.CircuitLocation
 import com.example.f1_kmp.domain.model.Race
 import com.example.f1_kmp.domain.model.RaceSession
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
+import kotlinx.datetime.number
 import kotlinx.datetime.LocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -22,8 +23,8 @@ class RaceDateTimeHelperTest {
         )
         val local = RaceDateTimeHelper.countdownTarget(race)
         assertEquals(2030, local.year)
-        assertEquals(1, local.monthNumber)
-        assertEquals(1, local.dayOfMonth)
+        assertEquals(1, local.month.number)
+        assertEquals(1, local.day)
     }
 
     @Test
