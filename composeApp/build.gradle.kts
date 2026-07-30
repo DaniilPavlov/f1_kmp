@@ -10,6 +10,7 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.kover)
 }
 
 val localProperties = Properties().apply {
@@ -203,6 +204,66 @@ tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
     jvmTarget = "17"
     exclude("**/build/**")
     exclude("**/generated/**")
+}
+
+kover {
+    reports {
+        filters {
+            excludes {
+                // Generated / platform noise — keep report focused on app code.
+                classes(
+                    "*.BuildConfig",
+                    "*.R",
+                    "*.R$*",
+                    "*ComposableSingletons*",
+                    "*_Factory*",
+                    "*_MembersInjector*",
+                    "com.example.f1_kmp.F1Application",
+                    "com.example.f1_kmp.MainActivity",
+                    "com.example.f1_kmp.AppKt",
+                    "com.example.f1_kmp.util.ShareHelper*",
+                    "com.example.f1_kmp.data.analytics.AppAnalyticsGateway*",
+                    "com.example.f1_kmp.data.circuits.CircuitLayoutAssets*",
+                    "com.example.f1_kmp.data.circuits.CircuitStatsRepository*",
+                    "com.example.f1_kmp.util.Platform*",
+                    "com.example.f1_kmp.domain.ThemePreferences*",
+                    "com.example.f1_kmp.domain.LocalePreferences*",
+                )
+                annotatedBy(
+                    "androidx.compose.runtime.Composable",
+                    "androidx.compose.ui.tooling.preview.Preview",
+                )
+                packages(
+                    "f1_kmp.composeapp.generated",
+                    "f1_kmp.composeapp.generated.*",
+                    "com.example.f1_kmp.ui",
+                    "com.example.f1_kmp.ui.*",
+                    "com.example.f1_kmp.widgets",
+                    "com.example.f1_kmp.widgets.*",
+                    "com.example.f1_kmp.di",
+                    "com.example.f1_kmp.di.*",
+                    "com.example.f1_kmp.notifications",
+                    "com.example.f1_kmp.notifications.*",
+                    "com.example.f1_kmp.platform",
+                    "com.example.f1_kmp.platform.*",
+                    "com.example.f1_kmp.data.firebase",
+                    "com.example.f1_kmp.data.firebase.*",
+                    "com.example.f1_kmp.data.appmetrica",
+                    "com.example.f1_kmp.data.appmetrica.*",
+                    "com.example.f1_kmp.data.model",
+                    "com.example.f1_kmp.data.model.*",
+                    "com.example.f1_kmp.data.api",
+                    "com.example.f1_kmp.data.api.*",
+                )
+            }
+        }
+        // Business-logic gate (~Flutter controller/util/repo unit coverage).
+        verify {
+            rule {
+                minBound(75)
+            }
+        }
+    }
 }
 
 // Must be applied after the Android Application plugin (AGP Variant API).

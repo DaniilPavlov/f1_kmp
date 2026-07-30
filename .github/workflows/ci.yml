@@ -54,11 +54,21 @@ jobs:
       - name: Build debug APK
         run: ./gradlew :composeApp:assembleDebug --stacktrace
 
-      - name: Run unit tests
-        run: ./gradlew :composeApp:testDebugUnitTest --stacktrace
+      - name: Run unit tests with coverage
+        run: ./gradlew :composeApp:koverXmlReportDebug :composeApp:koverHtmlReportDebug :composeApp:koverVerifyDebug --stacktrace
 
       - name: Build release APK (R8)
         run: ./gradlew :composeApp:assembleRelease --stacktrace
+
+      - name: Upload coverage
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: coverage-kover
+          path: |
+            composeApp/build/reports/kover/reportDebug.xml
+            composeApp/build/reports/kover/htmlDebug/
+          if-no-files-found: ignore
 
       - name: Upload test report
         if: failure()

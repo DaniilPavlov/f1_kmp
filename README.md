@@ -191,6 +191,17 @@ Kotlin framework for the simulator only (Apple Silicon), without installing the 
 ./gradlew :composeApp:detekt
 ```
 
+Coverage (Kover, same idea as Flutter `flutter test --coverage`):
+
+```bash
+./gradlew :composeApp:koverHtmlReportDebug
+# → composeApp/build/reports/kover/htmlDebug/index.html
+./gradlew :composeApp:koverXmlReportDebug
+# → composeApp/build/reports/kover/reportDebug.xml
+```
+
+CI uploads the Kover XML/HTML report as artifact `coverage-kover` on pushes to `master` (no coverage gate / threshold).
+
 Covered areas include ViewModels (Home, Results, Schedule, News, Race search, H2H drivers, Finish status, Race info, Circuit detail), Jolpica mappers, CareerLoader, `ApiCallHandler`, `AppVersion`, date/flag utils.
 
 ## CI / CD
@@ -199,7 +210,7 @@ Covered areas include ViewModels (Home, Results, Schedule, News, Race search, H2
 
 | Workflow | When | What it does |
 |----------|-------|------------|
-| `ci.yml` | push / PR to `master` | Firebase stub, detekt, debug APK, unit tests |
+| `ci.yml` | push / PR to `master` | Firebase stub, detekt, debug APK, unit tests + Kover coverage, release APK |
 | `release.yml` | tag `v*` or manual | Android APK (+ GitHub Release) |
 
 Release:
