@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -18,7 +20,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.f1_kmp.domain.model.Race
-import com.example.f1_kmp.domain.AsyncValue
 import com.example.f1_kmp.domain.LocaleController
 import com.example.f1_kmp.ui.components.ErrorBody
 import com.example.f1_kmp.ui.components.F1Calendar
@@ -34,15 +35,10 @@ import com.example.f1_kmp.viewmodel.ScheduleViewModel
  * Сверху — [F1Calendar], снизу — карточки сессий на выбранный день
  * или [ScheduleRaceFeaturedCard] с countdown, если день пустой и есть upcoming race.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScheduleScreen(viewModel: ScheduleViewModel) {
-    val races by viewModel.races.collectAsState()
-    val selectedDate by viewModel.selectedDate.collectAsState()
-    val userPickedDay by viewModel.userPickedDay.collectAsState()
-    val focusedMonth by viewModel.focusedMonth.collectAsState()
-    val scheduleItems by viewModel.scheduleItems.collectAsState()
-    val upcomingRace by viewModel.upcomingRace.collectAsState()
-    val error by viewModel.error.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
     val language by LocaleController.language.collectAsState()
     var sessionsRace by remember { mutableStateOf<Race?>(null) }
 
@@ -51,45 +47,53 @@ fun ScheduleScreen(viewModel: ScheduleViewModel) {
     }
 
     when {
-        error != null && races.isError -> ErrorBody(
-            error?.title,
-            error?.subtitle,
-            onRetry = viewModel::loadAllData,
+        uiState.error != null && uiState.races.isError -> ErrorBody(
+            uiState.error?.title,
+            uiState.error?.subtitle,
+            onRetry = viewModel::refreshAll,
             modifier = Modifier.fillMaxSize(),
         )
-        races.isLoading -> ScheduleShimmer(modifier = Modifier.fillMaxSize())
-        else -> Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(
-                    horizontal = AppDimens.horizontalPadding.dp,
-                    vertical = AppDimens.verticalPadding.dp,
-                ),
+        !uiState.isRefreshing && uiState.races.isLoading -> {
+            ScheduleShimmer(modifier = Modifier.fillMaxSize())
+        }
+        else -> PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = viewModel::refreshAll,
+            modifier = Modifier.fillMaxSize(),
         ) {
-            F1Calendar(
-                selectedDate = selectedDate,
-                focusedMonth = focusedMonth,
-                userPickedDay = userPickedDay,
-                logoForDay = viewModel::logoForDay,
-                onDaySelected = viewModel::onSelectDay,
-                onMonthChanged = viewModel::onMonthChanged,
-            )
-            Spacer(Modifier.height(AppDimens.verticalPadding.dp))
-            if (scheduleItems.isNotEmpty()) {
-                scheduleItems.forEach { item ->
-                    if (item.title.isEmpty()) {
-                        Text(item.raceName, style = AppStyles.h3, modifier = Modifier.padding(bottom = 12.dp))
-                    } else {
-                        ScheduleSessionCard(item.title, item.date.date, item.date.time)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(
+                        horizontal = AppDimens.horizontalPadding.dp,
+                        vertical = AppDimens.verticalPadding.dp,
+                    ),
+            ) {
+                F1Calendar(
+                    selectedDate = uiState.selectedDate,
+                    focusedMonth = uiState.focusedMonth,
+                    userPickedDay = uiState.userPickedDay,
+                    logoForDay = viewModel::logoForDay,
+                    onDaySelected = viewModel::onSelectDay,
+                    onMonthChanged = viewModel::onMonthChanged,
+                )
+                Spacer(Modifier.height(AppDimens.verticalPadding.dp))
+                if (uiState.scheduleItems.isNotEmpty()) {
+                    uiState.scheduleItems.forEach { item ->
+                        if (item.title.isEmpty()) {
+                            Text(item.raceName, style = AppStyles.h3, modifier = Modifier.padding(bottom = 12.dp))
+                        } else {
+                            ScheduleSessionCard(item.title, item.date.date, item.date.time)
+                        }
                     }
-                }
-            } else {
-                upcomingRace?.let { race ->
-                    ScheduleRaceFeaturedCard(
-                        race = race,
-                        onViewSessions = { sessionsRace = race },
-                    )
+                } else {
+                    uiState.upcomingRace?.let { race ->
+                        ScheduleRaceFeaturedCard(
+                            race = race,
+                            onViewSessions = { sessionsRace = race },
+                        )
+                    }
                 }
             }
         }

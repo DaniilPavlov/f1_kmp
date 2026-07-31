@@ -2,8 +2,11 @@ package com.example.f1_kmp.domain
 
 import io.ktor.client.network.sockets.ConnectTimeoutException
 import io.ktor.client.network.sockets.SocketTimeoutException
+import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.plugins.HttpRequestTimeoutException
+import io.ktor.http.HttpStatusCode
 import io.ktor.util.network.UnresolvedAddressException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.io.IOException
 
@@ -11,7 +14,7 @@ import kotlinx.io.IOException
  * Единая обёртка для сетевых вызовов в Repository.
  *
  * GoF Behavioral Template Method — фиксированный скелет: попытка → при
- * сетевой ошибке один retry → иначе [Throwable.toAppError] → [Result.failure].
+ * сетевой ошибке/429 retry → иначе [Throwable.toAppError] → [Result.failure].
  * Конкретный запрос передаётся как [block].
  *
  * Типичный случай retry: первый запрос упал (холодный DNS/SSL), повтор сразу прошёл.
@@ -22,24 +25,37 @@ object ApiCallHandler {
     private const val RETRY_DELAY_MS = 400L
 
     /**
-     * Выполняет [block] с одним повтором при сетевой ошибке.
-     * Все исключения превращаются в [AppException].
+     * Выполняет [block] с повтором при сетевой ошибке или 429.
+     * Все исключения превращаются в [AppException], кроме [CancellationException].
      */
     suspend fun <T> safeCall(
         retries: Int = DEFAULT_RETRIES,
         block: suspend () -> T,
     ): Result<T> {
         var lastError: AppException? = null
-        repeat(retries + 1) { attempt ->
+        var attempt = 0
+        var finished = false
+        while (attempt <= retries && !finished) {
             try {
                 return Result.success(block())
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: ClientRequestException) {
+                lastError = e.toAppError().asException()
+                if (e.response.status == HttpStatusCode.TooManyRequests && attempt < retries) {
+                    delay(RETRY_DELAY_MS * (attempt + 1))
+                    attempt++
+                } else {
+                    finished = true
+                }
             } catch (e: Exception) {
                 lastError = e.toAppError().asException()
                 val canRetry = attempt < retries && isRetryable(e)
                 if (canRetry) {
                     delay(RETRY_DELAY_MS)
+                    attempt++
                 } else {
-                    return Result.failure(lastError!!)
+                    finished = true
                 }
             }
         }

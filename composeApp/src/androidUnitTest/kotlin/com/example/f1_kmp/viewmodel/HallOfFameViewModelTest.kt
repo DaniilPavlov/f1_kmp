@@ -59,9 +59,9 @@ class HallOfFameViewModelTest {
         val vm = HallOfFameViewModel(repository)
         advanceUntilIdle()
 
-        assertEquals("2024", vm.year.value)
-        assertTrue(vm.drivers.value is AsyncValue.Value)
-        assertEquals(1, (vm.drivers.value as AsyncValue.Value).value.size)
-        assertEquals(1, (vm.constructors.value as AsyncValue.Value).value.size)
+        assertEquals("2024", vm.uiState.value.year)
+        assertTrue(vm.uiState.value.drivers is AsyncValue.Value)
+        assertEquals(1, (vm.uiState.value.drivers as AsyncValue.Value).value.size)
+        assertEquals(1, (vm.uiState.value.constructors as AsyncValue.Value).value.size)
     }
 }

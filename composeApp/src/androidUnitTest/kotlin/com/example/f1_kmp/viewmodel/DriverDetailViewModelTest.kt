@@ -61,9 +61,9 @@ class DriverDetailViewModelTest {
         val vm = DriverDetailViewModel("verstappen", repository, espn)
         advanceUntilIdle()
 
-        assertTrue(vm.driver.value is AsyncValue.Value)
-        assertEquals("verstappen", (vm.driver.value as AsyncValue.Value).value.driverId)
-        assertTrue(vm.careerStats.value is AsyncValue.Value)
-        assertEquals(60, (vm.careerStats.value as AsyncValue.Value).value.wins)
+        assertTrue(vm.uiState.value.driver is AsyncValue.Value)
+        assertEquals("verstappen", (vm.uiState.value.driver as AsyncValue.Value).value.driverId)
+        assertTrue(vm.uiState.value.careerStats is AsyncValue.Value)
+        assertEquals(60, (vm.uiState.value.careerStats as AsyncValue.Value).value.wins)
     }
 }

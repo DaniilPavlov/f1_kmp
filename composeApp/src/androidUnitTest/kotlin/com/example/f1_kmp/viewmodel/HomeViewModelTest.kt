@@ -52,7 +52,7 @@ class HomeViewModelTest {
     /**
      * При успешном ответе Repository ViewModel должен:
      * - записать сезон и раунд из метаданных API;
-     * - положить список пилотов в [HomeViewModel.drivers] как [AsyncValue.Value].
+     * - положить список пилотов в [HomeUiState.drivers] как [AsyncValue.Value].
      */
     @Test
     fun loadAllData_success_setsSeasonAndDrivers() = runTest {
@@ -85,9 +85,10 @@ class HomeViewModelTest {
         val viewModel = HomeViewModel(repository, mockk(relaxed = true))
         advanceUntilIdle()
 
-        assertEquals("2026", viewModel.season.value)
-        assertEquals("5", viewModel.round.value)
-        assertTrue(viewModel.drivers.value is AsyncValue.Value)
-        assertEquals(1, (viewModel.drivers.value as AsyncValue.Value).value.size)
+        val state = viewModel.uiState.value
+        assertEquals("2026", state.season)
+        assertEquals("5", state.round)
+        assertTrue(state.drivers is AsyncValue.Value)
+        assertEquals(1, (state.drivers as AsyncValue.Value).value.size)
     }
 }

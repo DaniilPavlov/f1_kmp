@@ -30,9 +30,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.f1_kmp.domain.LocaleController
 import com.example.f1_kmp.ui.theme.AppStyles
+import com.example.f1_kmp.ui.theme.F1Black
+import com.example.f1_kmp.ui.theme.F1OnChrome
 import com.example.f1_kmp.ui.theme.F1Red
-import com.example.f1_kmp.ui.theme.F1ShadowColor
 import com.example.f1_kmp.ui.theme.F1White
+import com.example.f1_kmp.ui.theme.appColors
 import com.example.f1_kmp.util.DateUtils
 import com.example.f1_kmp.util.YearMonth
 import com.example.f1_kmp.viewmodel.DayLogo
@@ -63,6 +65,7 @@ fun F1Calendar(
     onMonthChanged: (YearMonth) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = appColors()
     val language by LocaleController.language.collectAsState()
     val weekdayLabels = DateUtils.weekdayLabels(language)
     val daysInMonth = focusedMonth.lengthOfMonth()
@@ -75,7 +78,7 @@ fun F1Calendar(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(F1ShadowColor)
+            .background(colors.shadowColor)
             .padding(12.dp),
     ) {
         Row(
@@ -84,14 +87,22 @@ fun F1Calendar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = { onMonthChanged(focusedMonth.plusMonths(-1)) }) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null)
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    contentDescription = null,
+                    tint = colors.black,
+                )
             }
             Text(
                 text = "${DateUtils.monthName(focusedMonth.month)} ${focusedMonth.year}",
                 style = AppStyles.body,
             )
             IconButton(onClick = { onMonthChanged(focusedMonth.plusMonths(1)) }) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = colors.black,
+                )
             }
         }
 
@@ -153,9 +164,10 @@ private fun CalendarDay(
         today -> F1Red
         else -> Color.Transparent
     }
+    // Selection / today pills stay fixed contrast (true white / red), not theme surfaces.
     val textStyle = when {
-        selected -> AppStyles.body
-        today -> AppStyles.body.copy(color = F1White)
+        selected -> AppStyles.body.copy(color = F1Black)
+        today -> AppStyles.body.copy(color = F1OnChrome)
         else -> AppStyles.body
     }
     Box(

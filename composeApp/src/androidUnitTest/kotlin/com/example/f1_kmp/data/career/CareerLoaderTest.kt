@@ -105,6 +105,42 @@ class CareerLoaderTest {
         assertTrue(career.poleRaces.isNotEmpty())
     }
 
+    @Test
+    fun loadConstructorCareer_usesRacesTotalNotAllResultsPages() = runTest {
+        val related = DriverModel(
+            driverId = "norris",
+            url = "",
+            givenName = "Lando",
+            familyName = "Norris",
+            dateOfBirth = "1999-11-13",
+            nationality = "British",
+        )
+        coEvery { api.getMrDataTotal(any(), any(), any()) } answers {
+            val path = firstArg<String>()
+            when {
+                path.endsWith("/races") -> emptyPage("312")
+                path.endsWith("/results/1") -> pageWithOptionalRace(total = "10", race = sampleWinRace())
+                path.endsWith("/results/2") -> emptyPage("5")
+                path.endsWith("/results/3") -> emptyPage("3")
+                path.endsWith("/qualifying/1") -> pageWithPole(total = "7")
+                path.endsWith("/drivers") -> MrDataResponse(
+                    MrDataTotalModel(
+                        total = "1",
+                        driverTable = com.example.f1_kmp.data.model.DriverTableModel(listOf(related)),
+                    ),
+                )
+                else -> emptyPage("0")
+            }
+        }
+
+        val career = CareerLoader.loadConstructorCareer(api, "mclaren")
+
+        assertEquals(312, career.races)
+        assertEquals(10, career.wins)
+        assertEquals(1, career.winRaces.size)
+        assertEquals(listOf("norris"), career.related.map { it.driverId })
+    }
+
     private fun stubTotalsByPathSuffix(
         vararg pairs: Pair<String, String>,
         matchFullPath: Boolean = false,

@@ -5,11 +5,14 @@ import androidx.lifecycle.viewModelScope
 import com.example.f1_kmp.data.analytics.AnalyticsEvent
 import com.example.f1_kmp.data.analytics.AnalyticsGateway
 import com.example.f1_kmp.data.repository.IF1Repository
+import com.example.f1_kmp.domain.AppError
 import com.example.f1_kmp.domain.AsyncValue
+import com.example.f1_kmp.domain.ErrorStrings
 import com.example.f1_kmp.domain.model.ConstructorStanding
 import com.example.f1_kmp.domain.model.DriverStanding
 import com.example.f1_kmp.domain.model.Race
 import com.example.f1_kmp.domain.toAppError
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,10 +28,12 @@ import kotlinx.datetime.todayIn
 
 data class SeasonRewindBarEntry(
     val id: String,
+    val constructorId: String,
     val label: String,
     val tag: String,
     val points: Double,
-    val rank: Int,
+    /** 0-based позиция; дробная во время lerp-анимации. */
+    val rank: Float,
 )
 
 data class SeasonRewindUiState(
@@ -37,6 +42,10 @@ data class SeasonRewindUiState(
     val selectedRoundIndex: Int = 0,
     val isPlaying: Boolean = false,
     val chartLoading: Boolean = false,
+    val chartLoadFailed: Boolean = false,
+    /** Реальная ошибка сети/парсинга — для subtitle в ErrorBody. */
+    val chartError: AppError? = null,
+    val activeTable: Int = 0,
     val driverBars: List<SeasonRewindBarEntry> = emptyList(),
     val constructorBars: List<SeasonRewindBarEntry> = emptyList(),
     val chartRound: String? = null,
@@ -49,6 +58,19 @@ data class SeasonRewindUiState(
 
     val canPlay: Boolean
         get() = ((races as? AsyncValue.Value)?.value?.size ?: 0) > 1
+
+    val hasChartData: Boolean
+        get() = driverBars.isNotEmpty() && constructorBars.isNotEmpty()
+
+    /** Очки на экране не от [selectedRace] — chart устарел. */
+    val isChartStale: Boolean
+        get() {
+            val race = selectedRace ?: return true
+            return chartRound != race.round
+        }
+
+    val activeBars: List<SeasonRewindBarEntry>
+        get() = if (activeTable == 0) driverBars else constructorBars
 }
 
 class SeasonRewindViewModel(
@@ -59,6 +81,7 @@ class SeasonRewindViewModel(
     val uiState: StateFlow<SeasonRewindUiState> = _uiState.asStateFlow()
 
     private var playJob: Job? = null
+    private var standingsJob: Job? = null
     private var standingsRequestId = 0
 
     init {
@@ -83,6 +106,10 @@ class SeasonRewindViewModel(
         loadSeason()
     }
 
+    fun onTableChanged(index: Int) {
+        _uiState.update { it.copy(activeTable = index.coerceIn(0, 1)) }
+    }
+
     fun selectRound(index: Int) {
         val races = (_uiState.value.races as? AsyncValue.Value)?.value ?: return
         if (index !in races.indices) return
@@ -94,29 +121,37 @@ class SeasonRewindViewModel(
         if (_uiState.value.isPlaying) stopPlayback() else startPlayback()
     }
 
+    fun stopPlayback() {
+        playJob?.cancel()
+        playJob = null
+        _uiState.update { it.copy(isPlaying = false) }
+    }
+
     private fun startPlayback() {
-        if (!_uiState.value.canPlay) return
+        val races = (_uiState.value.races as? AsyncValue.Value)?.value ?: return
+        if (races.size < 2) return
+
+        stopPlayback()
+        if (_uiState.value.selectedRoundIndex >= races.lastIndex) {
+            _uiState.update { it.copy(selectedRoundIndex = 0) }
+            loadStandingsForSelected()
+        }
+
         _uiState.update { it.copy(isPlaying = true) }
         playJob = viewModelScope.launch {
             while (isActive) {
                 delay(PLAY_INTERVAL_MS)
                 val state = _uiState.value
-                val races = (state.races as? AsyncValue.Value)?.value ?: break
+                val list = (state.races as? AsyncValue.Value)?.value
                 val next = state.selectedRoundIndex + 1
-                if (next >= races.size) {
+                if (list == null || next >= list.size) {
                     stopPlayback()
-                    break
+                    return@launch
                 }
                 _uiState.update { it.copy(selectedRoundIndex = next) }
                 loadStandingsForSelected()
             }
         }
-    }
-
-    private fun stopPlayback() {
-        playJob?.cancel()
-        playJob = null
-        _uiState.update { it.copy(isPlaying = false) }
     }
 
     private fun loadSeason() {
@@ -125,12 +160,29 @@ class SeasonRewindViewModel(
             _uiState.update { it.copy(races = AsyncValue.Error("Invalid year", year)) }
             return
         }
+        standingsJob?.cancel()
         viewModelScope.launch {
-            _uiState.update { it.copy(races = AsyncValue.Loading, selectedRoundIndex = 0) }
+            _uiState.update {
+                it.copy(
+                    races = AsyncValue.Loading,
+                    selectedRoundIndex = 0,
+                    driverBars = emptyList(),
+                    constructorBars = emptyList(),
+                    chartRound = null,
+                    chartLoadFailed = false,
+                    chartError = null,
+                )
+            }
             repository.getSeasonRaces(year)
                 .onSuccess { all ->
                     val completed = completedRaces(all)
-                    _uiState.update { it.copy(races = AsyncValue.Value(completed)) }
+                    val startIndex = if (completed.isEmpty()) 0 else completed.lastIndex
+                    _uiState.update {
+                        it.copy(
+                            races = AsyncValue.Value(completed),
+                            selectedRoundIndex = startIndex,
+                        )
+                    }
                     if (completed.isNotEmpty()) {
                         loadStandingsForSelected()
                     }
@@ -147,23 +199,51 @@ class SeasonRewindViewModel(
     private fun loadStandingsForSelected() {
         val race = _uiState.value.selectedRace ?: return
         val requestId = ++standingsRequestId
-        viewModelScope.launch {
-            _uiState.update { it.copy(chartLoading = true) }
+        // Отменяем предыдущий HTTP — иначе параллельный scrub → 429 на первом раунде.
+        standingsJob?.cancel()
+        _uiState.update {
+            it.copy(chartLoading = true, chartLoadFailed = false, chartError = null)
+        }
+        standingsJob = viewModelScope.launch {
             repository.getStandingsAfterRound(race.season, race.round)
                 .onSuccess { (drivers, constructors) ->
                     if (requestId != standingsRequestId) return@onSuccess
+                    if (drivers.isEmpty() || constructors.isEmpty()) {
+                        _uiState.update {
+                            it.copy(
+                                chartLoading = false,
+                                chartLoadFailed = true,
+                                chartError = AppError(
+                                    title = ErrorStrings.responseParseError,
+                                    subtitle = ErrorStrings.errorRetrySubtitle,
+                                ),
+                            )
+                        }
+                        return@onSuccess
+                    }
                     _uiState.update {
                         it.copy(
                             chartLoading = false,
+                            chartLoadFailed = false,
+                            chartError = null,
                             chartRound = race.round,
                             driverBars = drivers.toDriverBars(),
                             constructorBars = constructors.toConstructorBars(),
                         )
                     }
                 }
-                .onFailure {
+                .onFailure { e ->
                     if (requestId != standingsRequestId) return@onFailure
-                    _uiState.update { it.copy(chartLoading = false) }
+                    // Отмена предыдущего scrub — не ошибка UI.
+                    if (e is CancellationException) return@onFailure
+                    val err = e.toAppError()
+                    _uiState.update {
+                        it.copy(
+                            chartLoading = false,
+                            chartLoadFailed = true,
+                            chartError = err,
+                        )
+                    }
                 }
         }
     }
@@ -182,10 +262,12 @@ class SeasonRewindViewModel(
         ).mapIndexed { index, s ->
             SeasonRewindBarEntry(
                 id = s.driver.driverId,
+                constructorId = s.constructors.firstOrNull()?.constructorId
+                    ?: s.driver.driverId,
                 label = s.driver.familyName,
                 tag = s.driver.code.orEmpty(),
                 points = s.points.toDoubleOrNull() ?: 0.0,
-                rank = index,
+                rank = index.toFloat(),
             )
         }
 
@@ -196,10 +278,11 @@ class SeasonRewindViewModel(
         ).mapIndexed { index, s ->
             SeasonRewindBarEntry(
                 id = s.constructor.constructorId,
+                constructorId = s.constructor.constructorId,
                 label = s.constructor.name,
                 tag = "",
                 points = s.points.toDoubleOrNull() ?: 0.0,
-                rank = index,
+                rank = index.toFloat(),
             )
         }
 

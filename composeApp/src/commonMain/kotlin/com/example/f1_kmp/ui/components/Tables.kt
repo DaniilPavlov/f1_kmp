@@ -14,6 +14,8 @@ import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,10 +32,12 @@ import com.example.f1_kmp.domain.model.Race
 import com.example.f1_kmp.domain.model.RaceResult
 import com.example.f1_kmp.ui.theme.AppDimens
 import com.example.f1_kmp.ui.theme.AppStyles
-import com.example.f1_kmp.ui.theme.F1GrayBg
+import com.example.f1_kmp.domain.LocaleController
 import com.example.f1_kmp.ui.theme.F1Red
 import com.example.f1_kmp.ui.theme.F1White
+import com.example.f1_kmp.ui.theme.appColors
 import com.example.f1_kmp.util.DateUtils
+import org.jetbrains.compose.resources.StringResource
 import f1_kmp.composeapp.generated.resources.Res
 import f1_kmp.composeapp.generated.resources.best_lap
 import f1_kmp.composeapp.generated.resources.constructor
@@ -43,7 +47,7 @@ import f1_kmp.composeapp.generated.resources.driver
 import f1_kmp.composeapp.generated.resources.duration
 import f1_kmp.composeapp.generated.resources.fastest_lap_label
 import f1_kmp.composeapp.generated.resources.lap
-import f1_kmp.composeapp.generated.resources.nationality
+import f1_kmp.composeapp.generated.resources.nationality_short
 import f1_kmp.composeapp.generated.resources.none_short
 import f1_kmp.composeapp.generated.resources.points
 import f1_kmp.composeapp.generated.resources.race_time
@@ -71,7 +75,7 @@ fun TournamentDriversTable(
             cells = listOf(
                 "",
                 stringResource(Res.string.driver),
-                stringResource(Res.string.nationality),
+                stringResource(Res.string.nationality_short),
                 stringResource(Res.string.points),
                 stringResource(Res.string.wins_short),
                 stringResource(Res.string.constructor),
@@ -131,17 +135,18 @@ fun TournamentConstructorsTable(
 }
 
 /**
- * Таблица результатов гонки.
+ * Таблица результатов гонки:
+ * Driver(pos+name) · Constructor · Time/Status · Points · Best lap.
  *
- * @param maxRows ограничить число строк (на главной результатов — топ-3)
- * @param showHeader показывать ли красную шапку с колонками
- * @param onDetailsClick если задан — рисуем строку «Подробная информация» внизу таблицы
+ * @param timeHeaderRes last-race preview uses [Res.string.time_status];
+ *   Race Info pinned header uses [Res.string.time].
  */
 @Composable
 fun RaceResultsTable(
     race: Race,
     maxRows: Int? = null,
     showHeader: Boolean = true,
+    timeHeaderRes: StringResource = Res.string.time_status,
     onDetailsClick: (() -> Unit)? = null,
     onDriverClick: ((Driver) -> Unit)? = null,
 ) {
@@ -155,7 +160,7 @@ fun RaceResultsTable(
                 cells = listOf(
                     stringResource(Res.string.driver),
                     stringResource(Res.string.constructor),
-                    stringResource(Res.string.time_status),
+                    stringResource(timeHeaderRes),
                     stringResource(Res.string.points),
                     stringResource(Res.string.best_lap),
                 ),
@@ -169,7 +174,7 @@ fun RaceResultsTable(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(F1GrayBg)
+                    .background(appColors().grayBg)
                     .clickable(onClick = onDetailsClick)
                     .padding(vertical = 10.dp, horizontal = 12.dp),
                 horizontalArrangement = Arrangement.End,
@@ -219,22 +224,25 @@ private fun RaceResultRow(
     )
 }
 
-/** Таблица квалификации Q1/Q2/Q3. */
+/** Таблица квалификации Q1/Q2/Q3. [showHeader] = false when headers live in a sticky section (Race Info). */
 @Composable
 fun QualifyingTable(
     results: List<QualifyingResult>,
+    showHeader: Boolean = true,
     onDriverClick: ((Driver) -> Unit)? = null,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        TableHeaderRow(
-            cells = listOf(
-                stringResource(Res.string.driver),
-                stringResource(Res.string.constructor),
-                "Q1",
-                "Q2",
-                "Q3",
-            ),
-        )
+        if (showHeader) {
+            TableHeaderRow(
+                cells = listOf(
+                    stringResource(Res.string.driver),
+                    stringResource(Res.string.constructor),
+                    "Q1",
+                    "Q2",
+                    "Q3",
+                ),
+            )
+        }
         results.forEachIndexed { index, item ->
             val position = item.position.toIntOrNull() ?: (index + 1)
             val q2 = item.q2 ?: if (position < 16) "-" else ""
@@ -257,19 +265,24 @@ fun QualifyingTable(
     }
 }
 
-/** Таблица пит-стопов. */
+/** Таблица пит-стопов. [showHeader] = false when headers live in a sticky section (Race Info). */
 @Composable
-fun PitStopsTable(stops: List<PitStop>) {
+fun PitStopsTable(
+    stops: List<PitStop>,
+    showHeader: Boolean = true,
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        TableHeaderRow(
-            cells = listOf(
-                stringResource(Res.string.driver),
-                stringResource(Res.string.lap),
-                stringResource(Res.string.stop_number),
-                stringResource(Res.string.stop_time),
-                stringResource(Res.string.race_time),
-            ),
-        )
+        if (showHeader) {
+            TableHeaderRow(
+                cells = listOf(
+                    stringResource(Res.string.driver),
+                    stringResource(Res.string.lap),
+                    stringResource(Res.string.stop_number),
+                    stringResource(Res.string.stop_time),
+                    stringResource(Res.string.race_time),
+                ),
+            )
+        }
         stops.forEachIndexed { index, stop ->
             TableDataRow(
                 cells = listOf(
@@ -305,6 +318,7 @@ fun ScheduleSessionCard(
     date: String,
     time: String?,
 ) {
+    val language by LocaleController.language.collectAsState()
     val localDateTime = DateUtils.toLocalDateTime(date, time)
     Box(
         modifier = Modifier
@@ -323,7 +337,7 @@ fun ScheduleSessionCard(
                 Text(title, style = AppStyles.h3)
                 if (localDateTime != null) {
                     Text(
-                        "${localDateTime.day} ${DateUtils.monthName(localDateTime.month.number)} ${localDateTime.year}",
+                        "${localDateTime.day} ${DateUtils.monthName(localDateTime.month.number, language)} ${localDateTime.year}",
                         style = AppStyles.body,
                         modifier = Modifier.padding(vertical = 5.dp),
                     )

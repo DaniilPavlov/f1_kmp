@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -64,33 +66,44 @@ import kotlinx.datetime.number
 import kotlinx.datetime.LocalDate
 
 /** Экран карточки пилота: профиль, карьера, команды и ESPN-новости. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DriverDetailScreen(
     viewModel: DriverDetailViewModel,
     onConstructorClick: (Constructor) -> Unit,
     onCircuitClick: (Circuit) -> Unit,
 ) {
-    val driver by viewModel.driver.collectAsState()
-    val career by viewModel.careerStats.collectAsState()
-    val espnCard by viewModel.espnCard.collectAsState()
-    val error by viewModel.error.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+    val driver = uiState.driver
+    val career = uiState.careerStats
 
     when {
-        driver.isLoading || career.isLoading -> CareerScreenShimmer(modifier = Modifier.fillMaxSize())
-        error != null && driver !is AsyncValue.Value -> ErrorBody(
-            error?.title,
-            error?.subtitle,
-            onRetry = viewModel::loadAllData,
+        !uiState.isRefreshing && (driver.isLoading || career.isLoading) -> CareerScreenShimmer(
             modifier = Modifier.fillMaxSize(),
         )
         driver is AsyncValue.Value && career is AsyncValue.Value -> {
-            DriverContent(
-                driver = (driver as AsyncValue.Value).value,
-                stats = (career as AsyncValue.Value).value,
-                espnCard = espnCard,
-                onConstructorClick = onConstructorClick,
-                onCircuitClick = onCircuitClick,
-                onWikipediaClick = { openUrl((driver as AsyncValue.Value).value.url) },
+            PullToRefreshBox(
+                isRefreshing = uiState.isRefreshing,
+                onRefresh = viewModel::refreshAll,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                DriverContent(
+                    driver = driver.value,
+                    stats = career.value,
+                    espnCard = uiState.espnCard,
+                    onConstructorClick = onConstructorClick,
+                    onCircuitClick = onCircuitClick,
+                    onWikipediaClick = { openUrl(driver.value.url) },
+                )
+            }
+        }
+        else -> {
+            val asyncError = (driver as? AsyncValue.Error) ?: (career as? AsyncValue.Error)
+            ErrorBody(
+                uiState.error?.title ?: asyncError?.message,
+                uiState.error?.subtitle ?: asyncError?.subtitle,
+                onRetry = viewModel::loadAllData,
+                modifier = Modifier.fillMaxSize(),
             )
         }
     }

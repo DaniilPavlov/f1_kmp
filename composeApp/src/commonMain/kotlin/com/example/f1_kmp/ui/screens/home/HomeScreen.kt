@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,53 +37,68 @@ import f1_kmp.composeapp.generated.resources.season_label
 import com.example.f1_kmp.domain.stringResource
 
 /** Главная вкладка: текущие standings пилотов и конструкторов. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
     onDriverClick: (Driver) -> Unit,
     onConstructorClick: (Constructor) -> Unit,
 ) {
-    val drivers by viewModel.drivers.collectAsState()
-    val constructors by viewModel.constructors.collectAsState()
-    val season by viewModel.season.collectAsState()
-    val round by viewModel.round.collectAsState()
-    val activeTable by viewModel.activeTable.collectAsState()
-    val error by viewModel.error.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+    val drivers = uiState.drivers
+    val constructors = uiState.constructors
 
     when {
-        drivers.isLoading || constructors.isLoading -> TournamentTablesShimmer(modifier = Modifier.fillMaxSize())
-        error != null -> ErrorBody(error?.title, error?.subtitle, onRetry = viewModel::refreshAll, modifier = Modifier.fillMaxSize())
+        !uiState.isRefreshing && (drivers.isLoading || constructors.isLoading) -> {
+            TournamentTablesShimmer(modifier = Modifier.fillMaxSize())
+        }
+        uiState.error != null -> ErrorBody(
+            uiState.error?.title,
+            uiState.error?.subtitle,
+            onRetry = viewModel::refreshAll,
+            modifier = Modifier.fillMaxSize(),
+        )
         drivers is AsyncValue.Value && constructors is AsyncValue.Value -> {
-            val driversList = (drivers as AsyncValue.Value).value
-            val constructorsList = (constructors as AsyncValue.Value).value
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(vertical = AppDimens.verticalPadding.dp),
+            val driversList = drivers.value
+            val constructorsList = constructors.value
+            PullToRefreshBox(
+                isRefreshing = uiState.isRefreshing,
+                onRefresh = viewModel::refreshAll,
+                modifier = Modifier.fillMaxSize(),
             ) {
-                Column(modifier = Modifier.padding(horizontal = AppDimens.horizontalPadding.dp)) {
-                    Text(stringResource(Res.string.home_standings_title), style = AppStyles.h1)
-                    Spacer(Modifier.height(32.dp))
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(Res.string.season_label, season), style = AppStyles.h2, modifier = Modifier.weight(1f))
-                        Text(stringResource(Res.string.round_label, round), style = AppStyles.h2)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(vertical = AppDimens.verticalPadding.dp),
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = AppDimens.horizontalPadding.dp)) {
+                        Text(stringResource(Res.string.home_standings_title), style = AppStyles.h1)
+                        Spacer(Modifier.height(32.dp))
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                stringResource(Res.string.season_label, uiState.season),
+                                style = AppStyles.h2,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(stringResource(Res.string.round_label, uiState.round), style = AppStyles.h2)
+                        }
                     }
+                    Spacer(Modifier.height(32.dp))
+                    CustomSwitcher(
+                        stringResource(Res.string.drivers),
+                        stringResource(Res.string.constructors),
+                        uiState.activeTable,
+                        viewModel::changeActiveTable,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    if (uiState.activeTable == 0) {
+                        TournamentDriversTable(driversList, onDriverClick = onDriverClick)
+                    } else {
+                        TournamentConstructorsTable(constructorsList, onConstructorClick = onConstructorClick)
+                    }
+                    Spacer(Modifier.height(32.dp))
                 }
-                Spacer(Modifier.height(32.dp))
-                CustomSwitcher(
-                    stringResource(Res.string.drivers),
-                    stringResource(Res.string.constructors),
-                    activeTable,
-                    viewModel::changeActiveTable,
-                )
-                Spacer(Modifier.height(8.dp))
-                if (activeTable == 0) {
-                    TournamentDriversTable(driversList, onDriverClick = onDriverClick)
-                } else {
-                    TournamentConstructorsTable(constructorsList, onConstructorClick = onConstructorClick)
-                }
-                Spacer(Modifier.height(32.dp))
             }
         }
     }

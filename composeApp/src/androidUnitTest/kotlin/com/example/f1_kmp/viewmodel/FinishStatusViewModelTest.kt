@@ -51,15 +51,15 @@ class FinishStatusViewModelTest {
         val viewModel = FinishStatusViewModel(repository)
         advanceUntilIdle()
 
-        assertEquals("2026", viewModel.year.value)
-        assertTrue(viewModel.statuses.value is AsyncValue.Value)
-        assertEquals(100, (viewModel.statuses.value as AsyncValue.Value).value.first().count)
+        assertEquals("2026", viewModel.uiState.value.year)
+        assertTrue(viewModel.uiState.value.statuses is AsyncValue.Value)
+        assertEquals(100, (viewModel.uiState.value.statuses as AsyncValue.Value).value.first().count)
 
         viewModel.onYearChanged("2025")
         advanceUntilIdle()
 
-        assertEquals("2025", viewModel.year.value)
-        assertTrue(viewModel.statuses.value is AsyncValue.Value)
-        assertEquals(80, (viewModel.statuses.value as AsyncValue.Value).value.first().count)
+        assertEquals("2025", viewModel.uiState.value.year)
+        assertTrue(viewModel.uiState.value.statuses is AsyncValue.Value)
+        assertEquals(80, (viewModel.uiState.value.statuses as AsyncValue.Value).value.first().count)
     }
 }

@@ -33,7 +33,7 @@ import com.example.f1_kmp.ui.components.circuits.CircuitLayoutImage
 import com.example.f1_kmp.ui.theme.AppDimens
 import com.example.f1_kmp.ui.theme.AppStyles
 import com.example.f1_kmp.ui.theme.F1Red
-import com.example.f1_kmp.ui.theme.F1TextGray
+import com.example.f1_kmp.ui.theme.appColors
 import com.example.f1_kmp.util.CountdownParts
 import com.example.f1_kmp.util.DateUtils
 import com.example.f1_kmp.util.RaceDateTimeHelper
@@ -66,6 +66,7 @@ fun ScheduleRaceFeaturedCard(
     modifier: Modifier = Modifier,
     showCountdown: Boolean = true,
 ) {
+    val colors = appColors()
     val language by LocaleController.language.collectAsState()
     var now by remember { mutableStateOf(Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())) }
     LaunchedEffect(Unit) {
@@ -95,7 +96,7 @@ fun ScheduleRaceFeaturedCard(
     ) {
         Text(
             text = stringResource(Res.string.schedule_round, race.round),
-            style = AppStyles.caption.copy(color = F1TextGray),
+            style = AppStyles.caption.copy(color = colors.textGray),
         )
         Spacer(Modifier.height(4.dp))
         Text(race.raceName, style = AppStyles.h2)
@@ -115,7 +116,7 @@ fun ScheduleRaceFeaturedCard(
             Spacer(Modifier.height(16.dp))
             Text(
                 text = stringResource(Res.string.schedule_countdown_title),
-                style = AppStyles.caption.copy(color = F1TextGray),
+                style = AppStyles.caption.copy(color = colors.textGray),
             )
             Spacer(Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth()) {
@@ -153,7 +154,7 @@ private fun CountdownCell(
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, style = AppStyles.h3)
         Spacer(Modifier.height(2.dp))
-        Text(label, style = AppStyles.caption.copy(color = F1TextGray))
+        Text(label, style = AppStyles.caption.copy(color = appColors().textGray))
     }
 }
 

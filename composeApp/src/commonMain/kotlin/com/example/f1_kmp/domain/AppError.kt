@@ -7,6 +7,7 @@ import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.http.HttpStatusCode
 import io.ktor.util.network.UnresolvedAddressException
 import kotlinx.io.IOException
+import kotlinx.serialization.SerializationException
 
 /**
  * Пользовательская ошибка для UI (не Exception).
@@ -56,6 +57,10 @@ fun Throwable.toAppError(): AppError = when (this) {
         } else {
             ErrorStrings.responseParseError
         },
+        subtitle = ErrorStrings.errorRetrySubtitle,
+    )
+    is SerializationException -> AppError(
+        title = ErrorStrings.responseParseError,
         subtitle = ErrorStrings.errorRetrySubtitle,
     )
     else -> AppError(

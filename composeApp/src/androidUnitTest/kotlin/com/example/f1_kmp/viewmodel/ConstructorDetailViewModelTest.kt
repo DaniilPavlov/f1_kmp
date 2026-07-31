@@ -60,9 +60,9 @@ class ConstructorDetailViewModelTest {
         val vm = ConstructorDetailViewModel("red_bull", repository, espn)
         advanceUntilIdle()
 
-        assertTrue(vm.constructor.value is AsyncValue.Value)
-        assertEquals("red_bull", (vm.constructor.value as AsyncValue.Value).value.constructorId)
-        assertTrue(vm.careerStats.value is AsyncValue.Value)
-        assertEquals(100, (vm.careerStats.value as AsyncValue.Value).value.wins)
+        assertTrue(vm.uiState.value.constructor is AsyncValue.Value)
+        assertEquals("red_bull", (vm.uiState.value.constructor as AsyncValue.Value).value.constructorId)
+        assertTrue(vm.uiState.value.careerStats is AsyncValue.Value)
+        assertEquals(100, (vm.uiState.value.careerStats as AsyncValue.Value).value.wins)
     }
 }

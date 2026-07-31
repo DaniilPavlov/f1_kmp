@@ -50,10 +50,10 @@ class CircuitsViewModelTest {
         val vm = CircuitsViewModel(repository, refresh)
         advanceUntilIdle()
 
-        assertTrue(vm.circuits.value is AsyncValue.Value)
-        assertEquals(1, (vm.circuits.value as AsyncValue.Value).value.size)
+        assertTrue(vm.uiState.value.circuits is AsyncValue.Value)
+        assertEquals(1, (vm.uiState.value.circuits as AsyncValue.Value).value.size)
         vm.changeActivePage(1)
-        assertEquals(1, vm.activePage.value)
+        assertEquals(1, vm.uiState.value.activePage)
 
         vm.refreshAll()
         advanceUntilIdle()

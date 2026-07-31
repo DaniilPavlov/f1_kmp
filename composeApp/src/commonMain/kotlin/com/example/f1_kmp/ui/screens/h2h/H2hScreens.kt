@@ -28,8 +28,7 @@ import com.example.f1_kmp.ui.components.shimmer.ListRowsShimmer
 import com.example.f1_kmp.ui.theme.AppDimens
 import com.example.f1_kmp.ui.theme.AppStyles
 import com.example.f1_kmp.ui.theme.F1Red
-import com.example.f1_kmp.ui.theme.F1StrokeGray
-import com.example.f1_kmp.ui.theme.F1TextGray
+import com.example.f1_kmp.ui.theme.appColors
 import com.example.f1_kmp.viewmodel.H2hConstructorsViewModel
 import com.example.f1_kmp.viewmodel.H2hDriversViewModel
 import f1_kmp.composeapp.generated.resources.Res
@@ -68,6 +67,7 @@ fun H2hDriversScreen(viewModel: H2hDriversViewModel) {
     val driverB by viewModel.driverB.collectAsState()
     val comparison by viewModel.comparison.collectAsState()
 
+    val colors = appColors()
     val isSeasonScope = scopeMode == 1
     val showYearPicker = isSeasonScope && !useCurrentSeason
 
@@ -82,7 +82,7 @@ fun H2hDriversScreen(viewModel: H2hDriversViewModel) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, F1StrokeGray, RoundedCornerShape(12.dp))
+                .border(1.dp, colors.strokeGray, RoundedCornerShape(12.dp))
                 .padding(16.dp),
         ) {
             Text(stringResource(Res.string.h2h_filters_title), style = AppStyles.body)
@@ -116,7 +116,7 @@ fun H2hDriversScreen(viewModel: H2hDriversViewModel) {
                     Spacer(Modifier.height(10.dp))
                     Text(
                         stringResource(Res.string.season_label, latestSeason),
-                        style = AppStyles.caption.copy(color = F1TextGray),
+                        style = AppStyles.caption.copy(color = colors.textGray),
                     )
                 }
             }
@@ -176,7 +176,7 @@ fun H2hDriversScreen(viewModel: H2hDriversViewModel) {
                     H2hPointsChart(
                         timeline = result.timeline,
                         colorA = F1Red,
-                        colorB = F1TextGray,
+                        colorB = appColors().textGray,
                     )
                 }
             }
@@ -196,6 +196,7 @@ fun H2hConstructorsScreen(viewModel: H2hConstructorsViewModel) {
     val constructorB by viewModel.constructorB.collectAsState()
     val comparison by viewModel.comparison.collectAsState()
 
+    val colors = appColors()
     val isSeasonScope = scopeMode == 1
     val showYearPicker = isSeasonScope && !useCurrentSeason
 
@@ -210,7 +211,7 @@ fun H2hConstructorsScreen(viewModel: H2hConstructorsViewModel) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, F1StrokeGray, RoundedCornerShape(12.dp))
+                .border(1.dp, colors.strokeGray, RoundedCornerShape(12.dp))
                 .padding(16.dp),
         ) {
             Text(stringResource(Res.string.h2h_filters_title), style = AppStyles.body)
@@ -244,7 +245,7 @@ fun H2hConstructorsScreen(viewModel: H2hConstructorsViewModel) {
                     Spacer(Modifier.height(10.dp))
                     Text(
                         stringResource(Res.string.season_label, latestSeason),
-                        style = AppStyles.caption.copy(color = F1TextGray),
+                        style = AppStyles.caption.copy(color = colors.textGray),
                     )
                 }
             }
@@ -304,7 +305,7 @@ fun H2hConstructorsScreen(viewModel: H2hConstructorsViewModel) {
                     H2hPointsChart(
                         timeline = result.timeline,
                         colorA = F1Red,
-                        colorB = F1TextGray,
+                        colorB = appColors().textGray,
                     )
                 }
             }

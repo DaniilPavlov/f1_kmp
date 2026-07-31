@@ -174,7 +174,7 @@ val viewModelModule = module {
     viewModel { HomeViewModel(get(), get()) }
     viewModel { ResultsViewModel(get(), get(), get()) }
     viewModel { HallOfFameViewModel(get()) }
-    viewModel { ScheduleViewModel(get()) }
+    viewModel { ScheduleViewModel(get(), get()) }
     viewModel { CircuitsViewModel(get(), get()) }
     viewModel { RaceSearchViewModel(get()) }
     viewModel { NewsViewModel(get(), get()) }

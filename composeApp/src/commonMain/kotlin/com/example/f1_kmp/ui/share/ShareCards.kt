@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import com.example.f1_kmp.data.model.EspnScoreboardEvent
+import com.example.f1_kmp.data.model.EspnScoreboardSession
 import com.example.f1_kmp.domain.model.Race
 import com.example.f1_kmp.domain.model.RaceResult
 import com.example.f1_kmp.ui.theme.AppStyles
@@ -199,11 +200,7 @@ fun ShareWeekendSummaryCard(event: EspnScoreboardEvent) {
     } ?: highlighted?.takeIf { it.results.isNotEmpty() }
     val podium = podiumSession?.results?.take(3).orEmpty()
     val isLive = event.isLive || (highlighted?.isLive == true)
-    val statusLabel = when {
-        isLive -> stringResource(Res.string.home_weekend_live)
-        !highlighted?.statusDetail.isNullOrEmpty() -> highlighted!!.statusDetail
-        else -> event.statusDetail
-    }
+    val statusLabel = weekendStatusLabel(event, highlighted, isLive)
 
     ShareCardShell {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
@@ -245,7 +242,7 @@ fun ShareWeekendSummaryCard(event: EspnScoreboardEvent) {
                 ) {
                     Text(session.abbreviation, style = AppStyles.body)
                     Text(
-                        session.statusDetail.ifBlank { if (session.isLive) "LIVE" else "" },
+                        sessionStatusText(session),
                         style = AppStyles.caption.copy(
                             color = if (session.isLive) F1Red else F1TextGray,
                         ),
@@ -267,6 +264,26 @@ fun ShareWeekendSummaryCard(event: EspnScoreboardEvent) {
         Spacer(Modifier.height(20.dp))
         ShareFooter()
     }
+}
+
+@Composable
+private fun weekendStatusLabel(
+    event: EspnScoreboardEvent,
+    highlighted: EspnScoreboardSession?,
+    isLive: Boolean,
+): String = when {
+    isLive -> stringResource(Res.string.home_weekend_live)
+    highlighted != null && !highlighted.isUpcoming && highlighted.statusDetail.isNotEmpty() ->
+        highlighted.statusDetail
+    event.statusState != "pre" && event.statusDetail.isNotEmpty() -> event.statusDetail
+    else -> ""
+}
+
+private fun sessionStatusText(session: EspnScoreboardSession): String = when {
+    session.isUpcoming -> ""
+    session.statusDetail.isNotBlank() -> session.statusDetail
+    session.isLive -> "LIVE"
+    else -> ""
 }
 
 @Composable

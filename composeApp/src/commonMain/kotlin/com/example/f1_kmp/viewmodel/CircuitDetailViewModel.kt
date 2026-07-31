@@ -13,6 +13,15 @@ import com.example.f1_kmp.domain.AsyncValue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+
+data class CircuitDetailUiState(
+    val circuit: AsyncValue<Circuit> = AsyncValue.Loading,
+    val winners: AsyncValue<List<CircuitRaceWin>> = AsyncValue.Loading,
+    val stats: CircuitStats? = null,
+    val error: AppError? = null,
+    val isRefreshing: Boolean = false,
+)
 
 /**
  * ViewModel карточки трассы.
@@ -28,17 +37,8 @@ class CircuitDetailViewModel(
 ) : ViewModel() {
     private val loadJob = LoadJobHolder()
 
-    private val _circuit = MutableStateFlow<AsyncValue<Circuit>>(AsyncValue.Loading)
-    val circuit: StateFlow<AsyncValue<Circuit>> = _circuit.asStateFlow()
-
-    private val _winners = MutableStateFlow<AsyncValue<List<CircuitRaceWin>>>(AsyncValue.Loading)
-    val winners: StateFlow<AsyncValue<List<CircuitRaceWin>>> = _winners.asStateFlow()
-
-    private val _stats = MutableStateFlow<CircuitStats?>(null)
-    val stats: StateFlow<CircuitStats?> = _stats.asStateFlow()
-
-    private val _error = MutableStateFlow<AppError?>(null)
-    val error: StateFlow<AppError?> = _error.asStateFlow()
+    private val _uiState = MutableStateFlow(CircuitDetailUiState())
+    val uiState: StateFlow<CircuitDetailUiState> = _uiState.asStateFlow()
 
     init {
         loadAllData()
@@ -47,43 +47,87 @@ class CircuitDetailViewModel(
     /** Повторный вызов — retry с экрана ошибки. */
     fun loadAllData() {
         loadJob.launch(viewModelScope) {
-            _error.value = null
-            loadCircuit()
+            loadInternal(softRefresh = false)
+        }
+    }
+
+    /** Pull-to-refresh: keep Values while reloading. */
+    fun refreshAll() {
+        loadJob.launch(viewModelScope) {
+            loadInternal(softRefresh = true)
+        }
+    }
+
+    private suspend fun loadInternal(softRefresh: Boolean) {
+        try {
+            if (softRefresh) {
+                _uiState.update {
+                    it.copy(
+                        isRefreshing = true,
+                        error = null,
+                        circuit = if (it.circuit is AsyncValue.Value) it.circuit else AsyncValue.Loading,
+                        winners = if (it.winners is AsyncValue.Value) it.winners else AsyncValue.Loading,
+                    )
+                }
+            } else {
+                _uiState.update { it.copy(error = null) }
+            }
+            loadCircuit(softRefresh)
             loadStats()
-            loadWinners()
+            loadWinners(softRefresh)
+        } finally {
+            _uiState.update { it.copy(isRefreshing = false) }
         }
     }
 
     private suspend fun loadStats() {
-        _stats.value = runCatching { circuitStatsRepository.of(circuitId) }.getOrNull()
+        _uiState.update {
+            it.copy(stats = runCatching { circuitStatsRepository.of(circuitId) }.getOrNull())
+        }
     }
 
-    private suspend fun loadCircuit() {
-        repository.peekCircuitsCache()?.find { it.circuitId == circuitId }?.let {
-            _circuit.value = AsyncValue.Value(it)
-        } ?: run { _circuit.value = AsyncValue.Loading }
+    private suspend fun loadCircuit(softRefresh: Boolean) {
+        if (!softRefresh) {
+            repository.peekCircuitsCache()?.find { it.circuitId == circuitId }?.let { cached ->
+                _uiState.update { it.copy(circuit = AsyncValue.Value(cached)) }
+            } ?: run {
+                _uiState.update { it.copy(circuit = AsyncValue.Loading) }
+            }
+        }
 
         repository.getCircuitById(circuitId).applyUnlessCached(
-            current = _circuit.value,
+            current = _uiState.value.circuit,
             onSuccess = { found ->
                 if (found != null) {
-                    _circuit.value = AsyncValue.Value(found)
-                } else {
-                    _circuit.value = AsyncValue.Error(ErrorStrings.circuitNotFound)
+                    _uiState.update { it.copy(circuit = AsyncValue.Value(found)) }
+                } else if (_uiState.value.circuit !is AsyncValue.Value) {
+                    _uiState.update { it.copy(circuit = AsyncValue.Error(ErrorStrings.circuitNotFound)) }
                 }
             },
-            onFailure = { ex -> _circuit.value = AsyncValue.Error(ex.title, ex.subtitle) },
+            onFailure = { err ->
+                if (_uiState.value.circuit !is AsyncValue.Value) {
+                    _uiState.update { it.copy(circuit = err.toAsyncError()) }
+                }
+            },
         )
     }
 
-    private suspend fun loadWinners() {
-        _winners.value = AsyncValue.Loading
+    private suspend fun loadWinners(softRefresh: Boolean) {
+        if (!softRefresh || _uiState.value.winners !is AsyncValue.Value) {
+            _uiState.update { it.copy(winners = AsyncValue.Loading) }
+        }
         repository.getCircuitWinners(circuitId).applyUnlessCached(
-            current = _winners.value,
-            onSuccess = { _winners.value = AsyncValue.Value(it) },
-            onFailure = { ex ->
-                _winners.value = AsyncValue.Error(ex.title, ex.subtitle)
-                _error.value = ex
+            current = _uiState.value.winners,
+            onSuccess = { _uiState.update { state -> state.copy(winners = AsyncValue.Value(it)) } },
+            onFailure = { err ->
+                if (_uiState.value.winners !is AsyncValue.Value) {
+                    _uiState.update {
+                        it.copy(
+                            winners = err.toAsyncError(),
+                            error = err,
+                        )
+                    }
+                }
             },
         )
     }

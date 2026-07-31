@@ -9,6 +9,8 @@ import com.example.f1_kmp.data.model.MrDataTotalModel
 import com.example.f1_kmp.data.model.RaceModel
 import com.example.f1_kmp.domain.model.Constructor
 import com.example.f1_kmp.domain.model.Driver
+import io.ktor.client.plugins.ClientRequestException
+import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.delay
 import kotlin.time.Clock
 
@@ -18,6 +20,8 @@ import kotlin.time.Clock
 object CareerLoader {
     private const val MIN_GAP_MS = 500L
     private const val MAX_PAGE_SIZE = 100
+    private const val PAGE_RETRIES = 3
+    private const val RATE_LIMIT_BACKOFF_MS = 1_000L
 
     suspend fun loadDriverCareer(
         api: F1ApiService,
@@ -72,13 +76,26 @@ object CareerLoader {
         current: List<Driver> = emptyList(),
     ): CareerStats<Driver> {
         val prefix = "constructors/$constructorId"
-        val allResultsPages = fetchAllPages(api, "$prefix/results")
+        // `/races` даёт unique GPs (total) за 1 запрос — не пагинируем все results (у McLaren ~20 стр. → 429).
+        val totals = getThrottled(
+            api,
+            listOf(
+                "$prefix/races",
+                "$prefix/results/1",
+                "$prefix/results/2",
+                "$prefix/results/3",
+                "$prefix/qualifying/1",
+                "$prefix/drivers",
+            ),
+            limit = 1,
+        )
         val winPages = fetchAllPages(api, "$prefix/results/1")
         val secondPages = fetchAllPages(api, "$prefix/results/2")
         val thirdPages = fetchAllPages(api, "$prefix/results/3")
         val polePages = fetchAllPages(api, "$prefix/qualifying/1")
-        val driversResponse = getThrottled(api, listOf("$prefix/drivers"), limit = 100).first()
 
+        val wins = totalOf(totals[1])
+        val poles = totalOf(totals[4])
         val winRaces = parseAllRaceResults(winPages, position = 1).sortedWith(newestFirst)
         val podiumRaces = dedupeByBestPosition(
             winRaces +
@@ -87,21 +104,13 @@ object CareerLoader {
         ).sortedWith(newestFirst)
         val poleRaces = parseAllQualifyingPoles(polePages).sortedWith(newestFirst)
 
-        val uniqueRaces = uniqueRaceCountAcross(allResultsPages)
-        val winsTotal = winPages.firstOrNull()?.let { totalOf(it) } ?: 0
-        val polesTotal = polePages.firstOrNull()?.let { totalOf(it) } ?: 0
-
         return CareerStats(
-            races = if (uniqueRaces > 0) {
-                uniqueRaces
-            } else {
-                allResultsPages.firstOrNull()?.let { totalOf(it) } ?: 0
-            },
-            wins = if (winsTotal > 0) winsTotal else winRaces.size,
+            races = totalOf(totals[0]),
+            wins = if (wins > 0) wins else winRaces.size,
             podiums = podiumRaces.size,
-            poles = if (polesTotal > 0) polesTotal else poleRaces.size,
+            poles = if (poles > 0) poles else poleRaces.size,
             current = current,
-            related = driversResponse.driverTable?.drivers.orEmpty().map { it.toDomain() },
+            related = totals[5].driverTable?.drivers.orEmpty().map { it.toDomain() },
             winRaces = winRaces,
             podiumRaces = podiumRaces,
             poleRaces = poleRaces,
@@ -183,9 +192,9 @@ object CareerLoader {
         val responses = mutableListOf<MrDataTotalModel>()
         var lastStart = 0L
         for (path in paths) {
-            throttle(lastStart)
-            lastStart = Clock.System.now().toEpochMilliseconds()
-            responses.add(api.getMrDataTotal(path, limit = limit).mrData)
+            val (page, nextStart) = getPage(api, path, limit = limit, offset = 0, lastStart = lastStart)
+            responses.add(page)
+            lastStart = nextStart
         }
         return responses
     }
@@ -194,19 +203,62 @@ object CareerLoader {
         val pages = mutableListOf<MrDataTotalModel>()
         var offset = 0
         var lastStart = 0L
-        while (true) {
-            throttle(lastStart)
-            lastStart = Clock.System.now().toEpochMilliseconds()
-            val page = api.getMrDataTotal(path, limit = MAX_PAGE_SIZE, offset = offset).mrData
+        var fetchMore = true
+        while (fetchMore) {
+            val (page, nextStart) = getPage(
+                api,
+                path,
+                limit = MAX_PAGE_SIZE,
+                offset = offset,
+                lastStart = lastStart,
+            )
+            lastStart = nextStart
             pages.add(page)
-            val pageRaces = page.raceTable?.races?.size ?: 0
-            if (pageRaces == 0) break
-            offset += MAX_PAGE_SIZE
-            val total = totalOf(page)
-            if (total > 0 && offset >= total) break
-            if (pageRaces < MAX_PAGE_SIZE && total == 0) break
+            fetchMore = shouldFetchNextPage(page, offset)
+            if (fetchMore) {
+                offset += MAX_PAGE_SIZE
+            }
         }
         return pages
+    }
+
+    /**
+     * Один HTTP-запрос с throttle и retry на 429 (без перезапуска всей карьеры с offset=0).
+     * @return страница и timestamp старта успешного запроса для следующего throttle.
+     */
+    private suspend fun getPage(
+        api: F1ApiService,
+        path: String,
+        limit: Int,
+        offset: Int,
+        lastStart: Long,
+    ): Pair<MrDataTotalModel, Long> {
+        var throttleFrom = lastStart
+        repeat(PAGE_RETRIES + 1) { attempt ->
+            throttle(throttleFrom)
+            val startedAt = Clock.System.now().toEpochMilliseconds()
+            try {
+                return api.getMrDataTotal(path, limit = limit, offset = offset).mrData to startedAt
+            } catch (e: ClientRequestException) {
+                if (e.response.status == HttpStatusCode.TooManyRequests && attempt < PAGE_RETRIES) {
+                    delay(RATE_LIMIT_BACKOFF_MS * (attempt + 1))
+                    throttleFrom = 0L
+                } else {
+                    throw e
+                }
+            }
+        }
+        error("unreachable")
+    }
+
+    private fun shouldFetchNextPage(page: MrDataTotalModel, offset: Int): Boolean {
+        val pageRaces = page.raceTable?.races?.size ?: 0
+        if (pageRaces == 0) return false
+        val nextOffset = offset + MAX_PAGE_SIZE
+        val total = totalOf(page)
+        if (total > 0 && nextOffset >= total) return false
+        if (pageRaces < MAX_PAGE_SIZE && total == 0) return false
+        return true
     }
 
     private suspend fun throttle(lastStart: Long) {
@@ -217,16 +269,6 @@ object CareerLoader {
 
     private fun totalOf(data: MrDataTotalModel): Int =
         data.total?.toIntOrNull() ?: 0
-
-    private fun uniqueRaceCountAcross(pages: List<MrDataTotalModel>): Int {
-        val keys = linkedSetOf<String>()
-        pages.forEach { page ->
-            page.raceTable?.races.orEmpty().forEach { race ->
-                keys.add(raceKey(race.season, race.round))
-            }
-        }
-        return keys.size
-    }
 
     private fun dedupeByBestPosition(races: List<CareerRaceResult>): List<CareerRaceResult> {
         val best = linkedMapOf<String, CareerRaceResult>()

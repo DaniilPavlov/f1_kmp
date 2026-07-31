@@ -3,6 +3,7 @@ package com.example.f1_kmp.data.model
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.Serializable
 
@@ -306,15 +307,18 @@ private fun EspnStatusTypeDto?.statusDetail(): String {
 
 fun parseEspnDateTime(raw: String?): LocalDateTime? {
     if (raw.isNullOrBlank()) return null
-    return try {
-        Instant.parse(raw).toLocalDateTime(TimeZone.currentSystemDefault())
-    } catch (_: Exception) {
-        try {
-            LocalDateTime.parse(raw.removeSuffix("Z").substringBefore('+').substringBefore('.'))
-        } catch (_: Exception) {
-            null
-        }
+    val trimmed = raw.trim()
+    // Prefer full Instant (…Z / …+00:00) → device zone.
+    runCatching {
+        return Instant.parse(trimmed).toLocalDateTime(TimeZone.currentSystemDefault())
     }
+    // ESPN sometimes omits zone — treat wall clock as UTC, then convert to device zone.
+    return runCatching {
+        val naive = LocalDateTime.parse(
+            trimmed.removeSuffix("Z").substringBefore('+').substringBefore('.'),
+        )
+        naive.toInstant(TimeZone.UTC).toLocalDateTime(TimeZone.currentSystemDefault())
+    }.getOrNull()
 }
 
 // endregion

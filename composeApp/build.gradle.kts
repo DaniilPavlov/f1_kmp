@@ -257,7 +257,7 @@ kover {
                 )
             }
         }
-        // Business-logic gate (~Flutter controller/util/repo unit coverage).
+        // Business-logic gate.
         verify {
             rule {
                 minBound(75)

@@ -1,7 +1,7 @@
 package com.example.f1_kmp.data.analytics
 
 /**
- * Typed analytics events — names/params match Flutter / f1_kotlin for cross-app parity.
+ * Typed analytics events — names/params match.
  */
 sealed class AnalyticsEvent {
     abstract val name: String

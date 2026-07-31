@@ -16,8 +16,15 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+
+data class ResultsUiState(
+    val lastRace: AsyncValue<Race> = AsyncValue.Loading,
+    val scoreboard: AsyncValue<EspnScoreboardEvent?> = AsyncValue.Loading,
+    val isRefreshing: Boolean = false,
+)
 
 /**
  * ViewModel «Результаты» — последняя гонка + ESPN weekend scoreboard.
@@ -34,11 +41,8 @@ class ResultsViewModel(
     private val loadJob = LoadJobHolder()
     private var pollJob: Job? = null
 
-    private val _lastRace = MutableStateFlow<AsyncValue<Race>>(AsyncValue.Loading)
-    val lastRace: StateFlow<AsyncValue<Race>> = _lastRace.asStateFlow()
-
-    private val _scoreboard = MutableStateFlow<AsyncValue<EspnScoreboardEvent?>>(AsyncValue.Loading)
-    val scoreboard: StateFlow<AsyncValue<EspnScoreboardEvent?>> = _scoreboard.asStateFlow()
+    private val _uiState = MutableStateFlow(ResultsUiState())
+    val uiState: StateFlow<ResultsUiState> = _uiState.asStateFlow()
 
     init {
         loadAllData()
@@ -51,7 +55,7 @@ class ResultsViewModel(
         }
     }
 
-    /** ErrorBody: сброс кэшей, затем сеть. */
+    /** ErrorBody / pull-to-refresh: сброс кэшей, затем сеть. */
     fun refreshAll() {
         loadJob.launch(viewModelScope) {
             loadInternal(clearCaches = true)
@@ -59,27 +63,47 @@ class ResultsViewModel(
     }
 
     private suspend fun loadInternal(clearCaches: Boolean) = coroutineScope {
-        if (clearCaches) {
-            appDataRefresh.clearAll()
-            _lastRace.value = AsyncValue.Loading
-            _scoreboard.value = AsyncValue.Loading
+        try {
+            if (clearCaches) {
+                appDataRefresh.clearAll()
+                _uiState.update {
+                    it.copy(
+                        isRefreshing = true,
+                        lastRace = if (it.lastRace is AsyncValue.Value) it.lastRace else AsyncValue.Loading,
+                        scoreboard = if (it.scoreboard is AsyncValue.Value) {
+                            it.scoreboard
+                        } else {
+                            AsyncValue.Loading
+                        },
+                    )
+                }
+            }
+            val raceDeferred = async { loadLastRaceInternal(skipPeek = clearCaches) }
+            val scoreboardDeferred = async { loadScoreboardInternal(forceRefresh = clearCaches) }
+            raceDeferred.await()
+            scoreboardDeferred.await()
+        } finally {
+            _uiState.update { it.copy(isRefreshing = false) }
         }
-        val raceDeferred = async { loadLastRaceInternal(skipPeek = clearCaches) }
-        val scoreboardDeferred = async { loadScoreboardInternal(forceRefresh = clearCaches) }
-        raceDeferred.await()
-        scoreboardDeferred.await()
     }
 
     private suspend fun loadLastRaceInternal(skipPeek: Boolean = false) {
         if (!skipPeek) {
-            repository.peekLastRaceCache()?.let { _lastRace.value = AsyncValue.Value(it) }
-                ?: run { _lastRace.value = AsyncValue.Loading }
+            repository.peekLastRaceCache()?.let { race ->
+                _uiState.update { it.copy(lastRace = AsyncValue.Value(race)) }
+            } ?: run {
+                _uiState.update { it.copy(lastRace = AsyncValue.Loading) }
+            }
         }
 
         repository.getLastRace().applyUnlessCached(
-            current = _lastRace.value,
-            onSuccess = { _lastRace.value = AsyncValue.Value(it) },
-            onFailure = { ex -> _lastRace.value = AsyncValue.Error(ex.title, ex.subtitle) },
+            current = _uiState.value.lastRace,
+            onSuccess = { race ->
+                _uiState.update { it.copy(lastRace = AsyncValue.Value(race)) }
+            },
+            onFailure = { err ->
+                _uiState.update { it.copy(lastRace = err.toAsyncError()) }
+            },
         )
     }
 
@@ -87,26 +111,30 @@ class ResultsViewModel(
     private suspend fun loadScoreboardInternal(forceRefresh: Boolean) {
         if (!forceRefresh) {
             if (espnRepository.isScoreboardFresh) {
-                _scoreboard.value = AsyncValue.Value(espnRepository.peekScoreboard)
+                _uiState.update {
+                    it.copy(scoreboard = AsyncValue.Value(espnRepository.peekScoreboard))
+                }
                 syncLivePolling()
                 return
             }
-            espnRepository.peekScoreboard?.let {
-                _scoreboard.value = AsyncValue.Value(it)
+            espnRepository.peekScoreboard?.let { event ->
+                _uiState.update { it.copy(scoreboard = AsyncValue.Value(event)) }
             } ?: run {
-                if (_scoreboard.value !is AsyncValue.Value) {
-                    _scoreboard.value = AsyncValue.Loading
+                if (_uiState.value.scoreboard !is AsyncValue.Value) {
+                    _uiState.update { it.copy(scoreboard = AsyncValue.Loading) }
                 }
             }
-        } else if (_scoreboard.value !is AsyncValue.Value) {
-            _scoreboard.value = AsyncValue.Loading
+        } else if (_uiState.value.scoreboard !is AsyncValue.Value) {
+            _uiState.update { it.copy(scoreboard = AsyncValue.Loading) }
         }
 
         espnRepository.getScoreboardEvent(forceRefresh = forceRefresh).fold(
-            onSuccess = { event -> _scoreboard.value = AsyncValue.Value(event) },
+            onSuccess = { event ->
+                _uiState.update { it.copy(scoreboard = AsyncValue.Value(event)) }
+            },
             onFailure = {
-                if (_scoreboard.value !is AsyncValue.Value) {
-                    _scoreboard.value = AsyncValue.Value(null)
+                if (_uiState.value.scoreboard !is AsyncValue.Value) {
+                    _uiState.update { it.copy(scoreboard = AsyncValue.Value(null)) }
                 }
             },
         )
@@ -114,7 +142,7 @@ class ResultsViewModel(
     }
 
     private fun syncLivePolling() {
-        val live = _scoreboard.value.getOrNull()?.isLive == true
+        val live = _uiState.value.scoreboard.getOrNull()?.isLive == true
         if (live) startLivePolling() else stopLivePolling()
     }
 
@@ -123,7 +151,7 @@ class ResultsViewModel(
         pollJob = viewModelScope.launch {
             while (isActive) {
                 delay(EspnApiService.SCOREBOARD_POLL_INTERVAL_MS)
-                if (_scoreboard.value.getOrNull()?.isLive != true) {
+                if (_uiState.value.scoreboard.getOrNull()?.isLive != true) {
                     stopLivePolling()
                     return@launch
                 }

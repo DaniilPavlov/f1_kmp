@@ -9,6 +9,13 @@ import com.example.f1_kmp.domain.AsyncValue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+
+data class CircuitsUiState(
+    val circuits: AsyncValue<List<Circuit>> = AsyncValue.Loading,
+    val activePage: Int = 0,
+    val isRefreshing: Boolean = false,
+)
 
 /**
  * ViewModel вкладки «Трассы».
@@ -22,11 +29,8 @@ class CircuitsViewModel(
 ) : ViewModel() {
     private val loadJob = LoadJobHolder()
 
-    private val _circuits = MutableStateFlow<AsyncValue<List<Circuit>>>(AsyncValue.Loading)
-    val circuits: StateFlow<AsyncValue<List<Circuit>>> = _circuits.asStateFlow()
-
-    private val _activePage = MutableStateFlow(0)
-    val activePage: StateFlow<Int> = _activePage.asStateFlow()
+    private val _uiState = MutableStateFlow(CircuitsUiState())
+    val uiState: StateFlow<CircuitsUiState> = _uiState.asStateFlow()
 
     init {
         loadCircuits()
@@ -34,7 +38,7 @@ class CircuitsViewModel(
 
     /** Переключение «На карте / Списком» на экране трасс. */
     fun changeActivePage(index: Int) {
-        _activePage.value = index
+        _uiState.update { it.copy(activePage = index) }
     }
 
     /** Peek → сеть. Ошибку сети не показываем, если на экране уже есть кэш. */
@@ -44,7 +48,7 @@ class CircuitsViewModel(
         }
     }
 
-    /** ErrorBody: сброс кэшей, затем сеть. */
+    /** ErrorBody / pull-to-refresh: сброс кэшей, затем сеть. */
     fun refreshAll() {
         loadJob.launch(viewModelScope) {
             loadInternal(clearCaches = true)
@@ -52,18 +56,34 @@ class CircuitsViewModel(
     }
 
     private suspend fun loadInternal(clearCaches: Boolean) {
-        if (clearCaches) {
-            appDataRefresh.clearAll()
-            _circuits.value = AsyncValue.Loading
-        } else {
-            repository.peekCircuitsCache()?.let { _circuits.value = AsyncValue.Value(it) }
-                ?: run { _circuits.value = AsyncValue.Loading }
-        }
+        try {
+            if (clearCaches) {
+                appDataRefresh.clearAll()
+                _uiState.update {
+                    it.copy(
+                        isRefreshing = true,
+                        circuits = if (it.circuits is AsyncValue.Value) it.circuits else AsyncValue.Loading,
+                    )
+                }
+            } else {
+                repository.peekCircuitsCache()?.let { cached ->
+                    _uiState.update { it.copy(circuits = AsyncValue.Value(cached)) }
+                } ?: run {
+                    _uiState.update { it.copy(circuits = AsyncValue.Loading) }
+                }
+            }
 
-        repository.getCircuits().applyUnlessCached(
-            current = _circuits.value,
-            onSuccess = { _circuits.value = AsyncValue.Value(it) },
-            onFailure = { ex -> _circuits.value = AsyncValue.Error(ex.title, ex.subtitle) },
-        )
+            repository.getCircuits().applyUnlessCached(
+                current = _uiState.value.circuits,
+                onSuccess = { list ->
+                    _uiState.update { it.copy(circuits = AsyncValue.Value(list)) }
+                },
+                onFailure = { err ->
+                    _uiState.update { it.copy(circuits = err.toAsyncError()) }
+                },
+            )
+        } finally {
+            _uiState.update { it.copy(isRefreshing = false) }
+        }
     }
 }

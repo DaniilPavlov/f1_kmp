@@ -127,83 +127,21 @@ private fun ScoreboardCard(event: EspnScoreboardEvent) {
         }
         if (highlighted != null) {
             Spacer(Modifier.height(14.dp))
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(F1GrayBg)
-                    .clickable { sheetSession = highlighted }
-                    .padding(12.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        highlighted.abbreviation,
-                        style = AppStyles.body.copy(fontWeight = FontWeight.SemiBold),
-                        modifier = Modifier.weight(1f),
-                    )
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = F1TextGray,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-                highlighted.date?.let { date ->
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        DateUtils.formatMediumDateTime(date, language),
-                        style = AppStyles.caption.copy(color = F1TextGray),
-                    )
-                }
-                highlighted.leaderName?.takeIf { it.isNotEmpty() }?.let { name ->
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        if (highlighted.isWinner) {
-                            stringResource(Res.string.home_weekend_winner, name)
-                        } else {
-                            stringResource(Res.string.home_weekend_leader, name)
-                        },
-                        style = AppStyles.body,
-                    )
-                }
-            }
+            HighlightedSessionBlock(
+                session = highlighted,
+                language = language,
+                onClick = { sheetSession = highlighted },
+            )
         }
         if (event.sessions.isNotEmpty()) {
             Spacer(Modifier.height(14.dp))
             event.sessions.forEach { session ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { sheetSession = session }
-                        .padding(bottom = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        session.abbreviation,
-                        style = AppStyles.caption.copy(
-                            color = if (session === highlighted) F1Red else F1Black,
-                            fontWeight = FontWeight.SemiBold,
-                        ),
-                        modifier = Modifier.width(48.dp),
-                    )
-                    Text(
-                        session.date?.let { DateUtils.formatMediumDateTime(it, language) } ?: session.statusDetail,
-                        style = AppStyles.caption.copy(color = F1TextGray),
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        session.statusDetail,
-                        style = AppStyles.caption.copy(
-                            color = if (session.isLive) F1Red else F1TextGray,
-                        ),
-                    )
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = F1TextGray.copy(alpha = 0.8f),
-                        modifier = Modifier.size(16.dp),
-                    )
-                }
+                SessionRow(
+                    session = session,
+                    highlighted = highlighted,
+                    language = language,
+                    onClick = { sheetSession = session },
+                )
             }
         }
     }
@@ -217,12 +155,108 @@ private fun ScoreboardCard(event: EspnScoreboardEvent) {
 }
 
 @Composable
+private fun HighlightedSessionBlock(
+    session: EspnScoreboardSession,
+    language: String,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(F1GrayBg)
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                session.abbreviation,
+                style = AppStyles.body.copy(fontWeight = FontWeight.SemiBold),
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = F1TextGray,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        session.date?.let { date ->
+            Spacer(Modifier.height(4.dp))
+            Text(
+                DateUtils.formatMediumDateTime(date, language),
+                style = AppStyles.caption.copy(color = F1TextGray),
+            )
+        }
+        session.leaderName?.takeIf { it.isNotEmpty() }?.let { name ->
+            Spacer(Modifier.height(6.dp))
+            Text(
+                if (session.isWinner) {
+                    stringResource(Res.string.home_weekend_winner, name)
+                } else {
+                    stringResource(Res.string.home_weekend_leader, name)
+                },
+                style = AppStyles.body,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SessionRow(
+    session: EspnScoreboardSession,
+    highlighted: EspnScoreboardSession?,
+    language: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            session.abbreviation,
+            style = AppStyles.caption.copy(
+                color = if (session === highlighted) F1Red else F1Black,
+                fontWeight = FontWeight.SemiBold,
+            ),
+            modifier = Modifier.width(48.dp),
+        )
+        Text(
+            session.date?.let { DateUtils.formatMediumDateTime(it, language) }.orEmpty(),
+            style = AppStyles.caption.copy(color = F1TextGray),
+            modifier = Modifier.weight(1f),
+        )
+        // ESPN statusDetail for upcoming sessions is US-local (e.g. "8/21 - 6:30 AM EDT") — skip it.
+        if (!session.isUpcoming && session.statusDetail.isNotEmpty()) {
+            Text(
+                session.statusDetail,
+                style = AppStyles.caption.copy(
+                    color = if (session.isLive) F1Red else F1TextGray,
+                ),
+            )
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = F1TextGray.copy(alpha = 0.8f),
+            modifier = Modifier.size(16.dp),
+        )
+    }
+}
+
+@Composable
 private fun StatusChip(event: EspnScoreboardEvent, highlighted: EspnScoreboardSession?) {
     val isLive = event.isLive || (highlighted?.isLive == true)
+    // Skip ESPN schedule strings (EDT / AM-PM); only show Live or post-session status.
     val label = when {
         isLive -> stringResource(Res.string.home_weekend_live)
-        !highlighted?.statusDetail.isNullOrEmpty() -> highlighted!!.statusDetail
-        else -> event.statusDetail
+        highlighted != null && !highlighted.isUpcoming && highlighted.statusDetail.isNotEmpty() ->
+            highlighted.statusDetail
+        event.statusState != "pre" && event.statusDetail.isNotEmpty() -> event.statusDetail
+        else -> ""
     }
     if (label.isEmpty()) return
     Text(
@@ -258,7 +292,7 @@ fun WeekendSessionResultsSheet(
                 stringResource(Res.string.weekend_session_results_title, session.abbreviation),
                 style = AppStyles.h2,
             )
-            if (session.statusDetail.isNotEmpty()) {
+            if (!session.isUpcoming && session.statusDetail.isNotEmpty()) {
                 Spacer(Modifier.height(4.dp))
                 Text(session.statusDetail, style = AppStyles.caption.copy(color = F1TextGray))
             }

@@ -43,7 +43,7 @@ data class AppColors(
             black = Color(0xFFE8E8E8),
             textGray = Color(0xFF9A9A9A),
             grayBg = Color(0xFF1E1E1E),
-            shadowColor = Color(0xFF000000),
+            shadowColor = Color(0xFF2A2A2A),
             strokeGray = Color(0xFF3A3A3A),
             shimmerBase = Color(0xFF2C2C2C),
             shimmerHighlight = Color(0xFF404040),
@@ -86,22 +86,23 @@ private fun helveticaBoldFamily(): FontFamily = HelveticaBold()
 private fun interRegularFamily(): FontFamily =
     FontFamily(Font(Res.font.inter_regular, weight = FontWeight.Normal))
 
+/** Typography — ink color follows [appColors].black (inverts in dark mode). */
 object AppStyles {
     val h1: TextStyle
-        @Composable get() = TextStyle(fontFamily = helveticaBoldFamily(), fontSize = 34.sp, color = Color.Black)
+        @Composable get() = TextStyle(fontFamily = helveticaBoldFamily(), fontSize = 34.sp, color = appColors().black)
 
     val h2: TextStyle
-        @Composable get() = TextStyle(fontFamily = helveticaBoldFamily(), fontSize = 30.sp, color = Color.Black)
+        @Composable get() = TextStyle(fontFamily = helveticaBoldFamily(), fontSize = 30.sp, color = appColors().black)
 
     val h3: TextStyle
-        @Composable get() = TextStyle(fontFamily = helveticaBoldFamily(), fontSize = 25.sp, color = Color.Black)
+        @Composable get() = TextStyle(fontFamily = helveticaBoldFamily(), fontSize = 25.sp, color = appColors().black)
 
     val body: TextStyle
         @Composable get() = TextStyle(
             fontFamily = interRegularFamily(),
             fontSize = 16.sp,
             lineHeight = 20.sp,
-            color = Color.Black,
+            color = appColors().black,
         )
 
     val caption: TextStyle
@@ -109,7 +110,7 @@ object AppStyles {
             fontFamily = interRegularFamily(),
             fontSize = 12.sp,
             lineHeight = 14.sp,
-            color = Color.Black,
+            color = appColors().black,
         )
 
     val navBar: TextStyle
@@ -117,27 +118,27 @@ object AppStyles {
             fontFamily = interRegularFamily(),
             fontSize = 10.sp,
             lineHeight = 12.sp,
-            color = Color.Black,
+            color = appColors().black,
         )
 }
 
 @Composable
-fun themedH1() = AppStyles.h1.copy(color = appColors().black)
+fun themedH1() = AppStyles.h1
 
 @Composable
-fun themedH2() = AppStyles.h2.copy(color = appColors().black)
+fun themedH2() = AppStyles.h2
 
 @Composable
-fun themedH3() = AppStyles.h3.copy(color = appColors().black)
+fun themedH3() = AppStyles.h3
 
 @Composable
-fun themedBody() = AppStyles.body.copy(color = appColors().black)
+fun themedBody() = AppStyles.body
 
 @Composable
-fun themedCaption() = AppStyles.caption.copy(color = appColors().black)
+fun themedCaption() = AppStyles.caption
 
 @Composable
-fun themedNavBar() = AppStyles.navBar.copy(color = appColors().black)
+fun themedNavBar() = AppStyles.navBar
 
 object AppDimens {
     const val horizontalPadding = 12f
