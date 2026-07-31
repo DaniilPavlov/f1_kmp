@@ -3,6 +3,7 @@ package com.example.f1_kmp.ui.components.shimmer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
@@ -318,5 +320,52 @@ fun CircuitsShimmer(modifier: Modifier = Modifier) {
         }
         Spacer(Modifier.height(16.dp))
         ListRowsShimmer(modifier = Modifier.fillMaxWidth())
+    }
+}
+
+/**
+ * [showScrubber] = false when scrubber is already on screen and only chart reloads.
+ */
+@Composable
+fun SeasonRewindShimmer(
+    showScrubber: Boolean = true,
+    modifier: Modifier = Modifier,
+) {
+    ScreenShimmer {
+        Column(modifier = modifier.fillMaxWidth()) {
+            if (showScrubber) {
+                Column(
+                    modifier = Modifier.padding(vertical = AppDimens.verticalPadding.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    ShimmerTextLine(height = 16.dp, width = 180.dp, bottomGap = 8.dp)
+                    ShimmerTextLine(height = 12.dp, width = 100.dp, bottomGap = 12.dp)
+                    ShimmerSkeleton(height = 32.dp, radius = 16.dp)
+                    Spacer(Modifier.height(12.dp))
+                    ShimmerSkeleton(height = 40.dp, width = 40.dp, radius = 20.dp)
+                }
+            }
+            ShimmerSkeleton(height = 40.dp, radius = 10.dp, bottomPadding = 16.dp)
+            ShimmerTextLine(height = 12.dp, width = 160.dp, bottomGap = 12.dp)
+            repeat(8) { i ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ShimmerSkeleton(height = 28.dp, width = 28.dp, radius = 14.dp)
+                    Spacer(Modifier.width(10.dp))
+                    val factor = (0.85f - i * 0.08f).coerceAtLeast(0.3f)
+                    Box(modifier = Modifier.weight(1f)) {
+                        Box(modifier = Modifier.fillMaxWidth(factor)) {
+                            ShimmerSkeleton(height = 28.dp, radius = 8.dp)
+                        }
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    ShimmerSkeleton(height = 14.dp, width = 36.dp, radius = 4.dp)
+                }
+            }
+        }
     }
 }

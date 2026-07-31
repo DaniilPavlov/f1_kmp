@@ -37,3 +37,5 @@ fun rememberShareRaceAction(race: Race): () -> Unit =
 expect fun shareCareerCard(title: String, races: Int, wins: Int, podiums: Int, poles: Int)
 
 expect fun shareRaceResultsCard(race: Race)
+
+expect fun shareCircuitDeepLink(circuitId: String, circuitName: String)

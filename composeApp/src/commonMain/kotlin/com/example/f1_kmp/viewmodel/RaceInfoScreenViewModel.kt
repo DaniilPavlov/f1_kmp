@@ -16,6 +16,16 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+
+data class RaceInfoUiState(
+    val race: AsyncValue<Race> = AsyncValue.Loading,
+    val qualifying: AsyncValue<List<QualifyingResult>> = AsyncValue.Loading,
+    val pitStops: AsyncValue<List<PitStop>> = AsyncValue.Loading,
+    val sprint: AsyncValue<List<RaceResult>> = AsyncValue.Loading,
+    val error: AppError? = null,
+    val isRefreshing: Boolean = false,
+)
 
 /**
  * ViewModel экрана деталей гонки.
@@ -35,20 +45,8 @@ class RaceInfoScreenViewModel(
 ) : ViewModel() {
     private val loadJob = LoadJobHolder()
 
-    private val _race = MutableStateFlow<AsyncValue<Race>>(AsyncValue.Loading)
-    val race: StateFlow<AsyncValue<Race>> = _race.asStateFlow()
-
-    private val _qualifying = MutableStateFlow<AsyncValue<List<QualifyingResult>>>(AsyncValue.Loading)
-    val qualifying: StateFlow<AsyncValue<List<QualifyingResult>>> = _qualifying.asStateFlow()
-
-    private val _pitStops = MutableStateFlow<AsyncValue<List<PitStop>>>(AsyncValue.Loading)
-    val pitStops: StateFlow<AsyncValue<List<PitStop>>> = _pitStops.asStateFlow()
-
-    private val _sprint = MutableStateFlow<AsyncValue<List<RaceResult>>>(AsyncValue.Loading)
-    val sprint: StateFlow<AsyncValue<List<RaceResult>>> = _sprint.asStateFlow()
-
-    private val _error = MutableStateFlow<AppError?>(null)
-    val error: StateFlow<AppError?> = _error.asStateFlow()
+    private val _uiState = MutableStateFlow(RaceInfoUiState())
+    val uiState: StateFlow<RaceInfoUiState> = _uiState.asStateFlow()
 
     init {
         loadAllData()
@@ -57,30 +55,82 @@ class RaceInfoScreenViewModel(
     /** Повторный вызов — retry с экрана ошибки. */
     fun loadAllData() {
         loadJob.launch(viewModelScope) {
-            _error.value = null
-            _race.value = AsyncValue.Loading
-            _qualifying.value = AsyncValue.Loading
-            _pitStops.value = AsyncValue.Loading
-            _sprint.value = AsyncValue.Loading
+            loadInternal(softRefresh = false)
+        }
+    }
+
+    /** Pull-to-refresh: keep Values while reloading. */
+    fun refreshAll() {
+        loadJob.launch(viewModelScope) {
+            loadInternal(softRefresh = true)
+        }
+    }
+
+    private suspend fun loadInternal(softRefresh: Boolean) {
+        try {
+            if (softRefresh) {
+                _uiState.update {
+                    it.copy(
+                        isRefreshing = true,
+                        error = null,
+                        race = if (it.race is AsyncValue.Value) it.race else AsyncValue.Loading,
+                        qualifying = if (it.qualifying is AsyncValue.Value) {
+                            it.qualifying
+                        } else {
+                            AsyncValue.Loading
+                        },
+                        pitStops = if (it.pitStops is AsyncValue.Value) {
+                            it.pitStops
+                        } else {
+                            AsyncValue.Loading
+                        },
+                        sprint = if (it.sprint is AsyncValue.Value) it.sprint else AsyncValue.Loading,
+                    )
+                }
+            } else {
+                _uiState.update {
+                    it.copy(
+                        error = null,
+                        race = AsyncValue.Loading,
+                        qualifying = AsyncValue.Loading,
+                        pitStops = AsyncValue.Loading,
+                        sprint = AsyncValue.Loading,
+                    )
+                }
+            }
 
             val raceResult = repository.getRaceResults(season, round)
             raceResult.onFailure { e ->
-                val ex = e.toAppError()
-                _race.value = AsyncValue.Error(ex.title, ex.subtitle)
-                _error.value = ex
+                val err = e.toAppError()
+                if (_uiState.value.race !is AsyncValue.Value) {
+                    _uiState.update {
+                        it.copy(
+                            race = err.toAsyncError(),
+                            error = err,
+                        )
+                    }
+                }
             }
-            if (raceResult.isFailure) return@launch
+            if (raceResult.isFailure) return
 
             val loadedRace = raceResult.getOrNull()
             if (loadedRace == null) {
-                val ex = AppError(ErrorStrings.raceNotFoundTitle)
-                _race.value = AsyncValue.Error(ex.title, ex.subtitle)
-                _error.value = ex
-                return@launch
+                if (_uiState.value.race !is AsyncValue.Value) {
+                    val err = AppError(ErrorStrings.raceNotFoundTitle)
+                    _uiState.update {
+                        it.copy(
+                            race = err.toAsyncError(),
+                            error = err,
+                        )
+                    }
+                }
+                return
             }
 
-            _race.value = AsyncValue.Value(loadedRace)
+            _uiState.update { it.copy(race = AsyncValue.Value(loadedRace)) }
             loadExtraSections(loadedRace)
+        } finally {
+            _uiState.update { it.copy(isRefreshing = false) }
         }
     }
 
@@ -91,29 +141,37 @@ class RaceInfoScreenViewModel(
             val sprintDeferred = async { repository.getSprintResults(race.season, race.round) }
 
             qualifyingDeferred.await().applyUnlessCached(
-                current = _qualifying.value,
-                onSuccess = { _qualifying.value = AsyncValue.Value(it) },
-                onFailure = { ex ->
-                    _qualifying.value = AsyncValue.Error(ex.title, ex.subtitle)
-                    _error.value = ex
+                current = _uiState.value.qualifying,
+                onSuccess = { _uiState.update { state -> state.copy(qualifying = AsyncValue.Value(it)) } },
+                onFailure = { err ->
+                    _uiState.update {
+                        it.copy(
+                            qualifying = err.toAsyncError(),
+                            error = err,
+                        )
+                    }
                 },
             )
 
             pitStopsDeferred.await().applyUnlessCached(
-                current = _pitStops.value,
-                onSuccess = { _pitStops.value = AsyncValue.Value(it) },
-                onFailure = { ex ->
-                    _pitStops.value = AsyncValue.Error(ex.title, ex.subtitle)
-                    _error.value = ex
+                current = _uiState.value.pitStops,
+                onSuccess = { _uiState.update { state -> state.copy(pitStops = AsyncValue.Value(it)) } },
+                onFailure = { err ->
+                    _uiState.update {
+                        it.copy(
+                            pitStops = err.toAsyncError(),
+                            error = err,
+                        )
+                    }
                 },
             )
 
             sprintDeferred.await().applyUnlessCached(
-                current = _sprint.value,
-                onSuccess = { _sprint.value = AsyncValue.Value(it) },
+                current = _uiState.value.sprint,
+                onSuccess = { _uiState.update { state -> state.copy(sprint = AsyncValue.Value(it)) } },
                 onFailure = {
                     // Нет спринта в уик-энде — не ошибка экрана, просто пустая секция.
-                    _sprint.value = AsyncValue.Value(emptyList())
+                    _uiState.update { state -> state.copy(sprint = AsyncValue.Value(emptyList())) }
                 },
             )
         }

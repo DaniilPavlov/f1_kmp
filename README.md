@@ -35,7 +35,8 @@ Same idea, other stacks:
 - Room → file cache  
 - java.time → kotlinx-datetime  
 - OSM map on Android; MapKit pins on iOS  
-- Session reminders: AlarmManager (Android) / UNUserNotificationCenter (iOS)
+- Session reminders: AlarmManager (Android) / UNUserNotificationCenter (iOS)  
+- Home widgets: Android only (same Next GP + standings as f1_kotlin)  
 
 ## Architecture
 
@@ -190,6 +191,17 @@ Kotlin framework for the simulator only (Apple Silicon), without installing the 
 ./gradlew :composeApp:detekt
 ```
 
+Coverage (Kover, same idea as Flutter `flutter test --coverage`):
+
+```bash
+./gradlew :composeApp:koverHtmlReportDebug
+# → composeApp/build/reports/kover/htmlDebug/index.html
+./gradlew :composeApp:koverXmlReportDebug
+# → composeApp/build/reports/kover/reportDebug.xml
+```
+
+CI uploads the Kover XML/HTML report as artifact `coverage-kover` on pushes to `master` (no coverage gate / threshold).
+
 Covered areas include ViewModels (Home, Results, Schedule, News, Race search, H2H drivers, Finish status, Race info, Circuit detail), Jolpica mappers, CareerLoader, `ApiCallHandler`, `AppVersion`, date/flag utils.
 
 ## CI / CD
@@ -198,7 +210,7 @@ Covered areas include ViewModels (Home, Results, Schedule, News, Race search, H2
 
 | Workflow | When | What it does |
 |----------|-------|------------|
-| `ci.yml` | push / PR to `master` | Firebase stub, detekt, debug APK, unit tests |
+| `ci.yml` | push / PR to `master` | Firebase stub, detekt, debug APK, unit tests + Kover coverage, release APK |
 | `release.yml` | tag `v*` or manual | Android APK (+ GitHub Release) |
 
 Release:
@@ -229,16 +241,21 @@ Forced reload (`refreshAll`) clears ESPN + file caches via `AppDataRefresh`.
 ## Features
 
 - **Home** — current season driver and constructor standings  
-- **Results** — weekend scoreboard (ESPN, live poll), latest race, race search, hall of fame, H2H (drivers / constructors), finish statuses  
+- **Results** — weekend scoreboard (ESPN, live poll), latest race, race search, hall of fame, season rewind, H2H (drivers / constructors + points chart), finish statuses  
 - **Calendar** — monthly calendar with session times; on empty days shows next GP card (layout + countdown); local reminders 30 min before (Android + iOS)  
 - **News** — F1 headlines from ESPN  
 - **Circuits** — list and map (OSMDroid + Carto on Android; MapKit pins on iOS), track layouts, length/laps/turns/speed/elevation, Wikipedia, winners history  
 - **Driver / Constructor cards** — ESPN photos/news, career stats with tappable wins / podiums / poles lists  
+- **Themes** — system / light / dark cycle in the app bar  
 - **Localization** — Russian (default) and English, toggle in the app bar without restarting the app  
+- **Live banner** — red session-live strip above the bottom bar → Results  
+- **Deep links** — `f1pet://driver|constructor|circuit|race/...` (Android + iOS)  
+- **Home widgets** (Android) — next GP countdown + top-3 standings  
 - **Reminders** — local notifications 30 minutes before a session (up to 10 upcoming; Android AlarmManager / iOS UNUserNotificationCenter); Remote Config kill-switch  
 - **Force update** — blocking screen when app version is below Remote Config `min_app_version`  
+- **Analytics** — typed events to Firebase Analytics + AppMetrica  
 - **Schedule cache** — shared file JSON cache for the calendar and reminders  
 - **Offline** — file JSON cache with instant peek and network refresh  
-- **Share** — career stats and race results (PNG on Android, text share sheet on iOS)  
+- **Share** — career / race / weekend cards (PNG on Android), circuit `f1pet://` text; text share sheet on iOS  
 - **Shimmer skeletons** — loading placeholders for main screens  
 - **Country flags** — nationality / country as emoji in tables, career cards, circuits, scoreboard  

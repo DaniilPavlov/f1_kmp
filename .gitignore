@@ -5,6 +5,7 @@
 **/local.properties
 .idea/
 .vscode/
+.cursor/
 *.iml
 .DS_Store
 xcuserdata/

@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,59 +38,72 @@ import f1_kmp.composeapp.generated.resources.select_season
 import com.example.f1_kmp.domain.stringResource
 
 /** Экран «Зал славы»: standings за выбранный исторический сезон. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HallOfFameScreen(
     viewModel: HallOfFameViewModel,
     onDriverClick: (Driver) -> Unit,
     onConstructorClick: (Constructor) -> Unit,
 ) {
-    val drivers by viewModel.drivers.collectAsState()
-    val constructors by viewModel.constructors.collectAsState()
-    val year by viewModel.year.collectAsState()
-    val activeTable by viewModel.activeTable.collectAsState()
-    val error by viewModel.error.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+    val drivers = uiState.drivers
+    val constructors = uiState.constructors
 
     when {
-        drivers.isLoading || constructors.isLoading -> TournamentTablesShimmer(showHeader = false, modifier = Modifier.fillMaxSize())
-        error != null -> ErrorBody(error?.title, error?.subtitle, onRetry = viewModel::loadAllData, modifier = Modifier.fillMaxSize())
+        !uiState.isRefreshing && (drivers.isLoading || constructors.isLoading) -> TournamentTablesShimmer(
+            showHeader = false,
+            modifier = Modifier.fillMaxSize(),
+        )
+        uiState.error != null && drivers !is AsyncValue.Value -> ErrorBody(
+            uiState.error?.title,
+            uiState.error?.subtitle,
+            onRetry = viewModel::loadAllData,
+            modifier = Modifier.fillMaxSize(),
+        )
         drivers is AsyncValue.Value && constructors is AsyncValue.Value -> {
-            val driversList = (drivers as AsyncValue.Value).value
-            val constructorsList = (constructors as AsyncValue.Value).value
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(vertical = AppDimens.verticalPadding.dp),
+            val driversList = drivers.value
+            val constructorsList = constructors.value
+            PullToRefreshBox(
+                isRefreshing = uiState.isRefreshing,
+                onRefresh = viewModel::refreshAll,
+                modifier = Modifier.fillMaxSize(),
             ) {
-                Column(modifier = Modifier.padding(horizontal = AppDimens.horizontalPadding.dp)) {
-                    Text(stringResource(Res.string.hall_of_fame_title), style = AppStyles.h1)
-                    Spacer(Modifier.height(16.dp))
-                    Row {
-                        Column(modifier = Modifier.width(240.dp)) {
-                            SeasonPickerField(
-                                value = year,
-                                label = stringResource(Res.string.season),
-                                hint = stringResource(Res.string.select_season),
-                                onSeasonSelected = viewModel::onYearChanged,
-                                loadSeasons = viewModel::loadSeasonYears,
-                            )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(vertical = AppDimens.verticalPadding.dp),
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = AppDimens.horizontalPadding.dp)) {
+                        Text(stringResource(Res.string.hall_of_fame_title), style = AppStyles.h1)
+                        Spacer(Modifier.height(16.dp))
+                        Row {
+                            Column(modifier = Modifier.width(240.dp)) {
+                                SeasonPickerField(
+                                    value = uiState.year,
+                                    label = stringResource(Res.string.season),
+                                    hint = stringResource(Res.string.select_season),
+                                    onSeasonSelected = viewModel::onYearChanged,
+                                    loadSeasons = viewModel::loadSeasonYears,
+                                )
+                            }
                         }
                     }
+                    Spacer(Modifier.height(24.dp))
+                    CustomSwitcher(
+                        stringResource(Res.string.drivers),
+                        stringResource(Res.string.constructors),
+                        uiState.activeTable,
+                        viewModel::changeActiveTable,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    if (uiState.activeTable == 0) {
+                        TournamentDriversTable(driversList, onDriverClick = onDriverClick)
+                    } else {
+                        TournamentConstructorsTable(constructorsList, onConstructorClick = onConstructorClick)
+                    }
+                    Spacer(Modifier.height(32.dp))
                 }
-                Spacer(Modifier.height(24.dp))
-                CustomSwitcher(
-                    stringResource(Res.string.drivers),
-                    stringResource(Res.string.constructors),
-                    activeTable,
-                    viewModel::changeActiveTable,
-                )
-                Spacer(Modifier.height(8.dp))
-                if (activeTable == 0) {
-                    TournamentDriversTable(driversList, onDriverClick = onDriverClick)
-                } else {
-                    TournamentConstructorsTable(constructorsList, onConstructorClick = onConstructorClick)
-                }
-                Spacer(Modifier.height(32.dp))
             }
         }
         else -> TournamentTablesShimmer(showHeader = false, modifier = Modifier.fillMaxSize())

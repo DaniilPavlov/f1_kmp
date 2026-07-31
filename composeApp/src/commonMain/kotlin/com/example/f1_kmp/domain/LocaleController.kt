@@ -32,6 +32,14 @@ object LocaleController {
         return next
     }
 
+    /**
+     * Повторно выставляет платформенный Locale без смены [language].
+     * Activity/config иногда сбрасывает JVM default — вызывать из [SideEffect] в App.
+     */
+    fun reassertPlatformLocale() {
+        applyPlatformLocale(_language.value)
+    }
+
     private fun applyLanguage(language: String, persist: Boolean) {
         val normalized = language.takeIf { it in SUPPORTED } ?: "ru"
         if (persist) {

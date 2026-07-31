@@ -16,21 +16,22 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.f1_kmp.data.circuits.CircuitLayoutAssets
-import com.example.f1_kmp.ui.theme.F1Black
+import com.example.f1_kmp.ui.theme.appColors
 import f1_kmp.composeapp.generated.resources.Res
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 
-/** Локальная схема трассы; при отсутствии ассета — ничего не рисует. */
+/** Локальная схема трассы; при отсутствии ассета — ничего не рисует. Tint по умолчанию — ink. */
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 fun CircuitLayoutImage(
     circuitId: String,
     modifier: Modifier = Modifier,
     height: Dp = 180.dp,
-    tint: Color = F1Black,
+    tint: Color? = null,
     padding: Dp = 12.dp,
 ) {
     val path = CircuitLayoutAssets.assetPath(circuitId) ?: return
+    val resolvedTint = tint ?: appColors().black
     val bitmap by produceState<ImageBitmap?>(initialValue = null, path) {
         value = runCatching {
             decodeCircuitLayoutBitmap(Res.readBytes(path))
@@ -38,7 +39,7 @@ fun CircuitLayoutImage(
     }
 
     val loaded = bitmap ?: return
-    CircuitLayoutImageContent(loaded, modifier, height, tint, padding)
+    CircuitLayoutImageContent(loaded, modifier, height, resolvedTint, padding)
 }
 
 internal expect fun decodeCircuitLayoutBitmap(bytes: ByteArray): ImageBitmap

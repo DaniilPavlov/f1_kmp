@@ -5,6 +5,7 @@ import com.example.f1_kmp.domain.model.Circuit
 import com.example.f1_kmp.domain.model.RaceSession
 import com.example.f1_kmp.domain.model.Race
 import com.example.f1_kmp.data.repository.IF1Repository
+import com.example.f1_kmp.domain.AppDataRefresh
 import com.example.f1_kmp.domain.AsyncValue
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -46,7 +47,7 @@ class ScheduleViewModelTest {
         val race = sampleRace(date = "2026-05-10")
         stubSchedule(listOf(race))
 
-        val viewModel = ScheduleViewModel(repository)
+        val viewModel = ScheduleViewModel(repository, mockk<AppDataRefresh>(relaxed = true))
         advanceUntilIdle()
 
         assertEquals(DayLogo.Finish, viewModel.logoForDay(LocalDate.parse("2026-05-10")))
@@ -60,7 +61,7 @@ class ScheduleViewModelTest {
         )
         stubSchedule(listOf(race))
 
-        val viewModel = ScheduleViewModel(repository)
+        val viewModel = ScheduleViewModel(repository, mockk<AppDataRefresh>(relaxed = true))
         advanceUntilIdle()
 
         assertEquals(DayLogo.Car, viewModel.logoForDay(LocalDate.parse("2026-05-10")))
@@ -74,13 +75,13 @@ class ScheduleViewModelTest {
         )
         stubSchedule(listOf(race))
 
-        val viewModel = ScheduleViewModel(repository)
+        val viewModel = ScheduleViewModel(repository, mockk<AppDataRefresh>(relaxed = true))
         advanceUntilIdle()
 
         viewModel.onSelectDay(LocalDate.parse("2026-05-10"))
         advanceUntilIdle()
 
-        val items = viewModel.scheduleItems.value
+        val items = viewModel.uiState.value.scheduleItems
         assertTrue(items.isNotEmpty())
         assertEquals("Monaco Grand Prix", items.first().raceName)
         assertEquals("Первая практика", items[1].title)
@@ -91,11 +92,11 @@ class ScheduleViewModelTest {
         val race = sampleRace(date = "2026-05-10")
         stubSchedule(listOf(race))
 
-        val viewModel = ScheduleViewModel(repository)
+        val viewModel = ScheduleViewModel(repository, mockk<AppDataRefresh>(relaxed = true))
         advanceUntilIdle()
 
-        assertTrue(viewModel.races.value is AsyncValue.Value)
-        assertEquals(1, (viewModel.races.value as AsyncValue.Value).value.size)
+        assertTrue(viewModel.uiState.value.races is AsyncValue.Value)
+        assertEquals(1, (viewModel.uiState.value.races as AsyncValue.Value).value.size)
     }
 
     private fun stubSchedule(races: List<Race>) {

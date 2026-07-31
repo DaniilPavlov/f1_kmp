@@ -13,6 +13,17 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+
+data class HomeUiState(
+    val drivers: AsyncValue<List<DriverStanding>> = AsyncValue.Loading,
+    val constructors: AsyncValue<List<ConstructorStanding>> = AsyncValue.Loading,
+    val season: String = "",
+    val round: String = "",
+    val activeTable: Int = 0,
+    val error: AppError? = null,
+    val isRefreshing: Boolean = false,
+)
 
 /**
  * ViewModel вкладки «Главная».
@@ -31,23 +42,8 @@ class HomeViewModel(
 ) : ViewModel() {
     private val loadJob = LoadJobHolder()
 
-    private val _drivers = MutableStateFlow<AsyncValue<List<DriverStanding>>>(AsyncValue.Loading)
-    val drivers: StateFlow<AsyncValue<List<DriverStanding>>> = _drivers.asStateFlow()
-
-    private val _constructors = MutableStateFlow<AsyncValue<List<ConstructorStanding>>>(AsyncValue.Loading)
-    val constructors: StateFlow<AsyncValue<List<ConstructorStanding>>> = _constructors.asStateFlow()
-
-    private val _season = MutableStateFlow("")
-    val season: StateFlow<String> = _season.asStateFlow()
-
-    private val _round = MutableStateFlow("")
-    val round: StateFlow<String> = _round.asStateFlow()
-
-    private val _activeTable = MutableStateFlow(0)
-    val activeTable: StateFlow<Int> = _activeTable.asStateFlow()
-
-    private val _error = MutableStateFlow<AppError?>(null)
-    val error: StateFlow<AppError?> = _error.asStateFlow()
+    private val _uiState = MutableStateFlow(HomeUiState())
+    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
         loadAllData()
@@ -55,7 +51,7 @@ class HomeViewModel(
 
     /** Переключение SegmentedControl: пилоты / конструкторы. */
     fun changeActiveTable(index: Int) {
-        _activeTable.value = index
+        _uiState.update { it.copy(activeTable = index) }
     }
 
     /** Peek → сеть. Ошибку сети не показываем, если на экране уже есть кэш. */
@@ -65,7 +61,7 @@ class HomeViewModel(
         }
     }
 
-    /** ErrorBody / forced reload: сброс кэшей, затем сеть. */
+    /** ErrorBody / pull-to-refresh: сброс кэшей, затем сеть. */
     fun refreshAll() {
         loadJob.launch(viewModelScope) {
             loadInternal(clearCaches = true)
@@ -73,46 +69,83 @@ class HomeViewModel(
     }
 
     private suspend fun loadInternal(clearCaches: Boolean) = coroutineScope {
-        _error.value = null
-        if (clearCaches) {
-            appDataRefresh.clearAll()
-            _drivers.value = AsyncValue.Loading
-            _constructors.value = AsyncValue.Loading
-        } else {
-            repository.peekCurrentDriversCache()?.let { (list, meta) ->
-                _drivers.value = AsyncValue.Value(list)
-                _season.value = meta.season
-                _round.value = meta.round
-            } ?: run { _drivers.value = AsyncValue.Loading }
+        try {
+            if (clearCaches) {
+                appDataRefresh.clearAll()
+                _uiState.update {
+                    it.copy(
+                        isRefreshing = true,
+                        error = null,
+                        drivers = if (it.drivers is AsyncValue.Value) it.drivers else AsyncValue.Loading,
+                        constructors = if (it.constructors is AsyncValue.Value) {
+                            it.constructors
+                        } else {
+                            AsyncValue.Loading
+                        },
+                    )
+                }
+            } else {
+                _uiState.update { it.copy(error = null) }
 
-            repository.peekCurrentConstructorsCache()?.let {
-                _constructors.value = AsyncValue.Value(it)
-            } ?: run { _constructors.value = AsyncValue.Loading }
+                repository.peekCurrentDriversCache()?.let { (list, meta) ->
+                    _uiState.update {
+                        it.copy(
+                            drivers = AsyncValue.Value(list),
+                            season = meta.season,
+                            round = meta.round,
+                        )
+                    }
+                } ?: run {
+                    _uiState.update { it.copy(drivers = AsyncValue.Loading) }
+                }
+
+                repository.peekCurrentConstructorsCache()?.let { list ->
+                    _uiState.update { it.copy(constructors = AsyncValue.Value(list)) }
+                } ?: run {
+                    _uiState.update { it.copy(constructors = AsyncValue.Loading) }
+                }
+            }
+
+            val driversDeferred = async { repository.getCurrentDriverStandings() }
+            val constructorsDeferred = async { repository.getCurrentConstructorStandings() }
+
+            driversDeferred.await().applyUnlessCached(
+                current = _uiState.value.drivers,
+                onSuccess = { (list, meta) ->
+                    _uiState.update {
+                        it.copy(
+                            drivers = AsyncValue.Value(list),
+                            season = meta.season,
+                            round = meta.round,
+                        )
+                    }
+                },
+                onFailure = { err ->
+                    _uiState.update {
+                        it.copy(
+                            drivers = err.toAsyncError(),
+                            error = err,
+                        )
+                    }
+                },
+            )
+
+            constructorsDeferred.await().applyUnlessCached(
+                current = _uiState.value.constructors,
+                onSuccess = { list ->
+                    _uiState.update { it.copy(constructors = AsyncValue.Value(list)) }
+                },
+                onFailure = { err ->
+                    _uiState.update {
+                        it.copy(
+                            constructors = err.toAsyncError(),
+                            error = err,
+                        )
+                    }
+                },
+            )
+        } finally {
+            _uiState.update { it.copy(isRefreshing = false) }
         }
-
-        val driversDeferred = async { repository.getCurrentDriverStandings() }
-        val constructorsDeferred = async { repository.getCurrentConstructorStandings() }
-
-        driversDeferred.await().applyUnlessCached(
-            current = _drivers.value,
-            onSuccess = { (list, meta) ->
-                _drivers.value = AsyncValue.Value(list)
-                _season.value = meta.season
-                _round.value = meta.round
-            },
-            onFailure = { ex ->
-                _drivers.value = AsyncValue.Error(ex.title, ex.subtitle)
-                _error.value = ex
-            },
-        )
-
-        constructorsDeferred.await().applyUnlessCached(
-            current = _constructors.value,
-            onSuccess = { _constructors.value = AsyncValue.Value(it) },
-            onFailure = { ex ->
-                _constructors.value = AsyncValue.Error(ex.title, ex.subtitle)
-                _error.value = ex
-            },
-        )
     }
 }

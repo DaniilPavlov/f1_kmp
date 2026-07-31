@@ -23,6 +23,8 @@ import com.example.f1_kmp.data.model.RaceModel
 import com.example.f1_kmp.data.model.SeasonsCache
 import com.example.f1_kmp.data.model.StandingsListsModel
 import com.example.f1_kmp.domain.ApiCallHandler
+import com.example.f1_kmp.domain.AppException
+import com.example.f1_kmp.domain.ErrorStrings
 import com.example.f1_kmp.domain.model.Circuit
 import com.example.f1_kmp.domain.model.Constructor
 import com.example.f1_kmp.domain.model.ConstructorStanding
@@ -33,7 +35,7 @@ import com.example.f1_kmp.domain.model.QualifyingResult
 import com.example.f1_kmp.domain.model.Race
 import com.example.f1_kmp.domain.model.RaceResult
 import com.example.f1_kmp.domain.model.StandingsMeta
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import kotlinx.coroutines.async
@@ -317,7 +319,8 @@ class F1Repository(
         driverId: String,
         currentConstructors: List<Constructor>,
     ): Result<CareerStats<Constructor>> =
-        ApiCallHandler.safeCall {
+        // 429 ретраи внутри CareerLoader постранично — не перезапускаем всю карьеру.
+        ApiCallHandler.safeCall(retries = 0) {
             CareerLoader.loadDriverCareer(api, driverId, currentConstructors)
         }
 
@@ -326,7 +329,7 @@ class F1Repository(
         constructorId: String,
         currentDrivers: List<Driver>,
     ): Result<CareerStats<Driver>> =
-        ApiCallHandler.safeCall {
+        ApiCallHandler.safeCall(retries = 0) {
             CareerLoader.loadConstructorCareer(api, constructorId, currentDrivers)
         }
 
@@ -338,6 +341,61 @@ class F1Repository(
     override suspend fun getConstructorH2hStats(constructorId: String, season: String?): Result<H2hStats> =
         ApiCallHandler.safeCall {
             CareerLoader.loadH2hStats(api, "constructors/$constructorId", season)
+        }
+
+    override suspend fun getStandingsAfterRound(
+        year: String,
+        round: String,
+    ): Result<Pair<List<DriverStanding>, List<ConstructorStanding>>> {
+        // отдельно + retry — Jolpica часто 429 при scrub Season Rewind.
+        val driversResult = ApiCallHandler.safeCall(retries = 3) {
+            api.getDriverStandingsAfterRound(year, round)
+                .mrData.standingsTable.standingsLists
+                .firstOrNull()?.driverStandings
+                ?: throw AppException(
+                    ErrorStrings.responseParseError,
+                    ErrorStrings.errorRetrySubtitle,
+                )
+        }
+        if (driversResult.isFailure) {
+            return Result.failure(driversResult.exceptionOrNull()!!)
+        }
+
+        val constructorsResult = ApiCallHandler.safeCall(retries = 3) {
+            api.getConstructorStandingsAfterRound(year, round)
+                .mrData.standingsTable.standingsLists
+                .firstOrNull()?.constructorStandings
+                ?: throw AppException(
+                    ErrorStrings.responseParseError,
+                    ErrorStrings.errorRetrySubtitle,
+                )
+        }
+        if (constructorsResult.isFailure) {
+            return Result.failure(constructorsResult.exceptionOrNull()!!)
+        }
+
+        return Result.success(
+            Pair(
+                driversResult.getOrNull().orEmpty().toDriverStandingDomain(),
+                constructorsResult.getOrNull().orEmpty().toConstructorStandingDomain(),
+            ),
+        )
+    }
+
+    override suspend fun getDriverH2hRoundScores(
+        driverId: String,
+        season: String?,
+    ): Result<List<com.example.f1_kmp.viewmodel.H2hRoundScore>> =
+        ApiCallHandler.safeCall {
+            CareerLoader.loadH2hRoundScores(api, "drivers/$driverId", season)
+        }
+
+    override suspend fun getConstructorH2hRoundScores(
+        constructorId: String,
+        season: String?,
+    ): Result<List<com.example.f1_kmp.viewmodel.H2hRoundScore>> =
+        ApiCallHandler.safeCall {
+            CareerLoader.loadH2hRoundScores(api, "constructors/$constructorId", season)
         }
 
     override suspend fun getSeasonFinishStatuses(year: String): Result<List<FinishStatusItem>> =

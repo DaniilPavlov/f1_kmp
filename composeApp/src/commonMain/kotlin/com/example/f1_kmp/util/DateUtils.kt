@@ -1,7 +1,8 @@
 package com.example.f1_kmp.util
 
 import com.example.f1_kmp.domain.LocaleController
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
+import kotlinx.datetime.number
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
@@ -78,21 +79,21 @@ object DateUtils {
 
     /** Дата в формате «22 июля 2026» / «July 22, 2026». */
     fun formatLongDate(date: LocalDate, language: String = LocaleController.language.value): String {
-        val month = monthName(date.monthNumber, language)
+        val month = monthName(date.month.number, language)
         return if (language == "en") {
-            "$month ${date.dayOfMonth}, ${date.year}"
+            "$month ${date.day}, ${date.year}"
         } else {
-            "${date.dayOfMonth} $month ${date.year}"
+            "${date.day} $month ${date.year}"
         }
     }
 
     /** Дата без года: «22 июля» / «July 22». */
     fun formatMediumDate(dateTime: LocalDateTime, language: String = LocaleController.language.value): String {
-        val month = monthName(dateTime.monthNumber, language)
+        val month = monthName(dateTime.month.number, language)
         return if (language == "en") {
-            "$month ${dateTime.dayOfMonth}, ${dateTime.year}"
+            "$month ${dateTime.day}, ${dateTime.year}"
         } else {
-            "${dateTime.dayOfMonth} $month ${dateTime.year}"
+            "${dateTime.day} $month ${dateTime.year}"
         }
     }
 

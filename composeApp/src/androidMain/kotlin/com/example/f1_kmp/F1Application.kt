@@ -9,6 +9,8 @@ import com.example.f1_kmp.di.appModule
 import com.example.f1_kmp.domain.ForceUpdateGate
 import com.example.f1_kmp.domain.LocaleController
 import com.example.f1_kmp.domain.LocalePreferences
+import com.example.f1_kmp.domain.ThemeController
+import com.example.f1_kmp.domain.ThemePreferences
 import com.example.f1_kmp.notifications.RaceReminderScheduler
 import com.example.f1_kmp.platform.AndroidContextHolder
 import com.example.f1_kmp.platform.OsmdroidInitializer
@@ -26,7 +28,7 @@ import org.koin.core.context.startKoin
  *
  * Здесь:
  * 1. сохраняем Application Context для файлового кэша и openUrl;
- * 2. инициализируем локаль;
+ * 2. инициализируем локаль и тему;
  * 3. настраиваем OSMDroid;
  * 4. стартуем Koin;
  * 5. Firebase / AppMetrica (sync) + Remote Config (IO);
@@ -39,6 +41,7 @@ class F1Application : Application() {
         super.onCreate()
         AndroidContextHolder.init(this)
         LocaleController.init(LocalePreferences())
+        ThemeController.init(ThemePreferences())
         OsmdroidInitializer.ensureInitialized(this)
         startKoin {
             androidContext(this@F1Application)

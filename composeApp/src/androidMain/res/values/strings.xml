@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">F1 KMP</string>
+    <string name="widget_next_gp_title">Следующий ГП</string>
+    <string name="widget_next_gp_description">Обратный отсчёт до следующего Гран-при</string>
+    <string name="widget_next_gp_days_label">дни</string>
+    <string name="widget_next_gp_time_label">час:мин:сек</string>
+    <string name="widget_next_gp_started">Стартовал</string>
+    <string name="widget_standings_title">Топ-3 пилотов</string>
+    <string name="widget_standings_description">Лидеры чемпионата</string>
+    <string name="widget_standings_subtitle">%1$s · R%2$s</string>
+    <string name="widget_open_app">Откройте приложение</string>
 </resources>

@@ -22,8 +22,7 @@ import androidx.compose.ui.unit.sp
 import com.example.f1_kmp.data.circuits.CircuitStats
 import com.example.f1_kmp.ui.theme.AppStyles
 import com.example.f1_kmp.ui.theme.F1Red
-import com.example.f1_kmp.ui.theme.F1StrokeGray
-import com.example.f1_kmp.ui.theme.F1TextGray
+import com.example.f1_kmp.ui.theme.appColors
 import com.example.f1_kmp.ui.theme.HelveticaBold
 import f1_kmp.composeapp.generated.resources.Res
 import f1_kmp.composeapp.generated.resources.circuit_stat_elevation
@@ -39,6 +38,7 @@ fun CircuitStatsGrid(
     stats: CircuitStats,
     modifier: Modifier = Modifier,
 ) {
+    val colors = appColors()
     val items = listOf(
         stringResource(Res.string.circuit_stat_length) to stats.lengthLabel,
         stringResource(Res.string.circuit_stat_laps) to stats.lapsLabel,
@@ -61,7 +61,7 @@ fun CircuitStatsGrid(
                     modifier = Modifier
                         .width(1.dp)
                         .height(44.dp)
-                        .background(F1StrokeGray),
+                        .background(colors.strokeGray),
                 )
             }
             Column(
@@ -80,7 +80,7 @@ fun CircuitStatsGrid(
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = label,
-                    style = AppStyles.caption.copy(color = F1TextGray),
+                    style = AppStyles.caption.copy(color = colors.textGray),
                     textAlign = TextAlign.Center,
                 )
             }

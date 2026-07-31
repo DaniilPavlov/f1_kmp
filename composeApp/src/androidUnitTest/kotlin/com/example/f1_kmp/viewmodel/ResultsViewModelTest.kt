@@ -61,7 +61,7 @@ class ResultsViewModelTest {
         val viewModel = ResultsViewModel(repository, espnRepository, mockk(relaxed = true))
         advanceUntilIdle()
 
-        val state = viewModel.lastRace.value
+        val state = viewModel.uiState.value.lastRace
         assertTrue(state is AsyncValue.Value)
         assertEquals("Monaco Grand Prix", (state as AsyncValue.Value).value.raceName)
     }
@@ -80,7 +80,7 @@ class ResultsViewModelTest {
         val viewModel = ResultsViewModel(repository, espnRepository, mockk(relaxed = true))
         advanceUntilIdle()
 
-        assertTrue(viewModel.lastRace.value is AsyncValue.Error)
+        assertTrue(viewModel.uiState.value.lastRace is AsyncValue.Error)
     }
 
     /** Успешный ESPN scoreboard → [ResultsViewModel.scoreboard] как [AsyncValue.Value]. */
@@ -97,8 +97,8 @@ class ResultsViewModelTest {
         val viewModel = ResultsViewModel(repository, espnRepository, mockk(relaxed = true))
         advanceUntilIdle()
 
-        assertTrue(viewModel.scoreboard.value is AsyncValue.Value)
-        assertEquals("Monaco Grand Prix", (viewModel.scoreboard.value as AsyncValue.Value).value?.name)
+        assertTrue(viewModel.uiState.value.scoreboard is AsyncValue.Value)
+        assertEquals("Monaco Grand Prix", (viewModel.uiState.value.scoreboard as AsyncValue.Value).value?.name)
     }
 
     /** [ViewModel.onCleared] останавливает pollJob без падения (без live-loop в тесте). */
@@ -115,7 +115,7 @@ class ResultsViewModelTest {
         advanceUntilIdle()
 
         invokeOnCleared(viewModel)
-        assertTrue(viewModel.scoreboard.value is AsyncValue.Value)
+        assertTrue(viewModel.uiState.value.scoreboard is AsyncValue.Value)
     }
 
     /** Минимальная заготовка [Race] — не тянем полный JSON из API. */

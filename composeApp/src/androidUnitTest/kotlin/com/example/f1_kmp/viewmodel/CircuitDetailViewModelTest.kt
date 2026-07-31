@@ -57,10 +57,10 @@ class CircuitDetailViewModelTest {
         val viewModel = CircuitDetailViewModel("monaco", repository, circuitStatsRepository)
         advanceUntilIdle()
 
-        assertTrue(viewModel.circuit.value is AsyncValue.Value)
-        assertEquals("Monaco", (viewModel.circuit.value as AsyncValue.Value).value.circuitName)
-        assertTrue(viewModel.winners.value is AsyncValue.Value)
-        assertEquals(0, (viewModel.winners.value as AsyncValue.Value).value.size)
+        assertTrue(viewModel.uiState.value.circuit is AsyncValue.Value)
+        assertEquals("Monaco", (viewModel.uiState.value.circuit as AsyncValue.Value).value.circuitName)
+        assertTrue(viewModel.uiState.value.winners is AsyncValue.Value)
+        assertEquals(0, (viewModel.uiState.value.winners as AsyncValue.Value).value.size)
     }
 
     @Test
@@ -73,7 +73,7 @@ class CircuitDetailViewModelTest {
         val viewModel = CircuitDetailViewModel("monaco", repository, circuitStatsRepository)
         advanceUntilIdle()
 
-        assertTrue(viewModel.circuit.value is AsyncValue.Error)
+        assertTrue(viewModel.uiState.value.circuit is AsyncValue.Error)
     }
 
     @Test
@@ -84,7 +84,7 @@ class CircuitDetailViewModelTest {
         val viewModel = CircuitDetailViewModel("monaco", repository, circuitStatsRepository)
         advanceUntilIdle()
 
-        assertTrue(viewModel.circuit.value is AsyncValue.Error)
+        assertTrue(viewModel.uiState.value.circuit is AsyncValue.Error)
     }
 
     private fun sampleCircuit() = Circuit(

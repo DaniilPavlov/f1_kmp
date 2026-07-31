@@ -10,7 +10,18 @@ import com.example.f1_kmp.domain.AsyncValue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+data class HallOfFameUiState(
+    val drivers: AsyncValue<List<DriverStanding>> = AsyncValue.Loading,
+    val constructors: AsyncValue<List<ConstructorStanding>> = AsyncValue.Loading,
+    val year: String = "",
+    val fieldsInputted: Boolean = false,
+    val activeTable: Int = 0,
+    val error: AppError? = null,
+    val isRefreshing: Boolean = false,
+)
 
 /**
  * ViewModel вкладки «Зал славы».
@@ -22,29 +33,14 @@ class HallOfFameViewModel(
 ) : ViewModel() {
     private val loadJob = LoadJobHolder()
 
-    private val _drivers = MutableStateFlow<AsyncValue<List<DriverStanding>>>(AsyncValue.Loading)
-    val drivers: StateFlow<AsyncValue<List<DriverStanding>>> = _drivers.asStateFlow()
-
-    private val _constructors = MutableStateFlow<AsyncValue<List<ConstructorStanding>>>(AsyncValue.Loading)
-    val constructors: StateFlow<AsyncValue<List<ConstructorStanding>>> = _constructors.asStateFlow()
-
-    private val _year = MutableStateFlow("")
-    val year: StateFlow<String> = _year.asStateFlow()
-
-    private val _fieldsInputted = MutableStateFlow(false)
-    val fieldsInputted: StateFlow<Boolean> = _fieldsInputted.asStateFlow()
-
-    private val _activeTable = MutableStateFlow(0)
-    val activeTable: StateFlow<Int> = _activeTable.asStateFlow()
-
-    private val _error = MutableStateFlow<AppError?>(null)
-    val error: StateFlow<AppError?> = _error.asStateFlow()
+    private val _uiState = MutableStateFlow(HallOfFameUiState())
+    val uiState: StateFlow<HallOfFameUiState> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
             repository.getSeasonYears().onSuccess { years ->
-                if (_year.value.isEmpty() && years.isNotEmpty()) {
-                    _year.value = years.first()
+                if (_uiState.value.year.isEmpty() && years.isNotEmpty()) {
+                    _uiState.update { it.copy(year = years.first()) }
                     checkFields()
                     loadAllData()
                 }
@@ -54,21 +50,24 @@ class HallOfFameViewModel(
 
     /** Смена года в picker; при валидном значении перезагружает standings. */
     fun onYearChanged(value: String) {
-        _year.value = value
+        _uiState.update { it.copy(year = value) }
         checkFields()
-        if (_fieldsInputted.value) {
+        if (_uiState.value.fieldsInputted) {
             loadAllData()
         }
     }
 
     /** Проверяет, что год введён полностью (4 цифры). */
     fun checkFields() {
-        _fieldsInputted.value = _year.value.length == 4 && _year.value.isNotEmpty()
+        val year = _uiState.value.year
+        _uiState.update {
+            it.copy(fieldsInputted = year.length == 4 && year.isNotEmpty())
+        }
     }
 
     /** Переключение SegmentedControl: пилоты / конструкторы. */
     fun changeActiveTable(index: Int) {
-        _activeTable.value = index
+        _uiState.update { it.copy(activeTable = index) }
     }
 
     /** Список сезонов для [SeasonPickerField]. */
@@ -76,32 +75,80 @@ class HallOfFameViewModel(
 
     /** Peek → сеть. Ошибку сети не показываем, если на экране уже есть кэш. */
     fun loadAllData() {
-        if (!_fieldsInputted.value) return
+        if (!_uiState.value.fieldsInputted) return
         loadJob.launch(viewModelScope) {
-            _error.value = null
+            loadInternal(softRefresh = false)
+        }
+    }
 
-            repository.peekHistoricalStandingsCache(_year.value)?.let { (drivers, constructors) ->
-                _drivers.value = AsyncValue.Value(drivers)
-                _constructors.value = AsyncValue.Value(constructors)
-            } ?: run {
-                _drivers.value = AsyncValue.Loading
-                _constructors.value = AsyncValue.Loading
+    /** Pull-to-refresh: keep Value while reloading. */
+    fun refreshAll() {
+        if (!_uiState.value.fieldsInputted) return
+        loadJob.launch(viewModelScope) {
+            loadInternal(softRefresh = true)
+        }
+    }
+
+    private suspend fun loadInternal(softRefresh: Boolean) {
+        try {
+            val year = _uiState.value.year
+            if (softRefresh) {
+                _uiState.update {
+                    it.copy(
+                        isRefreshing = true,
+                        error = null,
+                        drivers = if (it.drivers is AsyncValue.Value) it.drivers else AsyncValue.Loading,
+                        constructors = if (it.constructors is AsyncValue.Value) {
+                            it.constructors
+                        } else {
+                            AsyncValue.Loading
+                        },
+                    )
+                }
+            } else {
+                _uiState.update { it.copy(error = null) }
+
+                repository.peekHistoricalStandingsCache(year)?.let { (drivers, constructors) ->
+                    _uiState.update {
+                        it.copy(
+                            drivers = AsyncValue.Value(drivers),
+                            constructors = AsyncValue.Value(constructors),
+                        )
+                    }
+                } ?: run {
+                    _uiState.update {
+                        it.copy(
+                            drivers = AsyncValue.Loading,
+                            constructors = AsyncValue.Loading,
+                        )
+                    }
+                }
             }
 
-            repository.getHistoricalStandings(_year.value).applyUnlessCached(
-                current = _drivers.value,
+            repository.getHistoricalStandings(year).applyUnlessCached(
+                current = _uiState.value.drivers,
                 onSuccess = { (drivers, constructors) ->
-                    _drivers.value = AsyncValue.Value(drivers)
-                    _constructors.value = AsyncValue.Value(constructors)
+                    _uiState.update {
+                        it.copy(
+                            drivers = AsyncValue.Value(drivers),
+                            constructors = AsyncValue.Value(constructors),
+                        )
+                    }
                 },
-                onFailure = { ex ->
-                    if (_drivers.value !is AsyncValue.Value) {
-                        _drivers.value = AsyncValue.Error(ex.title, ex.subtitle)
-                        _constructors.value = AsyncValue.Error(ex.title, ex.subtitle)
-                        _error.value = ex
+                onFailure = { err ->
+                    if (_uiState.value.drivers !is AsyncValue.Value) {
+                        _uiState.update {
+                            it.copy(
+                                drivers = err.toAsyncError(),
+                                constructors = err.toAsyncError(),
+                                error = err,
+                            )
+                        }
                     }
                 },
             )
+        } finally {
+            _uiState.update { it.copy(isRefreshing = false) }
         }
     }
 }

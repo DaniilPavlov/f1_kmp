@@ -28,6 +28,7 @@ import com.example.f1_kmp.viewmodel.RaceInfoScreenViewModel
 import com.example.f1_kmp.viewmodel.RaceSearchViewModel
 import com.example.f1_kmp.viewmodel.ResultsViewModel
 import com.example.f1_kmp.viewmodel.ScheduleViewModel
+import com.example.f1_kmp.viewmodel.SeasonRewindViewModel
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.plugins.HttpTimeout
@@ -165,19 +166,22 @@ val networkModule = module {
     single { CacheJsonMapper(get()) }
     single<IF1Repository> { F1Repository(get(), get(), get()) }
     single { AppDataRefresh(get(), get()) }
+    single { com.example.f1_kmp.domain.live.LiveWeekendController(get()) }
+    single { com.example.f1_kmp.data.deeplink.DeepLinkBus() }
 }
 
 val viewModelModule = module {
     viewModel { HomeViewModel(get(), get()) }
     viewModel { ResultsViewModel(get(), get(), get()) }
     viewModel { HallOfFameViewModel(get()) }
-    viewModel { ScheduleViewModel(get()) }
+    viewModel { ScheduleViewModel(get(), get()) }
     viewModel { CircuitsViewModel(get(), get()) }
     viewModel { RaceSearchViewModel(get()) }
     viewModel { NewsViewModel(get(), get()) }
     viewModel { H2hDriversViewModel(get()) }
     viewModel { H2hConstructorsViewModel(get()) }
     viewModel { FinishStatusViewModel(get()) }
+    viewModel { SeasonRewindViewModel(get(), get()) }
     viewModel { (season: String, round: String) -> RaceInfoScreenViewModel(season, round, get()) }
     viewModel { (circuitId: String) -> CircuitDetailViewModel(circuitId, get(), get()) }
     viewModel { (driverId: String) -> DriverDetailViewModel(driverId, get(), get()) }

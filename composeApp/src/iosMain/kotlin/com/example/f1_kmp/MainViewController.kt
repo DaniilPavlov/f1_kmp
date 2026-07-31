@@ -9,6 +9,8 @@ import com.example.f1_kmp.di.iosModule
 import com.example.f1_kmp.domain.ForceUpdateGate
 import com.example.f1_kmp.domain.LocaleController
 import com.example.f1_kmp.domain.LocalePreferences
+import com.example.f1_kmp.domain.ThemeController
+import com.example.f1_kmp.domain.ThemePreferences
 import com.example.f1_kmp.notifications.RaceReminderBridge
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +34,7 @@ private val bootstrapScope = CoroutineScope(SupervisorJob() + Dispatchers.Defaul
 fun MainViewController(): UIViewController {
     if (!koinStarted) {
         LocaleController.init(LocalePreferences())
+        ThemeController.init(ThemePreferences())
         startKoin {
             modules(appModule, iosModule)
         }

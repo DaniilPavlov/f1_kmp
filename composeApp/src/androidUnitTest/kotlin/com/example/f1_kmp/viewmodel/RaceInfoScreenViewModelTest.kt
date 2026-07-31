@@ -49,11 +49,11 @@ class RaceInfoScreenViewModelTest {
         val viewModel = RaceInfoScreenViewModel("2026", "5", repository)
         advanceUntilIdle()
 
-        assertTrue(viewModel.race.value is AsyncValue.Value)
-        assertEquals("Monaco Grand Prix", (viewModel.race.value as AsyncValue.Value).value.raceName)
-        assertTrue(viewModel.qualifying.value is AsyncValue.Value)
-        assertTrue(viewModel.pitStops.value is AsyncValue.Value)
-        assertTrue(viewModel.sprint.value is AsyncValue.Value)
+        assertTrue(viewModel.uiState.value.race is AsyncValue.Value)
+        assertEquals("Monaco Grand Prix", (viewModel.uiState.value.race as AsyncValue.Value).value.raceName)
+        assertTrue(viewModel.uiState.value.qualifying is AsyncValue.Value)
+        assertTrue(viewModel.uiState.value.pitStops is AsyncValue.Value)
+        assertTrue(viewModel.uiState.value.sprint is AsyncValue.Value)
     }
 
     @Test
@@ -65,8 +65,8 @@ class RaceInfoScreenViewModelTest {
         val viewModel = RaceInfoScreenViewModel("2026", "5", repository)
         advanceUntilIdle()
 
-        assertTrue(viewModel.race.value is AsyncValue.Error)
-        assertNotNull(viewModel.error.value)
+        assertTrue(viewModel.uiState.value.race is AsyncValue.Error)
+        assertNotNull(viewModel.uiState.value.error)
     }
 
     @Test
@@ -76,8 +76,8 @@ class RaceInfoScreenViewModelTest {
         val viewModel = RaceInfoScreenViewModel("2026", "5", repository)
         advanceUntilIdle()
 
-        assertTrue(viewModel.race.value is AsyncValue.Error)
-        assertNotNull(viewModel.error.value)
+        assertTrue(viewModel.uiState.value.race is AsyncValue.Error)
+        assertNotNull(viewModel.uiState.value.error)
     }
 
     private fun sampleRace() = Race(

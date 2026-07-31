@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import com.example.f1_kmp.domain.model.Race
 import com.example.f1_kmp.ui.theme.AppStyles
 import com.example.f1_kmp.ui.theme.F1Red
-import com.example.f1_kmp.ui.theme.F1StrokeGray
+import com.example.f1_kmp.ui.theme.appColors
 import f1_kmp.composeapp.generated.resources.Res
 import f1_kmp.composeapp.generated.resources.races_load_error
 import f1_kmp.composeapp.generated.resources.seasons_load_error
@@ -152,7 +152,7 @@ fun RacePickerField(
                 Icon(
                     Icons.Default.ExpandMore,
                     contentDescription = null,
-                    tint = if (enabled) F1Red else F1StrokeGray,
+                    tint = if (enabled) F1Red else appColors().strokeGray,
                 )
             },
             modifier = Modifier.fillMaxWidth(),

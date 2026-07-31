@@ -46,8 +46,9 @@ data class StandingsListsModel(
 /** Строка турнирной таблицы пилотов. */
 @Serializable
 data class DriverStandingsModel(
-    val position: String,
-    val positionText: String,
+    // Jolpica иногда не отдаёт position (например Stroll после R1 2026 с positionText="-").
+    val position: String = "",
+    val positionText: String = "",
     val points: String,
     val wins: String,
     @SerialName("Driver") val driver: DriverModel,
@@ -57,8 +58,8 @@ data class DriverStandingsModel(
 /** Строка турнирной таблицы конструкторов. */
 @Serializable
 data class ConstructorStandingsModel(
-    val position: String,
-    val positionText: String,
+    val position: String = "",
+    val positionText: String = "",
     val points: String,
     val wins: String,
     @SerialName("Constructor") val constructor: ConstructorModel,

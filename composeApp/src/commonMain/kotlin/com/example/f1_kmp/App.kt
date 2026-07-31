@@ -1,6 +1,7 @@
 package com.example.f1_kmp
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.example.f1_kmp.domain.AppEnvironment
@@ -25,6 +26,11 @@ fun App() {
     val language by LocaleController.language.collectAsState()
     val forceUpdateGate = koinInject<ForceUpdateGate>()
     val forceUpdate by forceUpdateGate.required.collectAsState()
+
+    // Re-assert platform locale each frame — Activity attach can reset JVM default.
+    SideEffect {
+        LocaleController.reassertPlatformLocale()
+    }
 
     ProvideLocalizedContext(language) {
         AppEnvironment(locale = language) {

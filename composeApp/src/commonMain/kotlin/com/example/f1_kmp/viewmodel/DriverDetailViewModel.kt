@@ -17,6 +17,15 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+
+data class DriverDetailUiState(
+    val driver: AsyncValue<Driver> = AsyncValue.Loading,
+    val careerStats: AsyncValue<CareerStats<Constructor>> = AsyncValue.Loading,
+    val espnCard: EspnDriverCardData = EspnDriverCardData(),
+    val error: AppError? = null,
+    val isRefreshing: Boolean = false,
+)
 
 /**
  * ViewModel карточки пилота.
@@ -31,17 +40,8 @@ class DriverDetailViewModel(
 ) : ViewModel() {
     private val loadJob = LoadJobHolder()
 
-    private val _driver = MutableStateFlow<AsyncValue<Driver>>(AsyncValue.Loading)
-    val driver: StateFlow<AsyncValue<Driver>> = _driver.asStateFlow()
-
-    private val _careerStats = MutableStateFlow<AsyncValue<CareerStats<Constructor>>>(AsyncValue.Loading)
-    val careerStats: StateFlow<AsyncValue<CareerStats<Constructor>>> = _careerStats.asStateFlow()
-
-    private val _espnCard = MutableStateFlow(EspnDriverCardData())
-    val espnCard: StateFlow<EspnDriverCardData> = _espnCard.asStateFlow()
-
-    private val _error = MutableStateFlow<AppError?>(null)
-    val error: StateFlow<AppError?> = _error.asStateFlow()
+    private val _uiState = MutableStateFlow(DriverDetailUiState())
+    val uiState: StateFlow<DriverDetailUiState> = _uiState.asStateFlow()
 
     init {
         loadAllData()
@@ -50,25 +50,65 @@ class DriverDetailViewModel(
     /** Повторный вызов — retry с экрана ошибки. */
     fun loadAllData() {
         loadJob.launch(viewModelScope) {
-            _error.value = null
-            _driver.value = AsyncValue.Loading
-            _careerStats.value = AsyncValue.Loading
-            _espnCard.value = EspnDriverCardData()
+            loadInternal(softRefresh = false)
+        }
+    }
+
+    /** Pull-to-refresh: keep Values while reloading. */
+    fun refreshAll() {
+        loadJob.launch(viewModelScope) {
+            loadInternal(softRefresh = true)
+        }
+    }
+
+    private suspend fun loadInternal(softRefresh: Boolean) {
+        try {
+            if (softRefresh) {
+                _uiState.update {
+                    it.copy(
+                        isRefreshing = true,
+                        error = null,
+                        driver = if (it.driver is AsyncValue.Value) it.driver else AsyncValue.Loading,
+                        careerStats = if (it.careerStats is AsyncValue.Value) {
+                            it.careerStats
+                        } else {
+                            AsyncValue.Loading
+                        },
+                    )
+                }
+            } else {
+                _uiState.update {
+                    it.copy(
+                        error = null,
+                        driver = AsyncValue.Loading,
+                        careerStats = AsyncValue.Loading,
+                        espnCard = EspnDriverCardData(),
+                    )
+                }
+            }
 
             val currentConstructors = repository.currentConstructorsForDriver(driverId)
             val driverResult = repository.getDriver(driverId)
             driverResult.onFailure { e ->
-                val ex = e.toAppError()
-                _driver.value = AsyncValue.Error(ex.title, ex.subtitle)
-                _error.value = ex
-                return@launch
+                val err = e.toAppError()
+                if (_uiState.value.driver !is AsyncValue.Value) {
+                    _uiState.update {
+                        it.copy(
+                            driver = err.toAsyncError(),
+                            error = err,
+                        )
+                    }
+                }
+                return
             }
             val loadedDriver = driverResult.getOrNull()
             if (loadedDriver == null) {
-                _driver.value = AsyncValue.Error(ErrorStrings.driverNotFound)
-                return@launch
+                if (_uiState.value.driver !is AsyncValue.Value) {
+                    _uiState.update { it.copy(driver = AsyncValue.Error(ErrorStrings.driverNotFound)) }
+                }
+                return
             }
-            _driver.value = AsyncValue.Value(loadedDriver)
+            _uiState.update { it.copy(driver = AsyncValue.Value(loadedDriver)) }
 
             coroutineScope {
                 val careerDeferred = async {
@@ -79,15 +119,23 @@ class DriverDetailViewModel(
                 }
 
                 careerDeferred.await().applyUnlessCached(
-                    current = _careerStats.value,
-                    onSuccess = { _careerStats.value = AsyncValue.Value(it) },
-                    onFailure = { ex ->
-                        _careerStats.value = AsyncValue.Error(ex.title, ex.subtitle)
-                        _error.value = ex
+                    current = _uiState.value.careerStats,
+                    onSuccess = { stats ->
+                        _uiState.update { it.copy(careerStats = AsyncValue.Value(stats)) }
+                    },
+                    onFailure = { err ->
+                        _uiState.update {
+                            it.copy(
+                                careerStats = err.toAsyncError(),
+                                error = err,
+                            )
+                        }
                     },
                 )
-                _espnCard.value = espnDeferred.await()
+                _uiState.update { it.copy(espnCard = espnDeferred.await()) }
             }
+        } finally {
+            _uiState.update { it.copy(isRefreshing = false) }
         }
     }
 }

@@ -49,6 +49,7 @@ class H2hDriversViewModelTest {
         coEvery { repository.getSeasonYears() } returns Result.success(listOf("2026"))
         coEvery { repository.getDriverH2hStats("hamilton", null) } returns Result.success(statsA)
         coEvery { repository.getDriverH2hStats("russell", null) } returns Result.success(statsB)
+        coEvery { repository.getDriverH2hRoundScores(any(), any()) } returns Result.success(emptyList())
 
         val viewModel = H2hDriversViewModel(repository)
         advanceUntilIdle()

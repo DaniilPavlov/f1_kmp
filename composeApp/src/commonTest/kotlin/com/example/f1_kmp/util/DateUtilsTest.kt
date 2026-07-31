@@ -1,7 +1,10 @@
 package com.example.f1_kmp.util
 
+import kotlinx.datetime.number
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -50,8 +53,8 @@ class DateUtilsTest {
     fun toLocalDateTime_validTime_returnsLocalDateTime() {
         val result = DateUtils.toLocalDateTime("2026-05-10", "14:00:00Z")
         assertEquals(2026, result!!.year)
-        assertEquals(5, result.monthNumber)
-        assertEquals(10, result.dayOfMonth)
+        assertEquals(5, result.month.number)
+        assertEquals(10, result.day)
     }
 
     @Test
@@ -72,5 +75,22 @@ class DateUtilsTest {
     @Test
     fun yearMonth_atDay_createsLocalDate() {
         assertEquals(LocalDate(2026, 7, 17), YearMonth(2026, 7).atDay(17))
+    }
+
+    @Test
+    fun formatLongAndMedium_en() {
+        val date = LocalDate(2026, 3, 15)
+        assertTrue(DateUtils.formatLongDate(date, "en").contains("2026"))
+        val dt = LocalDateTime(2026, 3, 15, 14, 30)
+        assertTrue(DateUtils.formatMediumDate(dt, "en").isNotBlank())
+        assertTrue(DateUtils.formatMediumDateTime(dt, "en").contains("14"))
+        assertEquals(7, DateUtils.weekdayLabels("en").size)
+        assertEquals(7, DateUtils.weekdayLabels("ru").size)
+    }
+
+    @Test
+    fun parseUtcSession_blankTime_isMidnightUtc() {
+        val instant = DateUtils.parseUtcSession("2026-05-10", null)
+        assertEquals(2026, instant.toLocalDateTime(TimeZone.UTC).year)
     }
 }

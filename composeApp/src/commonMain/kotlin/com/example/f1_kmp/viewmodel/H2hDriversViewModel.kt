@@ -137,8 +137,18 @@ class H2hDriversViewModel(
                     _comparison.value = AsyncValue.Error(rightEx.title, rightEx.subtitle)
                     return@coroutineScope
                 }
+                val scoresA = repository.getDriverH2hRoundScores(a.driverId, season).getOrElse { emptyList() }
+                val scoresB = repository.getDriverH2hRoundScores(b.driverId, season).getOrElse { emptyList() }
+                val timeline = H2hPointsTimeline.fromScores(scoresA, scoresB, season)
                 _comparison.value = AsyncValue.Value(
-                    H2hDriverCompareResult(a, b, statsA.getOrThrow(), statsB.getOrThrow(), season),
+                    H2hDriverCompareResult(
+                        a,
+                        b,
+                        statsA.getOrThrow(),
+                        statsB.getOrThrow(),
+                        season,
+                        timeline,
+                    ),
                 )
             }
         }

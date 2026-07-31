@@ -20,6 +20,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.BrightnessAuto
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -41,29 +44,37 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.f1_kmp.data.analytics.AnalyticsEvent
+import com.example.f1_kmp.data.analytics.AnalyticsGateway
+import com.example.f1_kmp.domain.AppThemePreference
 import com.example.f1_kmp.domain.LocaleController
+import com.example.f1_kmp.domain.ThemeController
 import com.example.f1_kmp.ui.theme.AppDimens
 import com.example.f1_kmp.ui.theme.AppStyles
 import com.example.f1_kmp.ui.theme.F1Black
+import com.example.f1_kmp.ui.theme.F1Chrome
 import com.example.f1_kmp.ui.theme.F1GrayBg
-import com.example.f1_kmp.ui.theme.F1Pink
+import com.example.f1_kmp.ui.theme.F1OnChrome
 import com.example.f1_kmp.ui.theme.F1Red
+import com.example.f1_kmp.ui.theme.appColors
 import com.example.f1_kmp.util.onLocaleChanged
 import com.example.f1_kmp.ui.theme.F1StrokeGray
 import com.example.f1_kmp.ui.theme.F1White
 import f1_kmp.composeapp.generated.resources.Res
 import f1_kmp.composeapp.generated.resources.app_logo
+import f1_kmp.composeapp.generated.resources.back
 import f1_kmp.composeapp.generated.resources.error_car
 import f1_kmp.composeapp.generated.resources.locale_code_en
 import f1_kmp.composeapp.generated.resources.locale_code_ru
 import f1_kmp.composeapp.generated.resources.no_connection
 import f1_kmp.composeapp.generated.resources.no_connection_subtitle
 import f1_kmp.composeapp.generated.resources.refresh
-import f1_kmp.composeapp.generated.resources.refresh
 import androidx.compose.ui.text.style.TextOverflow
 import f1_kmp.composeapp.generated.resources.share
+import f1_kmp.composeapp.generated.resources.theme_toggle
 import org.jetbrains.compose.resources.painterResource
 import com.example.f1_kmp.domain.stringResource
+import org.koin.compose.koinInject
 
 /**
  * Верхняя панель приложения.
@@ -77,10 +88,12 @@ fun F1AppBar(
     onShare: (() -> Unit)? = null,
 ) {
     val language by LocaleController.language.collectAsState()
+    val themePreference by ThemeController.preference.collectAsState()
+    val analytics = koinInject<AnalyticsGateway>()
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(F1Black)
+            .background(F1Chrome)
             .statusBarsPadding()
             .padding(horizontal = AppDimens.horizontalPadding.dp)
             .padding(top = 8.dp, bottom = 14.dp)
@@ -98,8 +111,8 @@ fun F1AppBar(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = null,
-                    tint = F1White,
+                    contentDescription = stringResource(Res.string.back),
+                    tint = F1OnChrome,
                     modifier = Modifier.size(16.dp),
                 )
             }
@@ -107,7 +120,7 @@ fun F1AppBar(
         if (title != null) {
             Text(
                 text = title,
-                style = AppStyles.body.copy(color = F1White),
+                style = AppStyles.body.copy(color = F1OnChrome),
                 modifier = Modifier.align(Alignment.Center),
             )
             if (onShare != null) {
@@ -123,7 +136,7 @@ fun F1AppBar(
                     Icon(
                         imageVector = Icons.Filled.Share,
                         contentDescription = stringResource(Res.string.share),
-                        tint = F1White,
+                        tint = F1OnChrome,
                         modifier = Modifier.size(16.dp),
                     )
                 }
@@ -137,20 +150,51 @@ fun F1AppBar(
                     .align(Alignment.Center),
                 contentScale = ContentScale.Fit,
             )
-            Text(
-                text = stringResource(
-                    if (language == "en") Res.string.locale_code_en else Res.string.locale_code_ru,
-                ),
-                style = AppStyles.body.copy(color = F1White),
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .clip(CircleShape)
-                    .clickable {
-                        LocaleController.toggle()
-                        onLocaleChanged()
-                    }
-                    .padding(8.dp),
-            )
+            Row(
+                modifier = Modifier.align(Alignment.CenterEnd),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Icon(
+                    imageVector = when (themePreference) {
+                        AppThemePreference.System -> Icons.Filled.BrightnessAuto
+                        AppThemePreference.Light -> Icons.Filled.LightMode
+                        AppThemePreference.Dark -> Icons.Filled.DarkMode
+                    },
+                    contentDescription = stringResource(Res.string.theme_toggle),
+                    tint = F1OnChrome,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .clickable {
+                            val next = ThemeController.cycle()
+                            analytics.log(
+                                AnalyticsEvent.ThemeChanged(
+                                    when (next) {
+                                        AppThemePreference.System -> "system"
+                                        AppThemePreference.Light -> "light"
+                                        AppThemePreference.Dark -> "dark"
+                                    },
+                                ),
+                            )
+                        }
+                        .padding(6.dp),
+                )
+                Text(
+                    text = stringResource(
+                        if (language == "en") Res.string.locale_code_en else Res.string.locale_code_ru,
+                    ),
+                    style = AppStyles.body.copy(color = F1OnChrome),
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .clickable {
+                            val next = LocaleController.toggle()
+                            onLocaleChanged()
+                            analytics.log(AnalyticsEvent.LocaleChanged(next))
+                        }
+                        .padding(8.dp),
+                )
+            }
         }
     }
 }
@@ -256,6 +300,7 @@ fun CustomSwitcher(
 
 @Composable
 private fun RowScope.SwitcherTab(title: String, active: Boolean, onClick: () -> Unit) {
+    val colors = appColors()
     Column(
         modifier = Modifier
             .weight(1f)
@@ -264,7 +309,7 @@ private fun RowScope.SwitcherTab(title: String, active: Boolean, onClick: () -> 
     ) {
         Text(
             text = title,
-            style = AppStyles.h3.copy(color = if (active) F1Red else F1Pink),
+            style = AppStyles.h3.copy(color = if (active) F1Red else colors.pink),
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(15.dp))
@@ -272,7 +317,7 @@ private fun RowScope.SwitcherTab(title: String, active: Boolean, onClick: () -> 
             modifier = Modifier
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(if (active) F1Red else F1Pink),
+                .background(if (active) F1Red else colors.pink),
         )
     }
 }

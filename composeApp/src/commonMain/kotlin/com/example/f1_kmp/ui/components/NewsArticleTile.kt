@@ -27,13 +27,14 @@ import com.example.f1_kmp.domain.LocaleController
 import com.example.f1_kmp.ui.theme.AppStyles
 import com.example.f1_kmp.ui.theme.F1GrayBg
 import com.example.f1_kmp.ui.theme.F1Red
-import com.example.f1_kmp.ui.theme.F1TextGray
+import com.example.f1_kmp.ui.theme.appColors
 import com.example.f1_kmp.util.DateUtils
 import com.example.f1_kmp.util.TrustedUrl
 import com.example.f1_kmp.util.openUrl
 
 @Composable
 fun NewsArticleTile(article: NewsArticle) {
+    val colors = appColors()
     val language by LocaleController.language.collectAsState()
     val published = article.published?.let { DateUtils.formatMediumDate(it, language) }
     val hasMeta = !article.byline.isNullOrEmpty() || published != null
@@ -77,13 +78,13 @@ fun NewsArticleTile(article: NewsArticle) {
             ) {
                 Text(
                     text = article.byline.orEmpty(),
-                    style = AppStyles.caption.copy(color = F1TextGray),
+                    style = AppStyles.caption.copy(color = colors.textGray),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
                 if (published != null) {
-                    Text(published, style = AppStyles.caption.copy(color = F1TextGray))
+                    Text(published, style = AppStyles.caption.copy(color = colors.textGray))
                 }
             }
         } else {

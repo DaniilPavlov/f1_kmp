@@ -17,6 +17,15 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+
+data class ConstructorDetailUiState(
+    val constructor: AsyncValue<Constructor> = AsyncValue.Loading,
+    val careerStats: AsyncValue<CareerStats<Driver>> = AsyncValue.Loading,
+    val news: List<NewsArticle> = emptyList(),
+    val error: AppError? = null,
+    val isRefreshing: Boolean = false,
+)
 
 /**
  * ViewModel карточки конструктора.
@@ -31,17 +40,8 @@ class ConstructorDetailViewModel(
 ) : ViewModel() {
     private val loadJob = LoadJobHolder()
 
-    private val _constructor = MutableStateFlow<AsyncValue<Constructor>>(AsyncValue.Loading)
-    val constructor: StateFlow<AsyncValue<Constructor>> = _constructor.asStateFlow()
-
-    private val _careerStats = MutableStateFlow<AsyncValue<CareerStats<Driver>>>(AsyncValue.Loading)
-    val careerStats: StateFlow<AsyncValue<CareerStats<Driver>>> = _careerStats.asStateFlow()
-
-    private val _news = MutableStateFlow<List<NewsArticle>>(emptyList())
-    val news: StateFlow<List<NewsArticle>> = _news.asStateFlow()
-
-    private val _error = MutableStateFlow<AppError?>(null)
-    val error: StateFlow<AppError?> = _error.asStateFlow()
+    private val _uiState = MutableStateFlow(ConstructorDetailUiState())
+    val uiState: StateFlow<ConstructorDetailUiState> = _uiState.asStateFlow()
 
     init {
         loadAllData()
@@ -50,25 +50,71 @@ class ConstructorDetailViewModel(
     /** Повторный вызов — retry с экрана ошибки. */
     fun loadAllData() {
         loadJob.launch(viewModelScope) {
-            _error.value = null
-            _constructor.value = AsyncValue.Loading
-            _careerStats.value = AsyncValue.Loading
-            _news.value = emptyList()
+            loadInternal(softRefresh = false)
+        }
+    }
+
+    /** Pull-to-refresh: keep Values while reloading. */
+    fun refreshAll() {
+        loadJob.launch(viewModelScope) {
+            loadInternal(softRefresh = true)
+        }
+    }
+
+    private suspend fun loadInternal(softRefresh: Boolean) {
+        try {
+            if (softRefresh) {
+                _uiState.update {
+                    it.copy(
+                        isRefreshing = true,
+                        error = null,
+                        constructor = if (it.constructor is AsyncValue.Value) {
+                            it.constructor
+                        } else {
+                            AsyncValue.Loading
+                        },
+                        careerStats = if (it.careerStats is AsyncValue.Value) {
+                            it.careerStats
+                        } else {
+                            AsyncValue.Loading
+                        },
+                    )
+                }
+            } else {
+                _uiState.update {
+                    it.copy(
+                        error = null,
+                        constructor = AsyncValue.Loading,
+                        careerStats = AsyncValue.Loading,
+                        news = emptyList(),
+                    )
+                }
+            }
 
             val currentDrivers = repository.currentDriversForConstructor(constructorId)
             val constructorResult = repository.getConstructor(constructorId)
             constructorResult.onFailure { e ->
-                val ex = e.toAppError()
-                _constructor.value = AsyncValue.Error(ex.title, ex.subtitle)
-                _error.value = ex
-                return@launch
+                val err = e.toAppError()
+                if (_uiState.value.constructor !is AsyncValue.Value) {
+                    _uiState.update {
+                        it.copy(
+                            constructor = err.toAsyncError(),
+                            error = err,
+                        )
+                    }
+                }
+                return
             }
             val loaded = constructorResult.getOrNull()
             if (loaded == null) {
-                _constructor.value = AsyncValue.Error(ErrorStrings.constructorNotFound)
-                return@launch
+                if (_uiState.value.constructor !is AsyncValue.Value) {
+                    _uiState.update {
+                        it.copy(constructor = AsyncValue.Error(ErrorStrings.constructorNotFound))
+                    }
+                }
+                return
             }
-            _constructor.value = AsyncValue.Value(loaded)
+            _uiState.update { it.copy(constructor = AsyncValue.Value(loaded)) }
 
             coroutineScope {
                 val careerDeferred = async {
@@ -79,15 +125,23 @@ class ConstructorDetailViewModel(
                 }
 
                 careerDeferred.await().applyUnlessCached(
-                    current = _careerStats.value,
-                    onSuccess = { _careerStats.value = AsyncValue.Value(it) },
-                    onFailure = { ex ->
-                        _careerStats.value = AsyncValue.Error(ex.title, ex.subtitle)
-                        _error.value = ex
+                    current = _uiState.value.careerStats,
+                    onSuccess = { stats ->
+                        _uiState.update { it.copy(careerStats = AsyncValue.Value(stats)) }
+                    },
+                    onFailure = { err ->
+                        _uiState.update {
+                            it.copy(
+                                careerStats = err.toAsyncError(),
+                                error = err,
+                            )
+                        }
                     },
                 )
-                _news.value = newsDeferred.await()
+                _uiState.update { it.copy(news = newsDeferred.await()) }
             }
+        } finally {
+            _uiState.update { it.copy(isRefreshing = false) }
         }
     }
 }

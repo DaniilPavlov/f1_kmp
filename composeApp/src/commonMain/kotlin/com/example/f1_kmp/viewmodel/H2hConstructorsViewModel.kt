@@ -142,8 +142,20 @@ class H2hConstructorsViewModel(
                     _comparison.value = AsyncValue.Error(rightEx.title, rightEx.subtitle)
                     return@coroutineScope
                 }
+                val scoresA =
+                    repository.getConstructorH2hRoundScores(a.constructorId, season).getOrElse { emptyList() }
+                val scoresB =
+                    repository.getConstructorH2hRoundScores(b.constructorId, season).getOrElse { emptyList() }
+                val timeline = H2hPointsTimeline.fromScores(scoresA, scoresB, season)
                 _comparison.value = AsyncValue.Value(
-                    H2hConstructorCompareResult(a, b, statsA.getOrThrow(), statsB.getOrThrow(), season),
+                    H2hConstructorCompareResult(
+                        a,
+                        b,
+                        statsA.getOrThrow(),
+                        statsB.getOrThrow(),
+                        season,
+                        timeline,
+                    ),
                 )
             }
         }
