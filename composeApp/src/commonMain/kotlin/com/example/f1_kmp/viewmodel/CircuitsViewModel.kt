@@ -6,6 +6,9 @@ import com.example.f1_kmp.domain.model.Circuit
 import com.example.f1_kmp.data.repository.IF1Repository
 import com.example.f1_kmp.domain.AppDataRefresh
 import com.example.f1_kmp.domain.AsyncValue
+import com.example.f1_kmp.domain.NetworkReachability
+import com.example.f1_kmp.domain.clearOfflineBannerIfOnline
+import com.example.f1_kmp.domain.shouldShowOfflineCachedBanner
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,6 +18,7 @@ data class CircuitsUiState(
     val circuits: AsyncValue<List<Circuit>> = AsyncValue.Loading,
     val activePage: Int = 0,
     val isRefreshing: Boolean = false,
+    val showingCachedData: Boolean = false,
 )
 
 /**
@@ -26,6 +30,7 @@ data class CircuitsUiState(
 class CircuitsViewModel(
     private val repository: IF1Repository,
     private val appDataRefresh: AppDataRefresh,
+    private val networkReachability: NetworkReachability,
 ) : ViewModel() {
     private val loadJob = LoadJobHolder()
 
@@ -52,6 +57,17 @@ class CircuitsViewModel(
     fun refreshAll() {
         loadJob.launch(viewModelScope) {
             loadInternal(clearCaches = true)
+        }
+    }
+
+    fun dismissOfflineBannerIfOnline() {
+        _uiState.update {
+            it.copy(
+                showingCachedData = clearOfflineBannerIfOnline(
+                    currentlyShowing = it.showingCachedData,
+                    reachability = networkReachability,
+                ),
+            )
         }
     }
 
@@ -83,7 +99,15 @@ class CircuitsViewModel(
                 },
             )
         } finally {
-            _uiState.update { it.copy(isRefreshing = false) }
+            _uiState.update {
+                it.copy(
+                    isRefreshing = false,
+                    showingCachedData = shouldShowOfflineCachedBanner(
+                        hasCachedContent = it.circuits is AsyncValue.Value,
+                        reachability = networkReachability,
+                    ),
+                )
+            }
         }
     }
 }

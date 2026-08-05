@@ -5,6 +5,7 @@ import com.example.f1_kmp.domain.AppDataRefresh
 import com.example.f1_kmp.domain.AsyncValue
 import com.example.f1_kmp.domain.model.Circuit
 import com.example.f1_kmp.domain.model.CircuitLocation
+import com.example.f1_kmp.onlineReachability
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -47,7 +48,7 @@ class CircuitsViewModelTest {
         coEvery { repository.peekCircuitsCache() } returns null
         coEvery { repository.getCircuits() } returns Result.success(circuits)
 
-        val vm = CircuitsViewModel(repository, refresh)
+        val vm = CircuitsViewModel(repository, refresh, onlineReachability())
         advanceUntilIdle()
 
         assertTrue(vm.uiState.value.circuits is AsyncValue.Value)

@@ -69,11 +69,12 @@ data class ConstructorStandingsModel(
 @Serializable
 data class DriverModel(
     val driverId: String,
-    val url: String,
     val givenName: String,
     val familyName: String,
-    val dateOfBirth: String,
-    val nationality: String,
+    /** Jolpica иногда отдаёт резервных пилотов без url/DoB/nationality. */
+    val url: String = "",
+    val dateOfBirth: String = "",
+    val nationality: String = "",
     val code: String? = null,
     val permanentNumber: String? = null,
 ) {

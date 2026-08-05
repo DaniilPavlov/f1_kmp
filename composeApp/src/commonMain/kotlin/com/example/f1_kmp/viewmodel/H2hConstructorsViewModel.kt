@@ -155,6 +155,8 @@ class H2hConstructorsViewModel(
                         statsB.getOrThrow(),
                         season,
                         timeline,
+                        constructorIdA = a.constructorId,
+                        constructorIdB = b.constructorId,
                     ),
                 )
             }

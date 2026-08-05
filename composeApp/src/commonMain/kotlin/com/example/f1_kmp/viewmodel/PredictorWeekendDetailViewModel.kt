@@ -1,0 +1,125 @@
+package com.example.f1_kmp.viewmodel
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.f1_kmp.data.repository.IF1Repository
+import com.example.f1_kmp.data.repository.IPredictorRepository
+import com.example.f1_kmp.domain.AppError
+import com.example.f1_kmp.domain.model.Driver
+import com.example.f1_kmp.domain.predictor.PredictorGridKind
+import com.example.f1_kmp.domain.predictor.PredictorScoreService
+import com.example.f1_kmp.domain.predictor.PredictorSessionCompare
+import com.example.f1_kmp.domain.predictor.PredictorWeekendPrediction
+import com.example.f1_kmp.domain.toAppError
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+
+/** Детальный уикенд: предикт vs факт + очки сессий. */
+data class PredictorWeekendDetailUiState(
+    val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
+    val error: AppError? = null,
+    val weekend: PredictorWeekendPrediction? = null,
+    val driversById: Map<String, Driver> = emptyMap(),
+    val selectedSession: PredictorGridKind = PredictorGridKind.Qualifying,
+    val qualifyingCompare: PredictorSessionCompare? = null,
+    val raceCompare: PredictorSessionCompare? = null,
+)
+
+/** Detail уикенда: сравнение predicted/actual и досчёт очков при необходимости. */
+class PredictorWeekendDetailViewModel(
+    val season: String,
+    val round: String,
+    val raceName: String,
+    private val f1Repository: IF1Repository,
+    private val predictorRepository: IPredictorRepository,
+) : ViewModel() {
+
+    private val loadJob = LoadJobHolder()
+    private val _uiState = MutableStateFlow(PredictorWeekendDetailUiState())
+    val uiState: StateFlow<PredictorWeekendDetailUiState> = _uiState.asStateFlow()
+
+    init {
+        load()
+    }
+
+    fun load() {
+        loadJob.launch(viewModelScope) { loadInternal(clearCaches = false) }
+    }
+
+    fun refreshAll() {
+        loadJob.launch(viewModelScope) { loadInternal(clearCaches = true) }
+    }
+
+    fun selectSession(kind: PredictorGridKind) {
+        _uiState.update { it.copy(selectedSession = kind) }
+    }
+
+    fun activeCompare(state: PredictorWeekendDetailUiState = _uiState.value): PredictorSessionCompare? =
+        if (state.selectedSession == PredictorGridKind.Qualifying) {
+            state.qualifyingCompare
+        } else {
+            state.raceCompare
+        }
+
+    private suspend fun loadInternal(clearCaches: Boolean) {
+        _uiState.update {
+            it.copy(
+                isLoading = !clearCaches && it.weekend == null,
+                isRefreshing = clearCaches || it.weekend != null,
+                error = null,
+            )
+        }
+        try {
+            val store = predictorRepository.load()
+            val weekend = store.weekend(season, round)
+                ?: PredictorWeekendPrediction(round = round, raceName = raceName)
+
+            val drivers = f1Repository.getCurrentDrivers().getOrNull().orEmpty()
+                .associateBy { it.driverId }
+
+            var qualiActual = weekend.actualQualifyingOrder
+            var raceActual = weekend.actualRaceOrder
+
+            if (qualiActual == null) {
+                f1Repository.getQualifyingResults(season, round).getOrNull()?.let {
+                    qualiActual = PredictorScoreService.qualifyingActualOrder(it)
+                }
+            }
+            if (raceActual == null) {
+                f1Repository.getRaceResults(season, round).getOrNull()?.results?.let {
+                    raceActual = PredictorScoreService.raceActualOrder(it)
+                }
+            }
+
+            val qualiCompare = if (weekend.qualifyingOrder.isNotEmpty() || !qualiActual.isNullOrEmpty()) {
+                PredictorSessionCompare.fromOrders(weekend.qualifyingOrder, qualiActual.orEmpty())
+            } else {
+                null
+            }
+            val raceCompare = if (weekend.raceOrder.isNotEmpty() || !raceActual.isNullOrEmpty()) {
+                PredictorSessionCompare.fromOrders(weekend.raceOrder, raceActual.orEmpty())
+            } else {
+                null
+            }
+
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    isRefreshing = false,
+                    weekend = weekend,
+                    driversById = drivers,
+                    qualifyingCompare = qualiCompare,
+                    raceCompare = raceCompare,
+                    error = null,
+                )
+            }
+        } catch (e: Exception) {
+            _uiState.update {
+                it.copy(isLoading = false, isRefreshing = false, error = e.toAppError())
+            }
+        }
+    }
+}

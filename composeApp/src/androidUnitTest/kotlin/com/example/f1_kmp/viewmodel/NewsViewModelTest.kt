@@ -22,7 +22,7 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Unit-тесты [NewsViewModel] — вкладка «Новости» (ESPN).
+ * Unit-тесты [NewsViewModel] — headlines на Home (ESPN).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class NewsViewModelTest {
@@ -50,12 +50,13 @@ class NewsViewModelTest {
         val viewModel = NewsViewModel(espnRepository, mockk(relaxed = true))
         advanceUntilIdle()
 
-        assertTrue(viewModel.articles.value is AsyncValue.Value)
-        assertEquals("Test Headline", (viewModel.articles.value as AsyncValue.Value).value.first().headline)
+        val articles = viewModel.uiState.value.articles
+        assertTrue(articles is AsyncValue.Value)
+        assertEquals("Test Headline", (articles as AsyncValue.Value).value.first().headline)
         coVerify(exactly = 0) { espnRepository.getNews(any()) }
     }
 
-    /** Нет кэша → [getNews] успешно заполняет [NewsViewModel.articles]. */
+    /** Нет кэша → [getNews] успешно заполняет articles. */
     @Test
     fun loadArticles_networkSuccess_setsArticles() = runTest {
         val articles = listOf(sampleArticle(id = 2, headline = "Network Headline"))
@@ -65,8 +66,9 @@ class NewsViewModelTest {
         val viewModel = NewsViewModel(espnRepository, mockk(relaxed = true))
         advanceUntilIdle()
 
-        assertTrue(viewModel.articles.value is AsyncValue.Value)
-        assertEquals("Network Headline", (viewModel.articles.value as AsyncValue.Value).value.first().headline)
+        val stateArticles = viewModel.uiState.value.articles
+        assertTrue(stateArticles is AsyncValue.Value)
+        assertEquals("Network Headline", (stateArticles as AsyncValue.Value).value.first().headline)
     }
 
     /** Pull-to-refresh → [getNews] с forceRefresh и обновлённый список. */
@@ -84,9 +86,10 @@ class NewsViewModelTest {
         viewModel.refreshAll()
         advanceUntilIdle()
 
-        assertTrue(viewModel.articles.value is AsyncValue.Value)
-        assertEquals("Refreshed", (viewModel.articles.value as AsyncValue.Value).value.first().headline)
-        assertFalse(viewModel.isRefreshing.value)
+        val state = viewModel.uiState.value
+        assertTrue(state.articles is AsyncValue.Value)
+        assertEquals("Refreshed", (state.articles as AsyncValue.Value).value.first().headline)
+        assertFalse(state.isRefreshing)
         coVerify { espnRepository.getNews(forceRefresh = true) }
     }
 

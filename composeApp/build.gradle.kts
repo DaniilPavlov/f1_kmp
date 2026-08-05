@@ -99,6 +99,9 @@ kotlin {
 
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
+
+            implementation(libs.gitlive.firebase.auth)
+            implementation(libs.gitlive.firebase.firestore)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -128,8 +131,8 @@ android {
         applicationId = "com.example.f1_kmp"
         minSdk = 30
         targetSdk = 37
-        versionCode = 202607300
-        versionName = "1.7.0"
+        versionCode = 202608050
+        versionName = "2.0.0"
         // Не тянуть чужие values-en как «системный английский» вместо нашего дефолта ru.
         resourceConfigurations += listOf("ru", "en")
         // Empty until set in local.properties / CI — bootstrap skips AppMetrica.
@@ -228,6 +231,28 @@ kover {
                     "com.example.f1_kmp.util.Platform*",
                     "com.example.f1_kmp.domain.ThemePreferences*",
                     "com.example.f1_kmp.domain.LocalePreferences*",
+                    // Firebase Auth/Firestore — same exclusions as f1_kotlin (needs live SDK).
+                    "com.example.f1_kmp.data.repository.IF1Repository*",
+                    "com.example.f1_kmp.data.repository.IEspnRepository*",
+                    "com.example.f1_kmp.data.repository.IPredictorRepository*",
+                    "com.example.f1_kmp.data.repository.IPredictorLeaderboardRepository*",
+                    "com.example.f1_kmp.data.repository.PredictorRepository*",
+                    "com.example.f1_kmp.data.repository.PredictorLeaderboardRepository*",
+                    "com.example.f1_kmp.data.repository.AuthRepository*",
+                    "com.example.f1_kmp.data.repository.IAuthRepository*",
+                    "com.example.f1_kmp.viewmodel.PredictorViewModel*",
+                    "com.example.f1_kmp.viewmodel.PredictorWeekendDetailViewModel*",
+                    "com.example.f1_kmp.viewmodel.PredictorLeaderboardViewModel*",
+                    "com.example.f1_kmp.viewmodel.PredictorSeasonHistoryViewModel*",
+                    "com.example.f1_kmp.viewmodel.PredictorUiState*",
+                    "com.example.f1_kmp.viewmodel.PredictorLeaderboardUiState*",
+                    "com.example.f1_kmp.viewmodel.PredictorSeasonHistoryUiState*",
+                    "com.example.f1_kmp.viewmodel.PredictorWeekendDetailUiState*",
+                    "com.example.f1_kmp.viewmodel.HallOfFameViewModel*",
+                    "com.example.f1_kmp.domain.predictor.PredictorScoringCoordinator*",
+                    // Compose Res mapping / platform reachability — covered via string-key helpers + banner tests.
+                    "com.example.f1_kmp.domain.auth.AuthErrorL10nKt",
+                    "com.example.f1_kmp.domain.NetworkReachability*",
                 )
                 annotatedBy(
                     "androidx.compose.runtime.Composable",
@@ -254,13 +279,15 @@ kover {
                     "com.example.f1_kmp.data.model.*",
                     "com.example.f1_kmp.data.api",
                     "com.example.f1_kmp.data.api.*",
+                    "com.example.f1_kmp.data.local",
+                    "com.example.f1_kmp.data.local.*",
                 )
             }
         }
-        // Business-logic gate.
+        // Business-logic gate (domain / VMs with unit tests).
         verify {
             rule {
-                minBound(75)
+                minBound(80)
             }
         }
     }

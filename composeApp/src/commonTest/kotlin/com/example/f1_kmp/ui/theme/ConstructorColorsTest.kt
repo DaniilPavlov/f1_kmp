@@ -9,7 +9,7 @@ class ConstructorColorsTest {
     @Test
     fun forConstructorId_knownTeams_returnExpectedColors() {
         assertEquals(Color(0xFFFF8700), ConstructorColors.forConstructorId("mclaren"))
-        assertEquals(Color(0xFF8B0000), ConstructorColors.forConstructorId("Ferrari"))
+        assertEquals(Color(0xFFA51010), ConstructorColors.forConstructorId("Ferrari"))
         assertEquals(Color(0xFF006F62), ConstructorColors.forConstructorId("mercedes"))
     }
 

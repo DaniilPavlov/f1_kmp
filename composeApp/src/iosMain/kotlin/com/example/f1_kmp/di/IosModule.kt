@@ -13,5 +13,5 @@ val iosModule = module {
     single<AnalyticsGateway> { AppAnalyticsGateway() }
     single<IRemoteConfigService> { RemoteConfigService() }
     single { ForceUpdateGate(get()) }
-    single { RaceReminderScheduler(get(), get()) }
+    single { RaceReminderScheduler(get(), get(), get()) }
 }

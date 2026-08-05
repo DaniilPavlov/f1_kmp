@@ -1,6 +1,7 @@
 package com.example.f1_kmp.viewmodel
 
 import com.example.f1_kmp.domain.model.Driver
+import com.example.f1_kmp.domain.model.Constructor
 import com.example.f1_kmp.data.model.H2hStats
 import com.example.f1_kmp.data.repository.IF1Repository
 import com.example.f1_kmp.domain.AsyncValue
@@ -50,6 +51,10 @@ class H2hDriversViewModelTest {
         coEvery { repository.getDriverH2hStats("hamilton", null) } returns Result.success(statsA)
         coEvery { repository.getDriverH2hStats("russell", null) } returns Result.success(statsB)
         coEvery { repository.getDriverH2hRoundScores(any(), any()) } returns Result.success(emptyList())
+        coEvery { repository.currentConstructorsForDriver("hamilton") } returns
+            listOf(Constructor("mercedes", "", "Mercedes", "German"))
+        coEvery { repository.currentConstructorsForDriver("russell") } returns
+            listOf(Constructor("mercedes", "", "Mercedes", "German"))
 
         val viewModel = H2hDriversViewModel(repository)
         advanceUntilIdle()
@@ -66,5 +71,7 @@ class H2hDriversViewModelTest {
         assertEquals("russell", result?.driverB?.driverId)
         assertEquals(50, result?.statsA?.wins)
         assertEquals(5, result?.statsB?.wins)
+        assertEquals("mercedes", result?.constructorIdA)
+        assertEquals("mercedes", result?.constructorIdB)
     }
 }

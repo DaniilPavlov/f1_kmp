@@ -20,19 +20,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.BrightnessAuto
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
@@ -44,37 +41,27 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.f1_kmp.data.analytics.AnalyticsEvent
-import com.example.f1_kmp.data.analytics.AnalyticsGateway
-import com.example.f1_kmp.domain.AppThemePreference
-import com.example.f1_kmp.domain.LocaleController
-import com.example.f1_kmp.domain.ThemeController
 import com.example.f1_kmp.ui.theme.AppDimens
 import com.example.f1_kmp.ui.theme.AppStyles
+import com.example.f1_kmp.ui.theme.ConstructorColors
 import com.example.f1_kmp.ui.theme.F1Black
 import com.example.f1_kmp.ui.theme.F1Chrome
-import com.example.f1_kmp.ui.theme.F1GrayBg
 import com.example.f1_kmp.ui.theme.F1OnChrome
 import com.example.f1_kmp.ui.theme.F1Red
 import com.example.f1_kmp.ui.theme.appColors
-import com.example.f1_kmp.util.onLocaleChanged
 import com.example.f1_kmp.ui.theme.F1StrokeGray
 import com.example.f1_kmp.ui.theme.F1White
 import f1_kmp.composeapp.generated.resources.Res
 import f1_kmp.composeapp.generated.resources.app_logo
 import f1_kmp.composeapp.generated.resources.back
 import f1_kmp.composeapp.generated.resources.error_car
-import f1_kmp.composeapp.generated.resources.locale_code_en
-import f1_kmp.composeapp.generated.resources.locale_code_ru
 import f1_kmp.composeapp.generated.resources.no_connection
 import f1_kmp.composeapp.generated.resources.no_connection_subtitle
 import f1_kmp.composeapp.generated.resources.refresh
 import androidx.compose.ui.text.style.TextOverflow
 import f1_kmp.composeapp.generated.resources.share
-import f1_kmp.composeapp.generated.resources.theme_toggle
 import org.jetbrains.compose.resources.painterResource
 import com.example.f1_kmp.domain.stringResource
-import org.koin.compose.koinInject
 
 /**
  * Верхняя панель приложения.
@@ -87,9 +74,6 @@ fun F1AppBar(
     onBack: (() -> Unit)? = null,
     onShare: (() -> Unit)? = null,
 ) {
-    val language by LocaleController.language.collectAsState()
-    val themePreference by ThemeController.preference.collectAsState()
-    val analytics = koinInject<AnalyticsGateway>()
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -150,51 +134,6 @@ fun F1AppBar(
                     .align(Alignment.Center),
                 contentScale = ContentScale.Fit,
             )
-            Row(
-                modifier = Modifier.align(Alignment.CenterEnd),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Icon(
-                    imageVector = when (themePreference) {
-                        AppThemePreference.System -> Icons.Filled.BrightnessAuto
-                        AppThemePreference.Light -> Icons.Filled.LightMode
-                        AppThemePreference.Dark -> Icons.Filled.DarkMode
-                    },
-                    contentDescription = stringResource(Res.string.theme_toggle),
-                    tint = F1OnChrome,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .clickable {
-                            val next = ThemeController.cycle()
-                            analytics.log(
-                                AnalyticsEvent.ThemeChanged(
-                                    when (next) {
-                                        AppThemePreference.System -> "system"
-                                        AppThemePreference.Light -> "light"
-                                        AppThemePreference.Dark -> "dark"
-                                    },
-                                ),
-                            )
-                        }
-                        .padding(6.dp),
-                )
-                Text(
-                    text = stringResource(
-                        if (language == "en") Res.string.locale_code_en else Res.string.locale_code_ru,
-                    ),
-                    style = AppStyles.body.copy(color = F1OnChrome),
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .clickable {
-                            val next = LocaleController.toggle()
-                            onLocaleChanged()
-                            analytics.log(AnalyticsEvent.LocaleChanged(next))
-                        }
-                        .padding(8.dp),
-                )
-            }
         }
     }
 }
@@ -390,6 +329,7 @@ sealed interface TableCell {
 /**
  * Строка данных таблицы с зеброй.
  * [weights] — относительные ширины; `null` — равные колонки.
+ * [constructorId] — опциональный акцент 3dp слева цветом команды.
  */
 @Composable
 fun TableDataRow(
@@ -397,12 +337,24 @@ fun TableDataRow(
     index: Int,
     modifier: Modifier = Modifier,
     weights: List<Float>? = null,
+    constructorId: String? = null,
     onClick: (() -> Unit)? = null,
 ) {
+    val colors = appColors()
+    val accent = constructorId?.takeIf { it.isNotBlank() }?.let(ConstructorColors::forConstructorId)
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(if (index % 2 == 1) F1GrayBg else Color.Transparent)
+            .background(if (index % 2 == 1) colors.grayBg else Color.Transparent)
+            .drawBehind {
+                if (accent != null) {
+                    drawRect(
+                        color = accent,
+                        topLeft = Offset.Zero,
+                        size = Size(3.dp.toPx(), size.height),
+                    )
+                }
+            }
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -477,6 +429,7 @@ fun TableDataRow(
     highlight: Boolean = false,
     flagCellIndices: Set<Int> = emptySet(),
     weights: List<Float>? = null,
+    constructorId: String? = null,
     onClick: (() -> Unit)? = null,
 ) {
     TableDataRow(
@@ -490,6 +443,7 @@ fun TableDataRow(
         index = index,
         modifier = modifier,
         weights = weights,
+        constructorId = constructorId,
         onClick = onClick,
     )
 }

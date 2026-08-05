@@ -21,7 +21,7 @@ Same idea, other stacks:
 | Domain | Plain Jolpica models; `AppError` / `toAppError()`; `ApiCallHandler`; `AppDataRefresh` |
 | DI | Koin; `IF1Repository` / `IEspnRepository` |
 | Network | Ktor + kotlinx.serialization DTOs; mappers DTO → domain (`JolpicaMappers`) |
-| Backend | Firebase (Analytics, Crashlytics, Remote Config), AppMetrica |
+| Backend | Firebase (Analytics, Crashlytics, Remote Config, Auth, Firestore), AppMetrica |
 | Images | Coil 3 |
 | Cache | JSON files (offline peek → refresh); ESPN in-memory TTL; `AppDataRefresh.clearAll` |
 | Time | kotlinx-datetime |
@@ -47,9 +47,9 @@ Same idea, other stacks:
 - **ViewModels** — one file per screen under `viewmodel/` (no giant shared files).
 - **Refresh** — `AppDataRefresh.clearAll()` (Facade) resets ESPN TTL + file cache; `refreshAll()` on main screens calls it before reload (ErrorBody / pull-to-refresh).
 - **Patterns (GoF)** — Factory (`HttpClient`), Facade (`AppDataRefresh`), Template Method (`ApiCallHandler`), Proxy (peek cache), Adapter (ESPN/`JolpicaMappers`/`IRemoteConfigService`), State (`AsyncValue`), Command (`ErrorBody`), Bridge (map expect/actual), Singleton (`LocaleController` / Firebase·AppMetrica bootstrap / `ForceUpdateGate`).
-- **Firebase** — project `f1-kmp`; Android `composeApp/google-services.json` (gitignored); iOS `GoogleService-Info.plist` (gitignored) + SPM. Analytics/Crashlytics off in debug.
+- **Firebase** — separate project `f1-kmp` (not shared with f1_kotlin); Android `composeApp/google-services.json` (gitignored); iOS `GoogleService-Info.plist` (gitignored) + SPM. Analytics/Crashlytics off in debug. Auth + Firestore for Profile/Predictor — see [docs/firebase_setup.md](docs/firebase_setup.md).
 - **AppMetrica** — Android `local.properties` (`appmetrica.apiKey`); iOS `Config.local.xcconfig` (`APPMETRICA_API_KEY`). Empty → skip; crashes via Crashlytics.
-- **Remote Config** — `min_app_version` (force update), `local_notifications_enabled` (reminder kill-switch).
+- **Remote Config** — `min_app_version` (force update).
 
 ## Secrets
 
@@ -60,7 +60,8 @@ Not in git.
 1. [Firebase Console](https://console.firebase.google.com/project/f1-kmp/overview) → Project settings → Your apps  
 2. Android package **`com.example.f1_kmp`** → `composeApp/google-services.json` (gitignored)  
 3. iOS bundle **`com.example.f1kmp`** → `iosApp/iosApp/GoogleService-Info.plist` (gitignored)  
-4. Enable **Analytics**, **Crashlytics**, **Remote Config**  
+4. Enable **Analytics**, **Crashlytics**, **Remote Config**, **Authentication (Email/Password)**, **Cloud Firestore**  
+5. Full Auth/Firestore rules + data shape: [docs/firebase_setup.md](docs/firebase_setup.md)
 
 Without a real Android JSON, Gradle copies `tool/ci/google-services.stub.json` so CI/local still builds.
 
@@ -91,7 +92,7 @@ CI secret `APPMETRICA_API_KEY` — для Android release (пишется в `lo
 
 File → Add Package Dependencies:
 
-- `https://github.com/firebase/firebase-ios-sdk` → FirebaseAnalytics, FirebaseCrashlytics, FirebaseRemoteConfig  
+- `https://github.com/firebase/firebase-ios-sdk` → FirebaseAnalytics, FirebaseCrashlytics, FirebaseRemoteConfig, FirebaseAuth, FirebaseFirestore  
 - `https://github.com/appmetrica/appmetrica-sdk-ios` → AppMetricaCore  
 
 Without packages the app still builds (`#if canImport`); Firebase/AppMetrica stay inactive and RC uses defaults.
@@ -200,7 +201,8 @@ Coverage (Kover, same idea as Flutter `flutter test --coverage`):
 # → composeApp/build/reports/kover/reportDebug.xml
 ```
 
-CI uploads the Kover XML/HTML report as artifact `coverage-kover` on pushes to `master` (no coverage gate / threshold).
+CI uploads the Kover XML/HTML report as artifact `coverage-kover` on pushes to `master`.
+Gate: `koverVerifyDebug` with **minBound(80)** (UI / Firebase Auth·Firestore repos excluded — same idea as f1_kotlin).
 
 Covered areas include ViewModels (Home, Results, Schedule, News, Race search, H2H drivers, Finish status, Race info, Circuit detail), Jolpica mappers, CareerLoader, `ApiCallHandler`, `AppVersion`, date/flag utils.
 

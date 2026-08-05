@@ -35,11 +35,13 @@ import com.example.f1_kmp.data.circuits.CircuitLayoutAssets
 import com.example.f1_kmp.domain.model.Circuit
 import com.example.f1_kmp.domain.model.Driver
 import com.example.f1_kmp.domain.AsyncValue
+import com.example.f1_kmp.ui.components.CachedDataBanner
 import com.example.f1_kmp.ui.components.CareerListTile
 import com.example.f1_kmp.ui.components.CountryFlag
 import com.example.f1_kmp.ui.components.CustomSwitcher
 import com.example.f1_kmp.ui.components.ErrorBody
 import com.example.f1_kmp.ui.components.LinkText
+import com.example.f1_kmp.ui.components.OnAppResumed
 import com.example.f1_kmp.ui.components.circuits.CircuitLayoutImage
 import com.example.f1_kmp.ui.components.circuits.CircuitStatsGrid
 import com.example.f1_kmp.ui.components.shimmer.CareerScreenShimmer
@@ -75,6 +77,8 @@ fun CircuitsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    OnAppResumed(onResumed = viewModel::dismissOfflineBannerIfOnline)
+
     when (val state = uiState.circuits) {
         is AsyncValue.Loading -> if (!uiState.isRefreshing) {
             CircuitsShimmer(modifier = Modifier.fillMaxSize())
@@ -86,6 +90,9 @@ fun CircuitsScreen(
             modifier = Modifier.fillMaxSize(),
         )
         is AsyncValue.Value -> Column(modifier = Modifier.fillMaxSize()) {
+            if (uiState.showingCachedData) {
+                CachedDataBanner()
+            }
             Spacer(Modifier.height(12.dp))
             CustomSwitcher(
                 stringResource(Res.string.on_map),

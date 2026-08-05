@@ -7,6 +7,7 @@ import com.example.f1_kmp.domain.model.DriverStanding
 import com.example.f1_kmp.domain.model.StandingsMeta
 import com.example.f1_kmp.data.repository.IF1Repository
 import com.example.f1_kmp.domain.AsyncValue
+import com.example.f1_kmp.onlineReachability
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -82,7 +83,7 @@ class HomeViewModelTest {
         coEvery { repository.getCurrentDriverStandings() } returns Result.success(Pair(drivers, meta))
         coEvery { repository.getCurrentConstructorStandings() } returns Result.success(constructors)
 
-        val viewModel = HomeViewModel(repository, mockk(relaxed = true))
+        val viewModel = HomeViewModel(repository, mockk(relaxed = true), onlineReachability())
         advanceUntilIdle()
 
         val state = viewModel.uiState.value

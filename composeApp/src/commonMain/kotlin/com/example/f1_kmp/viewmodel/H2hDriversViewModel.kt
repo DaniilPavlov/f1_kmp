@@ -140,6 +140,10 @@ class H2hDriversViewModel(
                 val scoresA = repository.getDriverH2hRoundScores(a.driverId, season).getOrElse { emptyList() }
                 val scoresB = repository.getDriverH2hRoundScores(b.driverId, season).getOrElse { emptyList() }
                 val timeline = H2hPointsTimeline.fromScores(scoresA, scoresB, season)
+                val constructorIdA = repository.currentConstructorsForDriver(a.driverId)
+                    .firstOrNull()?.constructorId
+                val constructorIdB = repository.currentConstructorsForDriver(b.driverId)
+                    .firstOrNull()?.constructorId
                 _comparison.value = AsyncValue.Value(
                     H2hDriverCompareResult(
                         a,
@@ -148,6 +152,8 @@ class H2hDriversViewModel(
                         statsB.getOrThrow(),
                         season,
                         timeline,
+                        constructorIdA = constructorIdA,
+                        constructorIdB = constructorIdB,
                     ),
                 )
             }

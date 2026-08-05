@@ -15,6 +15,6 @@ val androidModule = module {
     single<AnalyticsGateway> { AppAnalyticsGateway() }
     single<IRemoteConfigService> { RemoteConfigService() }
     single { ForceUpdateGate(get()) }
-    single { RaceReminderScheduler(androidContext(), get(), get()) }
+    single { RaceReminderScheduler(androidContext(), get(), get(), get()) }
     single { AppWidgetSyncService(androidContext(), get()) }
 }

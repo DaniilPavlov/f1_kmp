@@ -9,19 +9,35 @@ import com.example.f1_kmp.domain.AsyncValue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
-/** ViewModel вкладки «Новости» (ESPN). */
+data class NewsUiState(
+    val articles: AsyncValue<List<NewsArticle>> = AsyncValue.Loading,
+    val visibleCount: Int = NewsViewModel.PAGE_SIZE,
+    val isRefreshing: Boolean = false,
+) {
+    val visibleArticles: List<NewsArticle>
+        get() {
+            val list = (articles as? AsyncValue.Value)?.value ?: return emptyList()
+            return list.take(visibleCount)
+        }
+
+    val canRevealMore: Boolean
+        get() {
+            val list = (articles as? AsyncValue.Value)?.value ?: return false
+            return visibleCount < list.size
+        }
+}
+
+/** ViewModel ленты ESPN-новостей (секция Headlines на Home). */
 class NewsViewModel(
     private val espnRepository: IEspnRepository,
     private val appDataRefresh: AppDataRefresh,
 ) : ViewModel() {
     private val loadJob = LoadJobHolder()
 
-    private val _articles = MutableStateFlow<AsyncValue<List<NewsArticle>>>(AsyncValue.Loading)
-    val articles: StateFlow<AsyncValue<List<NewsArticle>>> = _articles.asStateFlow()
-
-    private val _isRefreshing = MutableStateFlow(false)
-    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+    private val _uiState = MutableStateFlow(NewsUiState())
+    val uiState: StateFlow<NewsUiState> = _uiState.asStateFlow()
 
     init {
         loadArticles()
@@ -30,29 +46,55 @@ class NewsViewModel(
     fun loadArticles(forceRefresh: Boolean = false) {
         loadJob.launch(viewModelScope) {
             if (forceRefresh) {
-                _isRefreshing.value = true
+                _uiState.update { it.copy(isRefreshing = true) }
                 appDataRefresh.clearAll()
             }
             try {
                 if (!forceRefresh) {
                     espnRepository.peekNews?.let { cached ->
-                        _articles.value = AsyncValue.Value(cached)
+                        _uiState.update {
+                            it.copy(articles = AsyncValue.Value(cached), visibleCount = PAGE_SIZE)
+                        }
                         if (espnRepository.isNewsFresh) return@launch
-                    } ?: run { _articles.value = AsyncValue.Loading }
-                } else if (_articles.value !is AsyncValue.Value) {
-                    _articles.value = AsyncValue.Loading
+                    } ?: run {
+                        _uiState.update { it.copy(articles = AsyncValue.Loading) }
+                    }
+                } else if (_uiState.value.articles !is AsyncValue.Value) {
+                    _uiState.update { it.copy(articles = AsyncValue.Loading) }
                 }
 
                 espnRepository.getNews(forceRefresh = forceRefresh).applyUnlessCached(
-                    current = _articles.value,
-                    onSuccess = { _articles.value = AsyncValue.Value(it) },
-                    onFailure = { ex -> _articles.value = AsyncValue.Error(ex.title, ex.subtitle) },
+                    current = _uiState.value.articles,
+                    onSuccess = { list ->
+                        _uiState.update {
+                            it.copy(
+                                articles = AsyncValue.Value(list),
+                                visibleCount = if (forceRefresh) PAGE_SIZE else it.visibleCount,
+                            )
+                        }
+                    },
+                    onFailure = { err ->
+                        _uiState.update { it.copy(articles = err.toAsyncError()) }
+                    },
                 )
             } finally {
-                _isRefreshing.value = false
+                _uiState.update { it.copy(isRefreshing = false) }
             }
         }
     }
 
+    /** Клиентская пагинация уже загруженного списка. */
+    fun revealMore() {
+        _uiState.update { state ->
+            val list = (state.articles as? AsyncValue.Value)?.value ?: return@update state
+            if (state.visibleCount >= list.size) return@update state
+            state.copy(visibleCount = minOf(state.visibleCount + PAGE_SIZE, list.size))
+        }
+    }
+
     fun refreshAll() = loadArticles(forceRefresh = true)
+
+    companion object {
+        const val PAGE_SIZE = 10
+    }
 }

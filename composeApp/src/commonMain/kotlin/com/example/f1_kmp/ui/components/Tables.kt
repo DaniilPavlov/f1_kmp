@@ -94,6 +94,7 @@ fun TournamentDriversTable(
                 ),
                 index = index,
                 weights = DriversTableWeights,
+                constructorId = item.constructors.firstOrNull()?.constructorId,
                 onClick = onDriverClick?.let { { it(item.driver) } },
             )
         }
@@ -128,6 +129,7 @@ fun TournamentConstructorsTable(
                 ),
                 index = index,
                 weights = ConstructorsTableWeights,
+                constructorId = item.constructor.constructorId,
                 onClick = onConstructorClick?.let { { it(item.constructor) } },
             )
         }
@@ -220,6 +222,7 @@ private fun RaceResultRow(
         ),
         index = index,
         weights = RaceResultsTableWeights,
+        constructorId = result.constructor.constructorId,
         onClick = onDriverClick?.let { { it(result.driver) } },
     )
 }
@@ -259,6 +262,7 @@ fun QualifyingTable(
                     TableCell.Text(q3),
                 ),
                 index = index,
+                constructorId = item.constructor.constructorId,
                 onClick = onDriverClick?.let { { it(item.driver) } },
             )
         }

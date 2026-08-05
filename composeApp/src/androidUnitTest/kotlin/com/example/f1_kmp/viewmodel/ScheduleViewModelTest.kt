@@ -7,6 +7,7 @@ import com.example.f1_kmp.domain.model.Race
 import com.example.f1_kmp.data.repository.IF1Repository
 import com.example.f1_kmp.domain.AppDataRefresh
 import com.example.f1_kmp.domain.AsyncValue
+import com.example.f1_kmp.onlineReachability
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -47,7 +48,7 @@ class ScheduleViewModelTest {
         val race = sampleRace(date = "2026-05-10")
         stubSchedule(listOf(race))
 
-        val viewModel = ScheduleViewModel(repository, mockk<AppDataRefresh>(relaxed = true))
+        val viewModel = ScheduleViewModel(repository, mockk<AppDataRefresh>(relaxed = true), onlineReachability())
         advanceUntilIdle()
 
         assertEquals(DayLogo.Finish, viewModel.logoForDay(LocalDate.parse("2026-05-10")))
@@ -61,7 +62,7 @@ class ScheduleViewModelTest {
         )
         stubSchedule(listOf(race))
 
-        val viewModel = ScheduleViewModel(repository, mockk<AppDataRefresh>(relaxed = true))
+        val viewModel = ScheduleViewModel(repository, mockk<AppDataRefresh>(relaxed = true), onlineReachability())
         advanceUntilIdle()
 
         assertEquals(DayLogo.Car, viewModel.logoForDay(LocalDate.parse("2026-05-10")))
@@ -75,7 +76,7 @@ class ScheduleViewModelTest {
         )
         stubSchedule(listOf(race))
 
-        val viewModel = ScheduleViewModel(repository, mockk<AppDataRefresh>(relaxed = true))
+        val viewModel = ScheduleViewModel(repository, mockk<AppDataRefresh>(relaxed = true), onlineReachability())
         advanceUntilIdle()
 
         viewModel.onSelectDay(LocalDate.parse("2026-05-10"))
@@ -92,7 +93,7 @@ class ScheduleViewModelTest {
         val race = sampleRace(date = "2026-05-10")
         stubSchedule(listOf(race))
 
-        val viewModel = ScheduleViewModel(repository, mockk<AppDataRefresh>(relaxed = true))
+        val viewModel = ScheduleViewModel(repository, mockk<AppDataRefresh>(relaxed = true), onlineReachability())
         advanceUntilIdle()
 
         assertTrue(viewModel.uiState.value.races is AsyncValue.Value)

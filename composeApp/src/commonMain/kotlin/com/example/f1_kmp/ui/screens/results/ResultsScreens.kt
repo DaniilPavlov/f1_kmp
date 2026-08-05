@@ -33,8 +33,10 @@ import com.example.f1_kmp.domain.model.Race
 import com.example.f1_kmp.domain.model.RaceResult
 import com.example.f1_kmp.domain.AsyncValue
 import com.example.f1_kmp.ui.components.BlackButton
+import com.example.f1_kmp.ui.components.CachedDataBanner
 import com.example.f1_kmp.ui.components.ErrorBody
 import com.example.f1_kmp.ui.components.LoadingIndicator
+import com.example.f1_kmp.ui.components.OnAppResumed
 import com.example.f1_kmp.ui.components.PitStopsTable
 import com.example.f1_kmp.ui.components.QualifyingTable
 import com.example.f1_kmp.ui.components.RacePickerField
@@ -56,7 +58,6 @@ import f1_kmp.composeapp.generated.resources.choose_specific_race
 import f1_kmp.composeapp.generated.resources.constructor
 import f1_kmp.composeapp.generated.resources.driver
 import f1_kmp.composeapp.generated.resources.finish_status_title
-import f1_kmp.composeapp.generated.resources.h2h_constructors_title
 import f1_kmp.composeapp.generated.resources.h2h_title
 import f1_kmp.composeapp.generated.resources.hall_of_fame_title
 import f1_kmp.composeapp.generated.resources.lap
@@ -95,13 +96,14 @@ fun ResultsScreen(
     onSearchRace: () -> Unit,
     onHallOfFame: () -> Unit,
     onSeasonRewind: () -> Unit,
-    onH2hDrivers: () -> Unit,
-    onH2hConstructors: () -> Unit,
+    onH2h: () -> Unit,
     onFinishStatus: () -> Unit,
     onRaceDetails: (Race) -> Unit,
     onDriverClick: (Driver) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    OnAppResumed(onResumed = viewModel::dismissOfflineBannerIfOnline)
 
     PullToRefreshBox(
         isRefreshing = uiState.isRefreshing,
@@ -114,6 +116,9 @@ fun ResultsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = AppDimens.verticalPadding.dp),
         ) {
+            if (uiState.showingCachedData) {
+                CachedDataBanner()
+            }
             WeekendScoreboardSection(uiState.scoreboard)
 
             when (val state = uiState.lastRace) {
@@ -158,9 +163,7 @@ fun ResultsScreen(
             Spacer(Modifier.height(12.dp))
             BoxedAction(title = stringResource(Res.string.season_rewind_title), onClick = onSeasonRewind)
             Spacer(Modifier.height(12.dp))
-            BoxedAction(title = stringResource(Res.string.h2h_title), onClick = onH2hDrivers)
-            Spacer(Modifier.height(12.dp))
-            BoxedAction(title = stringResource(Res.string.h2h_constructors_title), onClick = onH2hConstructors)
+            BoxedAction(title = stringResource(Res.string.h2h_title), onClick = onH2h)
             Spacer(Modifier.height(12.dp))
             BoxedAction(title = stringResource(Res.string.finish_status_title), onClick = onFinishStatus)
         }
