@@ -1,16 +1,35 @@
 # F1 KMP
 
 Kotlin Multiplatform + Compose Multiplatform app with Formula 1 stats  
-(standings, results, calendar, news, circuits).
+(standings, results, calendar, predictor, circuits, profile).
 
 Data:
 - [Jolpica F1 API](https://github.com/jolpica/jolpica-f1) (Ergast-compatible) — schedule, results, standings
-- [ESPN](https://site.api.espn.com/) — news, weekend scoreboard, driver photos
+- [ESPN](https://site.api.espn.com/) — news (on Home), weekend scoreboard, driver photos
 
 Same idea, other stacks:
 
 - [f1_pet_project](https://github.com/DaniilPavlov/f1_pet_project) — Flutter (Android / iOS / Web)
 - [f1_kotlin](https://github.com/DaniilPavlov/f1_kotlin) — native Android
+
+## Screenshots
+
+<p>
+  <img src="docs/screenshots/01_home_1.png" width="180" alt="Home standings" />
+  <img src="docs/screenshots/01_home_2.png" width="180" alt="Home news" />
+  <img src="docs/screenshots/02_results.png" width="180" alt="Results" />
+  <img src="docs/screenshots/03_schedule.png" width="180" alt="Schedule" />
+  <img src="docs/screenshots/04_predictor.png" width="180" alt="Predictor" />
+  <img src="docs/screenshots/05_circuits.png" width="180" alt="Circuits" />
+  <img src="docs/screenshots/06_race_info.png" width="180" alt="Race info" />
+  <img src="docs/screenshots/07_driver.png" width="180" alt="Driver" />
+  <img src="docs/screenshots/08_widgets.png" width="180" alt="Home widgets" />
+  <img src="docs/screenshots/09_profile.png" width="180" alt="Profile" />
+  <img src="docs/screenshots/10_rewind.png" width="180" alt="Season rewind" />
+  <img src="docs/screenshots/11_h2h_drivers.png" width="180" alt="H2H drivers" />
+</p>
+
+Placeholders live under [`docs/screenshots/`](docs/screenshots/README.md) — replace PNGs in place when you have real captures.
 
 ## Stack
 
@@ -19,11 +38,12 @@ Same idea, other stacks:
 | UI | Compose Multiplatform, type-safe Navigation (`kotlinx.serialization` routes) |
 | Presentation | One ViewModel file per screen; multiple `StateFlow` + `AsyncValue` |
 | Domain | Plain Jolpica models; `AppError` / `toAppError()`; `ApiCallHandler`; `AppDataRefresh` |
-| DI | Koin; `IF1Repository` / `IEspnRepository` |
+| DI | Koin; `IF1Repository` / `IEspnRepository` / auth & predictor repos |
 | Network | Ktor + kotlinx.serialization DTOs; mappers DTO → domain (`JolpicaMappers`) |
 | Backend | Firebase (Analytics, Crashlytics, Remote Config, Auth, Firestore), AppMetrica |
 | Images | Coil 3 |
 | Cache | JSON files (offline peek → refresh); ESPN in-memory TTL; `AppDataRefresh.clearAll` |
+| Tests | JVM unit (`androidUnitTest` + `commonTest`, MockK) + detekt; Kover ≥80% |
 | Time | kotlinx-datetime |
 | Android map | OSMDroid + OSMBonusPack (Carto tiles, clustering) |
 | iOS map | MapKit pins (no clustering) |
@@ -132,12 +152,15 @@ f1_kmp/
 ├── composeApp/          # shared + Android + iOS Kotlin
 │   └── src/
 │       ├── commonMain/  # UI, ViewModel, API, repository, circuit assets
-│       ├── androidMain/ # Activity, OSMDroid, OkHttp, reminders, share
+│       ├── androidMain/ # Activity, OSMDroid, OkHttp, reminders, share, widgets
 │       ├── iosMain/     # MainViewController, Darwin HTTP, MapKit
 │       ├── commonTest/
 │       └── androidUnitTest/
 ├── iosApp/              # Xcode host (SwiftUI → Compose)
-└── gradle/
+├── docs/                # firebase_setup, screenshots
+├── tool/ci/             # google-services stub
+├── gradle/
+└── .github/workflows/
 ```
 
 ## Requirements
@@ -242,22 +265,22 @@ Forced reload (`refreshAll`) clears ESPN + file caches via `AppDataRefresh`.
 
 ## Features
 
-- **Home** — current season driver and constructor standings  
+- **Home** — current season driver and constructor standings; ESPN headlines  
 - **Results** — weekend scoreboard (ESPN, live poll), latest race, race search, hall of fame, season rewind, H2H (drivers / constructors + points chart), finish statuses  
+- **Live race mode** — app-wide session banner while ESPN status is live; deep link `f1pet://race/live` → Results  
 - **Calendar** — monthly calendar with session times; on empty days shows next GP card (layout + countdown); local reminders 30 min before (Android + iOS)  
-- **News** — F1 headlines from ESPN  
+- **Predictor** — race/quali grid predictions (Auth + verified email + Firestore); lock before quali; season history, scoring, public leaderboard  
+- **Profile** — account (email/password), theme, locale, race / practice reminder prefs  
 - **Circuits** — list and map (OSMDroid + Carto on Android; MapKit pins on iOS), track layouts, length/laps/turns/speed/elevation, Wikipedia, winners history  
 - **Driver / Constructor cards** — ESPN photos/news, career stats with tappable wins / podiums / poles lists  
-- **Themes** — system / light / dark cycle in the app bar  
-- **Localization** — Russian (default) and English, toggle in the app bar without restarting the app  
-- **Live banner** — red session-live strip above the bottom bar → Results  
-- **Deep links** — `f1pet://driver|constructor|circuit|race/...` (Android + iOS)  
 - **Home widgets** (Android) — next GP countdown + top-3 standings  
+- **Themes** — system / light / dark (Profile)  
+- **Localization** — Russian (default) and English (Profile), without restarting the app  
+- **Deep links** — `f1pet://driver|constructor|circuit|race/...` (Android + iOS)  
 - **Reminders** — local notifications 30 minutes before a session (up to 10 upcoming; Android AlarmManager / iOS UNUserNotificationCenter); Remote Config kill-switch  
 - **Force update** — blocking screen when app version is below Remote Config `min_app_version`  
 - **Analytics** — typed events to Firebase Analytics + AppMetrica  
-- **Schedule cache** — shared file JSON cache for the calendar and reminders  
-- **Offline** — file JSON cache with instant peek and network refresh  
+- **Offline** — file JSON cache with instant peek and network refresh; ESPN short in-memory TTL  
 - **Share** — career / race / weekend cards (PNG on Android), circuit `f1pet://` text; text share sheet on iOS  
 - **Shimmer skeletons** — loading placeholders for main screens  
 - **Country flags** — nationality / country as emoji in tables, career cards, circuits, scoreboard  
