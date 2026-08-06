@@ -26,7 +26,7 @@ class H2hPointsTimelineTest {
 
         val timeline = H2hPointsTimeline.fromScores(a, b)
         assertEquals(3, timeline.points.size)
-        assertEquals("2024 · R1", timeline.points[0].label)
+        assertEquals("2024", timeline.points[0].label)
         assertEquals(25.0, timeline.points[0].cumulativeA)
         assertEquals(18.0, timeline.points[0].cumulativeB)
         assertEquals(43.0, timeline.points[1].cumulativeA)
@@ -44,6 +44,13 @@ class H2hPointsTimelineTest {
         assertEquals("5", timeline.points.single().label)
         assertEquals(25.0, timeline.points.single().roundPointsA)
         assertEquals(12.0, timeline.points.single().roundPointsB)
+    }
+
+    @Test
+    fun fromScores_careerScope_usesYearOnlyLabels() {
+        val a = listOf(H2hRoundScore("2026", "3", "Japan", 12.0))
+        val timeline = H2hPointsTimeline.fromScores(a, emptyList(), seasonScope = null)
+        assertEquals("2026", timeline.points.single().label)
     }
 
     @Test

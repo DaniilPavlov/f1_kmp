@@ -9,6 +9,7 @@ import com.example.f1_kmp.data.repository.IEspnRepository
 import com.example.f1_kmp.data.repository.IF1Repository
 import com.example.f1_kmp.domain.AppException
 import com.example.f1_kmp.domain.AsyncValue
+import com.example.f1_kmp.onlineReachability
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -58,7 +59,7 @@ class ResultsViewModelTest {
         coEvery { espnRepository.peekScoreboard } returns null
         coEvery { espnRepository.getScoreboardEvent(forceRefresh = false) } returns Result.success(null)
 
-        val viewModel = ResultsViewModel(repository, espnRepository, mockk(relaxed = true))
+        val viewModel = ResultsViewModel(repository, espnRepository, mockk(relaxed = true), onlineReachability())
         advanceUntilIdle()
 
         val state = viewModel.uiState.value.lastRace
@@ -77,7 +78,7 @@ class ResultsViewModelTest {
         coEvery { espnRepository.peekScoreboard } returns null
         coEvery { espnRepository.getScoreboardEvent(forceRefresh = false) } returns Result.success(null)
 
-        val viewModel = ResultsViewModel(repository, espnRepository, mockk(relaxed = true))
+        val viewModel = ResultsViewModel(repository, espnRepository, mockk(relaxed = true), onlineReachability())
         advanceUntilIdle()
 
         assertTrue(viewModel.uiState.value.lastRace is AsyncValue.Error)
@@ -94,7 +95,7 @@ class ResultsViewModelTest {
         coEvery { espnRepository.peekScoreboard } returns null
         coEvery { espnRepository.getScoreboardEvent(forceRefresh = false) } returns Result.success(scoreboard)
 
-        val viewModel = ResultsViewModel(repository, espnRepository, mockk(relaxed = true))
+        val viewModel = ResultsViewModel(repository, espnRepository, mockk(relaxed = true), onlineReachability())
         advanceUntilIdle()
 
         assertTrue(viewModel.uiState.value.scoreboard is AsyncValue.Value)
@@ -111,7 +112,7 @@ class ResultsViewModelTest {
         coEvery { espnRepository.peekScoreboard } returns null
         coEvery { espnRepository.getScoreboardEvent(forceRefresh = false) } returns Result.success(sampleScoreboard())
 
-        val viewModel = ResultsViewModel(repository, espnRepository, mockk(relaxed = true))
+        val viewModel = ResultsViewModel(repository, espnRepository, mockk(relaxed = true), onlineReachability())
         advanceUntilIdle()
 
         invokeOnCleared(viewModel)

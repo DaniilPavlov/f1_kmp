@@ -1,5 +1,6 @@
 package com.example.f1_kmp.viewmodel
 
+import com.example.f1_kmp.data.model.H2hEntityCompareData
 import com.example.f1_kmp.data.model.H2hStats
 import com.example.f1_kmp.data.repository.IF1Repository
 import com.example.f1_kmp.domain.AsyncValue
@@ -40,11 +41,10 @@ class H2hConstructorsViewModelTest {
         val a = Constructor("red_bull", "", "Red Bull", "Austrian")
         val b = Constructor("mercedes", "", "Mercedes", "German")
         coEvery { repository.getSeasonYears() } returns Result.success(listOf("2026"))
-        coEvery { repository.getConstructorH2hStats("red_bull", null) } returns
-            Result.success(H2hStats(100, 50, 80, 40))
-        coEvery { repository.getConstructorH2hStats("mercedes", null) } returns
-            Result.success(H2hStats(100, 40, 70, 30))
-        coEvery { repository.getConstructorH2hRoundScores(any(), any()) } returns Result.success(emptyList())
+        coEvery { repository.getConstructorH2hCompareData("red_bull", null) } returns
+            Result.success(H2hEntityCompareData(H2hStats(100, 50, 80, 40), emptyList()))
+        coEvery { repository.getConstructorH2hCompareData("mercedes", null) } returns
+            Result.success(H2hEntityCompareData(H2hStats(100, 40, 70, 30), emptyList()))
 
         val vm = H2hConstructorsViewModel(repository)
         advanceUntilIdle()

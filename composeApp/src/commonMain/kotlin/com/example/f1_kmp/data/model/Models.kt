@@ -69,11 +69,12 @@ data class ConstructorStandingsModel(
 @Serializable
 data class DriverModel(
     val driverId: String,
-    val url: String,
     val givenName: String,
     val familyName: String,
-    val dateOfBirth: String,
-    val nationality: String,
+    /** Jolpica иногда отдаёт резервных пилотов без url/DoB/nationality. */
+    val url: String = "",
+    val dateOfBirth: String = "",
+    val nationality: String = "",
     val code: String? = null,
     val permanentNumber: String? = null,
 ) {
@@ -180,7 +181,8 @@ data class TimeModel(
 /** Лучший круг пилота в гонке. */
 @Serializable
 data class FastestLapModel(
-    val rank: String,
+    /** Jolpica sprint results often omit rank. */
+    val rank: String = "",
     val lap: String,
     @SerialName("Time") val time: TimeModel,
     @SerialName("AverageSpeed") val averageSpeed: AverageSpeedModel? = null,
@@ -330,6 +332,12 @@ data class H2hStats(
     val wins: Int,
     val podiums: Int,
     val poles: Int,
+)
+
+/** Stats + round scores из одного прохода results/sprint (для графика H2H). */
+data class H2hEntityCompareData(
+    val stats: H2hStats,
+    val scores: List<com.example.f1_kmp.viewmodel.H2hRoundScore>,
 )
 
 /** Таблица сезонов чемпионата. */

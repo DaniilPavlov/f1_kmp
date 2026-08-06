@@ -9,6 +9,9 @@ import com.example.f1_kmp.data.repository.IEspnRepository
 import com.example.f1_kmp.data.repository.IF1Repository
 import com.example.f1_kmp.domain.AppDataRefresh
 import com.example.f1_kmp.domain.AsyncValue
+import com.example.f1_kmp.domain.NetworkReachability
+import com.example.f1_kmp.domain.clearOfflineBannerIfOnline
+import com.example.f1_kmp.domain.shouldShowOfflineCachedBanner
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -24,6 +27,7 @@ data class ResultsUiState(
     val lastRace: AsyncValue<Race> = AsyncValue.Loading,
     val scoreboard: AsyncValue<EspnScoreboardEvent?> = AsyncValue.Loading,
     val isRefreshing: Boolean = false,
+    val showingCachedData: Boolean = false,
 )
 
 /**
@@ -37,6 +41,7 @@ class ResultsViewModel(
     private val repository: IF1Repository,
     private val espnRepository: IEspnRepository,
     private val appDataRefresh: AppDataRefresh,
+    private val networkReachability: NetworkReachability,
 ) : ViewModel() {
     private val loadJob = LoadJobHolder()
     private var pollJob: Job? = null
@@ -62,6 +67,17 @@ class ResultsViewModel(
         }
     }
 
+    fun dismissOfflineBannerIfOnline() {
+        _uiState.update {
+            it.copy(
+                showingCachedData = clearOfflineBannerIfOnline(
+                    currentlyShowing = it.showingCachedData,
+                    reachability = networkReachability,
+                ),
+            )
+        }
+    }
+
     private suspend fun loadInternal(clearCaches: Boolean) = coroutineScope {
         try {
             if (clearCaches) {
@@ -83,7 +99,15 @@ class ResultsViewModel(
             raceDeferred.await()
             scoreboardDeferred.await()
         } finally {
-            _uiState.update { it.copy(isRefreshing = false) }
+            _uiState.update {
+                it.copy(
+                    isRefreshing = false,
+                    showingCachedData = shouldShowOfflineCachedBanner(
+                        hasCachedContent = it.lastRace is AsyncValue.Value,
+                        reachability = networkReachability,
+                    ),
+                )
+            }
         }
     }
 

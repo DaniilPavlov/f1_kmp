@@ -8,6 +8,9 @@ import com.example.f1_kmp.data.repository.IF1Repository
 import com.example.f1_kmp.domain.AppDataRefresh
 import com.example.f1_kmp.domain.AppError
 import com.example.f1_kmp.domain.AsyncValue
+import com.example.f1_kmp.domain.NetworkReachability
+import com.example.f1_kmp.domain.clearOfflineBannerIfOnline
+import com.example.f1_kmp.domain.shouldShowOfflineCachedBanner
 import com.example.f1_kmp.domain.SessionStrings
 import com.example.f1_kmp.util.DateUtils
 import com.example.f1_kmp.util.RaceDateTimeHelper
@@ -46,6 +49,7 @@ data class ScheduleUiState(
     val upcomingRace: Race? = null,
     val error: AppError? = null,
     val isRefreshing: Boolean = false,
+    val showingCachedData: Boolean = false,
 )
 
 /**
@@ -58,6 +62,7 @@ data class ScheduleUiState(
 class ScheduleViewModel(
     private val repository: IF1Repository,
     private val appDataRefresh: AppDataRefresh,
+    private val networkReachability: NetworkReachability,
 ) : ViewModel() {
     private val loadJob = LoadJobHolder()
     private val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
@@ -80,6 +85,17 @@ class ScheduleViewModel(
     fun refreshAll() {
         loadJob.launch(viewModelScope) {
             loadInternal(clearCaches = true)
+        }
+    }
+
+    fun dismissOfflineBannerIfOnline() {
+        _uiState.update {
+            it.copy(
+                showingCachedData = clearOfflineBannerIfOnline(
+                    currentlyShowing = it.showingCachedData,
+                    reachability = networkReachability,
+                ),
+            )
         }
     }
 
@@ -125,7 +141,15 @@ class ScheduleViewModel(
                 },
             )
         } finally {
-            _uiState.update { it.copy(isRefreshing = false) }
+            _uiState.update {
+                it.copy(
+                    isRefreshing = false,
+                    showingCachedData = shouldShowOfflineCachedBanner(
+                        hasCachedContent = it.races is AsyncValue.Value,
+                        reachability = networkReachability,
+                    ),
+                )
+            }
         }
     }
 

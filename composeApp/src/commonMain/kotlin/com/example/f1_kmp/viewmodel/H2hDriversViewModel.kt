@@ -2,12 +2,9 @@ package com.example.f1_kmp.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.f1_kmp.domain.model.Driver
 import com.example.f1_kmp.data.repository.IF1Repository
-import com.example.f1_kmp.domain.toAppError
 import com.example.f1_kmp.domain.AsyncValue
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
+import com.example.f1_kmp.domain.model.Driver
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -116,42 +113,36 @@ class H2hDriversViewModel(
         if (_currentOnly.value) repository.getCurrentDrivers() else repository.getAllDrivers()
 
     fun compare() {
-        if (!canCompare) return
         val a = _driverA.value ?: return
         val b = _driverB.value ?: return
         val season = selectedSeason
-        loadJob.launch(viewModelScope) {
-            _comparison.value = AsyncValue.Loading
-            coroutineScope {
-                val statsADeferred = async { repository.getDriverH2hStats(a.driverId, season) }
-                val statsBDeferred = async { repository.getDriverH2hStats(b.driverId, season) }
-                val statsA = statsADeferred.await()
-                val statsB = statsBDeferred.await()
-                val leftEx = statsA.exceptionOrNull()?.toAppError()?.asException()
-                if (leftEx != null) {
-                    _comparison.value = AsyncValue.Error(leftEx.title, leftEx.subtitle)
-                    return@coroutineScope
-                }
-                val rightEx = statsB.exceptionOrNull()?.toAppError()?.asException()
-                if (rightEx != null) {
-                    _comparison.value = AsyncValue.Error(rightEx.title, rightEx.subtitle)
-                    return@coroutineScope
-                }
-                val scoresA = repository.getDriverH2hRoundScores(a.driverId, season).getOrElse { emptyList() }
-                val scoresB = repository.getDriverH2hRoundScores(b.driverId, season).getOrElse { emptyList() }
-                val timeline = H2hPointsTimeline.fromScores(scoresA, scoresB, season)
+        loadJob.launchH2hCompare(
+            scope = viewModelScope,
+            canCompare = canCompare,
+            fetchA = { repository.getDriverH2hCompareData(a.driverId, season) },
+            fetchB = { repository.getDriverH2hCompareData(b.driverId, season) },
+            onLoading = { _comparison.value = AsyncValue.Loading },
+            onError = { err -> _comparison.value = err.toAsyncError() },
+            onSuccess = { dataA, dataB ->
+                val timeline = H2hPointsTimeline.fromScores(dataA.scores, dataB.scores, season)
+                val constructorIdA = repository.currentConstructorsForDriver(a.driverId)
+                    .firstOrNull()?.constructorId
+                val constructorIdB = repository.currentConstructorsForDriver(b.driverId)
+                    .firstOrNull()?.constructorId
                 _comparison.value = AsyncValue.Value(
                     H2hDriverCompareResult(
                         a,
                         b,
-                        statsA.getOrThrow(),
-                        statsB.getOrThrow(),
+                        dataA.stats,
+                        dataB.stats,
                         season,
                         timeline,
+                        constructorIdA = constructorIdA,
+                        constructorIdB = constructorIdB,
                     ),
                 )
-            }
-        }
+            },
+        )
     }
 
     private fun resetComparison() {

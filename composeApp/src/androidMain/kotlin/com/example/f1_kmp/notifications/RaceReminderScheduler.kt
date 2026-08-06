@@ -13,6 +13,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.f1_kmp.R
 import com.example.f1_kmp.data.firebase.IRemoteConfigService
+import com.example.f1_kmp.domain.NotificationsPreference
 import com.example.f1_kmp.domain.model.RaceSession
 import com.example.f1_kmp.domain.model.Race
 import com.example.f1_kmp.data.repository.IF1Repository
@@ -42,6 +43,7 @@ class RaceReminderScheduler(
     private val context: Context,
     private val repository: IF1Repository,
     private val remoteConfig: IRemoteConfigService,
+    private val notificationsPreference: NotificationsPreference,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val lastScheduledIds = AtomicReference<Set<Int>>(emptySet())
@@ -50,13 +52,14 @@ class RaceReminderScheduler(
     fun sync() {
         scope.launch {
             runCatching {
-                if (!remoteConfig.localNotificationsEnabled) {
+                if (!remoteConfig.localNotificationsEnabled || !notificationsPreference.effectivelyEnabled) {
                     cancelIds(lastScheduledIds.get())
                     lastScheduledIds.set(emptySet())
                     return@runCatching
                 }
                 val races = repository.getCurrentSchedule().getOrNull() ?: return@runCatching
-                val upcoming = sessions(races).sortedBy { it.triggerAt }
+                val includePractice = notificationsPreference.practiceRemindersEffectivelyEnabled
+                val upcoming = sessions(races, includePractice).sortedBy { it.triggerAt }
                 val window = upcoming.take(MAX_SCHEDULED_REMINDERS)
 
                 cancelIds(lastScheduledIds.get() + upcoming.map { it.id })
@@ -66,7 +69,7 @@ class RaceReminderScheduler(
         }
     }
 
-    private fun sessions(races: List<Race>): List<Reminder> = buildList {
+    private fun sessions(races: List<Race>, includePractice: Boolean): List<Reminder> = buildList {
         races.forEach { race ->
             listOf(
                 Triple("fp1", SessionStrings.firstPractice, race.firstPractice),
@@ -77,6 +80,7 @@ class RaceReminderScheduler(
                 Triple("qualifying", SessionStrings.qualifying, race.qualifying),
                 Triple("race", SessionStrings.race, RaceSession(race.date, race.time)),
             ).forEach { (key, title, date) ->
+                if (!includePractice && key.startsWith("fp")) return@forEach
                 val session = date ?: return@forEach
                 val local = DateUtils.toLocalDateTime(session.date, session.time) ?: return@forEach
                 val trigger = local.toInstant(TimeZone.currentSystemDefault()).toEpochMilliseconds() - THIRTY_MINUTES

@@ -51,11 +51,17 @@ import com.example.f1_kmp.ui.screens.circuits.CircuitsScreen
 import com.example.f1_kmp.ui.screens.constructor.ConstructorDetailScreen
 import com.example.f1_kmp.ui.screens.driver.DriverDetailScreen
 import com.example.f1_kmp.ui.screens.finishstatus.FinishStatusScreen
-import com.example.f1_kmp.ui.screens.h2h.H2hConstructorsScreen
-import com.example.f1_kmp.ui.screens.h2h.H2hDriversScreen
+import com.example.f1_kmp.ui.screens.h2h.H2hMode
+import com.example.f1_kmp.ui.screens.h2h.H2hScreen
 import com.example.f1_kmp.ui.screens.halloffame.HallOfFameScreen
 import com.example.f1_kmp.ui.screens.home.HomeScreen
-import com.example.f1_kmp.ui.screens.news.NewsScreen
+import com.example.f1_kmp.ui.screens.predictor.PredictorLeaderboardScreen
+import com.example.f1_kmp.ui.screens.predictor.PredictorScreen
+import com.example.f1_kmp.ui.screens.predictor.PredictorSeasonHistoryScreen
+import com.example.f1_kmp.ui.screens.predictor.PredictorWeekendDetailScreen
+import com.example.f1_kmp.ui.screens.profile.AuthRegisterScreen
+import com.example.f1_kmp.ui.screens.profile.AuthSignInScreen
+import com.example.f1_kmp.ui.screens.profile.ProfileScreen
 import com.example.f1_kmp.ui.screens.results.RaceInfoScreen
 import com.example.f1_kmp.ui.screens.results.RaceSearchScreen
 import com.example.f1_kmp.ui.screens.results.ResultsScreen
@@ -72,18 +78,24 @@ import f1_kmp.composeapp.generated.resources.constructor
 import f1_kmp.composeapp.generated.resources.detailed_info
 import f1_kmp.composeapp.generated.resources.driver
 import f1_kmp.composeapp.generated.resources.finish_status_title
-import f1_kmp.composeapp.generated.resources.h2h_constructors_title
 import f1_kmp.composeapp.generated.resources.h2h_title
 import f1_kmp.composeapp.generated.resources.hall_of_fame_title
+import f1_kmp.composeapp.generated.resources.auth_register_title
+import f1_kmp.composeapp.generated.resources.auth_sign_in_title
 import f1_kmp.composeapp.generated.resources.nav_calendar
-import f1_kmp.composeapp.generated.resources.nav_circuit
 import f1_kmp.composeapp.generated.resources.nav_circuits
+import f1_kmp.composeapp.generated.resources.nav_helmet
 import f1_kmp.composeapp.generated.resources.nav_home
 import f1_kmp.composeapp.generated.resources.nav_lights
-import f1_kmp.composeapp.generated.resources.nav_news
+import f1_kmp.composeapp.generated.resources.nav_predictor
+import f1_kmp.composeapp.generated.resources.nav_profile
 import f1_kmp.composeapp.generated.resources.nav_racing_car
 import f1_kmp.composeapp.generated.resources.nav_results
 import f1_kmp.composeapp.generated.resources.nav_trophy
+import f1_kmp.composeapp.generated.resources.predictor_history_title
+import f1_kmp.composeapp.generated.resources.predictor_leaderboard_title
+import f1_kmp.composeapp.generated.resources.predictor_title
+import f1_kmp.composeapp.generated.resources.profile_title
 import f1_kmp.composeapp.generated.resources.race_search_title
 import f1_kmp.composeapp.generated.resources.season_rewind_title
 import kotlinx.coroutines.flow.collectLatest
@@ -105,16 +117,16 @@ sealed class BottomTab(
     data object HomeTab : BottomTab(Home, Home::class, Res.string.nav_home, Res.drawable.nav_home)
     data object ResultsTab : BottomTab(Results, Results::class, Res.string.nav_results, Res.drawable.nav_racing_car)
     data object ScheduleTab : BottomTab(Schedule, Schedule::class, Res.string.nav_calendar, Res.drawable.nav_lights)
-    data object NewsTab : BottomTab(News, News::class, Res.string.nav_news, Res.drawable.nav_trophy)
-    data object CircuitsTab : BottomTab(Circuits, Circuits::class, Res.string.nav_circuits, Res.drawable.nav_circuit)
+    data object PredictorTab : BottomTab(Predictor, Predictor::class, Res.string.nav_predictor, Res.drawable.nav_trophy)
+    data object ProfileTab : BottomTab(Profile, Profile::class, Res.string.nav_profile, Res.drawable.nav_helmet)
 }
 
 private val tabs = listOf(
     BottomTab.HomeTab,
     BottomTab.ResultsTab,
     BottomTab.ScheduleTab,
-    BottomTab.NewsTab,
-    BottomTab.CircuitsTab,
+    BottomTab.PredictorTab,
+    BottomTab.ProfileTab,
 )
 
 /** Корневой Composable: Scaffold + NavHost + нижняя панель. */
@@ -137,6 +149,19 @@ fun F1App() {
         }
     }
 
+    LaunchedEffect(destination?.route) {
+        val route = destination?.route ?: return@LaunchedEffect
+        val screenName = route.substringBefore('?').substringBefore('/')
+            .substringAfterLast('.')
+            .ifBlank { route }
+        analytics.log(
+            AnalyticsEvent.ScreenView(
+                screenName = screenName,
+                screenClass = destination.route,
+            ),
+        )
+    }
+
     val onDriverClick: (Driver) -> Unit = { driver ->
         analytics.log(AnalyticsEvent.DriverOpened(driver.driverId, driver.fullName))
         navController.navigate(DriverDetail(driver.driverId))
@@ -155,6 +180,7 @@ fun F1App() {
             topBar = {
                 F1TopBar(
                     destination = destination,
+                    backStackEntry = backStackEntry,
                     showBottomBar = showBottomBar,
                     popBack = popBack,
                     shareAction = shareAction,
@@ -206,8 +232,8 @@ private val BottomTab.analyticsTab: String
         BottomTab.HomeTab -> "home"
         BottomTab.ResultsTab -> "results"
         BottomTab.ScheduleTab -> "schedule"
-        BottomTab.NewsTab -> "news"
-        BottomTab.CircuitsTab -> "circuits"
+        BottomTab.PredictorTab -> "predictor"
+        BottomTab.ProfileTab -> "profile"
     }
 
 private fun navigateDeepLink(
@@ -236,14 +262,54 @@ private fun navigateDeepLink(
 }
 
 @Composable
+@Suppress("CyclomaticComplexMethod")
 private fun F1TopBar(
     destination: NavDestination?,
+    backStackEntry: androidx.navigation.NavBackStackEntry?,
     showBottomBar: Boolean,
     popBack: () -> Unit,
     shareAction: (() -> Unit)?,
 ) {
     when {
+        showBottomBar && destination?.hasRoute<Profile>() == true -> F1AppBar(
+            title = stringResource(Res.string.profile_title),
+        )
+        showBottomBar && destination?.hasRoute<Predictor>() == true -> F1AppBar(
+            title = stringResource(Res.string.predictor_title),
+        )
         showBottomBar -> F1AppBar()
+        destination?.hasRoute<AuthSignIn>() == true -> F1AppBar(
+            title = stringResource(Res.string.auth_sign_in_title),
+            onBack = popBack,
+        )
+        destination?.hasRoute<AuthRegister>() == true -> F1AppBar(
+            title = stringResource(Res.string.auth_register_title),
+            onBack = popBack,
+        )
+        destination?.hasRoute<PredictorWeekendDetail>() == true -> {
+            val raceName = backStackEntry?.toRoute<PredictorWeekendDetail>()?.raceName
+            F1AppBar(
+                title = raceName?.takeIf { it.isNotBlank() }
+                    ?: stringResource(Res.string.predictor_title),
+                onBack = popBack,
+            )
+        }
+        destination?.hasRoute<PredictorSeasonHistory>() == true -> F1AppBar(
+            title = backStackEntry?.toRoute<PredictorSeasonHistory>()?.year
+                ?: stringResource(Res.string.predictor_history_title),
+            onBack = popBack,
+        )
+        destination?.hasRoute<PredictorLeaderboard>() == true -> F1AppBar(
+            title = stringResource(
+                Res.string.predictor_leaderboard_title,
+                backStackEntry?.toRoute<PredictorLeaderboard>()?.year.orEmpty(),
+            ),
+            onBack = popBack,
+        )
+        destination?.hasRoute<Circuits>() == true -> F1AppBar(
+            title = stringResource(Res.string.nav_circuits),
+            onBack = popBack,
+        )
         destination?.hasRoute<RaceSearch>() == true -> F1AppBar(
             title = stringResource(Res.string.race_search_title),
             onBack = popBack,
@@ -261,7 +327,7 @@ private fun F1TopBar(
             onBack = popBack,
         )
         destination?.hasRoute<H2hConstructors>() == true -> F1AppBar(
-            title = stringResource(Res.string.h2h_constructors_title),
+            title = stringResource(Res.string.h2h_title),
             onBack = popBack,
         )
         destination?.hasRoute<FinishStatus>() == true -> F1AppBar(
@@ -292,6 +358,7 @@ private fun F1TopBar(
 }
 
 @Composable
+@Suppress("LongMethod")
 private fun F1NavHost(
     navController: NavHostController,
     onDriverClick: (Driver) -> Unit,
@@ -307,6 +374,7 @@ private fun F1NavHost(
         composable<Home> {
             HomeScreen(
                 viewModel = koinViewModel(),
+                newsViewModel = koinViewModel(),
                 onDriverClick = onDriverClick,
                 onConstructorClick = onConstructorClick,
             )
@@ -317,8 +385,7 @@ private fun F1NavHost(
                 onSearchRace = { navController.navigate(RaceSearch) },
                 onHallOfFame = { navController.navigate(HallOfFame) },
                 onSeasonRewind = { navController.navigate(SeasonRewind) },
-                onH2hDrivers = { navController.navigate(H2hDrivers) },
-                onH2hConstructors = { navController.navigate(H2hConstructors) },
+                onH2h = { navController.navigate(H2hDrivers) },
                 onFinishStatus = { navController.navigate(FinishStatus) },
                 onRaceDetails = { race ->
                     navController.navigate(RaceInfo(race.season, race.round))
@@ -346,10 +413,18 @@ private fun F1NavHost(
             SeasonRewindScreen(viewModel = koinViewModel())
         }
         composable<H2hDrivers> {
-            H2hDriversScreen(viewModel = koinViewModel())
+            H2hScreen(
+                driversViewModel = koinViewModel(),
+                constructorsViewModel = koinViewModel(),
+                initialMode = H2hMode.Drivers,
+            )
         }
         composable<H2hConstructors> {
-            H2hConstructorsScreen(viewModel = koinViewModel())
+            H2hScreen(
+                driversViewModel = koinViewModel(),
+                constructorsViewModel = koinViewModel(),
+                initialMode = H2hMode.Constructors,
+            )
         }
         composable<FinishStatus> {
             FinishStatusScreen(viewModel = koinViewModel())
@@ -362,10 +437,113 @@ private fun F1NavHost(
             )
         }
         composable<Schedule> {
-            ScheduleScreen(koinViewModel())
+            ScheduleScreen(
+                viewModel = koinViewModel(),
+                onCircuits = { navController.navigate(Circuits) },
+            )
         }
-        composable<News> {
-            NewsScreen(viewModel = koinViewModel())
+        composable<Predictor> {
+            PredictorScreen(
+                viewModel = koinViewModel(),
+                onGoSignIn = { navController.navigate(AuthSignIn) },
+                onGoProfile = {
+                    navController.navigate(Profile) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onOpenLeaderboard = { year, myPoints ->
+                    navController.navigate(PredictorLeaderboard(year = year, myPoints = myPoints))
+                },
+                onOpenWeekend = { season, weekend ->
+                    navController.navigate(
+                        PredictorWeekendDetail(
+                            season = season,
+                            round = weekend.round,
+                            raceName = weekend.raceName,
+                        ),
+                    )
+                },
+                onOpenSeason = { year ->
+                    navController.navigate(PredictorSeasonHistory(year = year))
+                },
+            )
+        }
+        composable<PredictorWeekendDetail> { entry ->
+            val args = entry.toRoute<PredictorWeekendDetail>()
+            PredictorWeekendDetailScreen(
+                viewModel = koinViewModel { parametersOf(args.season, args.round, args.raceName) },
+                onGoSignIn = {
+                    navController.navigate(AuthSignIn) {
+                        popUpTo(Predictor) { inclusive = false }
+                    }
+                },
+                onBlocked = { navController.popBackStack() },
+            )
+        }
+        composable<PredictorSeasonHistory> { entry ->
+            val args = entry.toRoute<PredictorSeasonHistory>()
+            PredictorSeasonHistoryScreen(
+                viewModel = koinViewModel { parametersOf(args.year) },
+                onGoSignIn = {
+                    navController.navigate(AuthSignIn) {
+                        popUpTo(Predictor) { inclusive = false }
+                    }
+                },
+                onBlocked = { navController.popBackStack() },
+                onOpenWeekend = { season, weekend ->
+                    navController.navigate(
+                        PredictorWeekendDetail(
+                            season = season,
+                            round = weekend.round,
+                            raceName = weekend.raceName,
+                        ),
+                    )
+                },
+            )
+        }
+        composable<PredictorLeaderboard> { entry ->
+            val args = entry.toRoute<PredictorLeaderboard>()
+            PredictorLeaderboardScreen(
+                viewModel = koinViewModel { parametersOf(args.year, args.myPoints) },
+                onGoSignIn = {
+                    navController.navigate(AuthSignIn) {
+                        popUpTo(Predictor) { inclusive = false }
+                    }
+                },
+                onBlocked = { navController.popBackStack() },
+            )
+        }
+        composable<Profile> {
+            ProfileScreen(
+                viewModel = koinViewModel(),
+                onSignIn = { navController.navigate(AuthSignIn) },
+            )
+        }
+        composable<AuthSignIn> {
+            AuthSignInScreen(
+                viewModel = koinViewModel(),
+                onSuccess = { navController.popBackStack() },
+                onGoRegister = {
+                    navController.navigate(AuthRegister) {
+                        popUpTo(AuthSignIn) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
+        composable<AuthRegister> {
+            AuthRegisterScreen(
+                viewModel = koinViewModel(),
+                onSuccess = { navController.popBackStack() },
+                onGoSignIn = {
+                    navController.navigate(AuthSignIn) {
+                        popUpTo(AuthRegister) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+            )
         }
         composable<Circuits> {
             CircuitsScreen(

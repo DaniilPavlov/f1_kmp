@@ -2,12 +2,9 @@ package com.example.f1_kmp.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.f1_kmp.domain.model.Constructor
 import com.example.f1_kmp.data.repository.IF1Repository
-import com.example.f1_kmp.domain.toAppError
 import com.example.f1_kmp.domain.AsyncValue
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
+import com.example.f1_kmp.domain.model.Constructor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -121,44 +118,32 @@ class H2hConstructorsViewModel(
         }
 
     fun compare() {
-        if (!canCompare) return
         val a = _constructorA.value ?: return
         val b = _constructorB.value ?: return
         val season = selectedSeason
-        loadJob.launch(viewModelScope) {
-            _comparison.value = AsyncValue.Loading
-            coroutineScope {
-                val statsADeferred = async { repository.getConstructorH2hStats(a.constructorId, season) }
-                val statsBDeferred = async { repository.getConstructorH2hStats(b.constructorId, season) }
-                val statsA = statsADeferred.await()
-                val statsB = statsBDeferred.await()
-                val leftEx = statsA.exceptionOrNull()?.toAppError()?.asException()
-                if (leftEx != null) {
-                    _comparison.value = AsyncValue.Error(leftEx.title, leftEx.subtitle)
-                    return@coroutineScope
-                }
-                val rightEx = statsB.exceptionOrNull()?.toAppError()?.asException()
-                if (rightEx != null) {
-                    _comparison.value = AsyncValue.Error(rightEx.title, rightEx.subtitle)
-                    return@coroutineScope
-                }
-                val scoresA =
-                    repository.getConstructorH2hRoundScores(a.constructorId, season).getOrElse { emptyList() }
-                val scoresB =
-                    repository.getConstructorH2hRoundScores(b.constructorId, season).getOrElse { emptyList() }
-                val timeline = H2hPointsTimeline.fromScores(scoresA, scoresB, season)
+        loadJob.launchH2hCompare(
+            scope = viewModelScope,
+            canCompare = canCompare,
+            fetchA = { repository.getConstructorH2hCompareData(a.constructorId, season) },
+            fetchB = { repository.getConstructorH2hCompareData(b.constructorId, season) },
+            onLoading = { _comparison.value = AsyncValue.Loading },
+            onError = { err -> _comparison.value = err.toAsyncError() },
+            onSuccess = { dataA, dataB ->
+                val timeline = H2hPointsTimeline.fromScores(dataA.scores, dataB.scores, season)
                 _comparison.value = AsyncValue.Value(
                     H2hConstructorCompareResult(
                         a,
                         b,
-                        statsA.getOrThrow(),
-                        statsB.getOrThrow(),
+                        dataA.stats,
+                        dataB.stats,
                         season,
                         timeline,
+                        constructorIdA = a.constructorId,
+                        constructorIdB = b.constructorId,
                     ),
                 )
-            }
-        }
+            },
+        )
     }
 
     private fun resetComparison() {
