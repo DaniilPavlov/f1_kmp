@@ -262,6 +262,7 @@ private fun navigateDeepLink(
 }
 
 @Composable
+@Suppress("CyclomaticComplexMethod")
 private fun F1TopBar(
     destination: NavDestination?,
     backStackEntry: androidx.navigation.NavBackStackEntry?,
@@ -357,6 +358,7 @@ private fun F1TopBar(
 }
 
 @Composable
+@Suppress("LongMethod")
 private fun F1NavHost(
     navController: NavHostController,
     onDriverClick: (Driver) -> Unit,

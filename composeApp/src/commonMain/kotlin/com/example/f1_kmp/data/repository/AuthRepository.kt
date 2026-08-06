@@ -1,5 +1,7 @@
 package com.example.f1_kmp.data.repository
 
+import com.example.f1_kmp.data.model.AuthUserCreateDto
+import com.example.f1_kmp.data.model.AuthUserSyncDto
 import com.example.f1_kmp.domain.auth.AuthResult
 import com.example.f1_kmp.domain.auth.AuthUser
 import com.example.f1_kmp.util.AppLogger
@@ -8,7 +10,6 @@ import dev.gitlive.firebase.auth.FirebaseAuthException
 import dev.gitlive.firebase.auth.FirebaseUser
 import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.auth.code
-import dev.gitlive.firebase.firestore.FieldValue
 import dev.gitlive.firebase.firestore.firestore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -118,18 +119,17 @@ class AuthRepository : IAuthRepository {
             val existing = ref.get()
             if (existing.exists) {
                 ref.set(
-                    mapOf(
-                        "email" to user.email,
-                        "emailVerified" to user.isEmailVerified,
+                    AuthUserSyncDto(
+                        email = user.email,
+                        emailVerified = user.isEmailVerified,
                     ),
                     merge = true,
                 )
             } else {
                 ref.set(
-                    mapOf(
-                        "email" to user.email,
-                        "emailVerified" to user.isEmailVerified,
-                        "createdAt" to FieldValue.serverTimestamp,
+                    AuthUserCreateDto(
+                        email = user.email,
+                        emailVerified = user.isEmailVerified,
                     ),
                 )
             }

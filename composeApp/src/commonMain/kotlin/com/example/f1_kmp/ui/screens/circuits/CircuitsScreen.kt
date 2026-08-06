@@ -44,7 +44,7 @@ import com.example.f1_kmp.ui.components.LinkText
 import com.example.f1_kmp.ui.components.OnAppResumed
 import com.example.f1_kmp.ui.components.circuits.CircuitLayoutImage
 import com.example.f1_kmp.ui.components.circuits.CircuitStatsGrid
-import com.example.f1_kmp.ui.components.shimmer.CareerScreenShimmer
+import com.example.f1_kmp.ui.components.shimmer.CircuitScreenShimmer
 import com.example.f1_kmp.ui.components.shimmer.CircuitsShimmer
 import com.example.f1_kmp.ui.components.shimmer.ListRowsShimmer
 import com.example.f1_kmp.ui.map.CircuitsMapContent
@@ -179,7 +179,7 @@ fun CircuitDetailScreen(
 
     when (val state = uiState.circuit) {
         is AsyncValue.Loading -> if (!uiState.isRefreshing) {
-            CareerScreenShimmer(modifier = Modifier.fillMaxSize())
+            CircuitScreenShimmer(modifier = Modifier.fillMaxSize())
         }
         is AsyncValue.Error -> ErrorBody(
             state.message,

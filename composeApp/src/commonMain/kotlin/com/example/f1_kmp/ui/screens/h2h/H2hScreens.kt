@@ -28,7 +28,7 @@ import com.example.f1_kmp.ui.components.ErrorBody
 import com.example.f1_kmp.ui.components.H2hCompareTable
 import com.example.f1_kmp.ui.components.H2hFilterToggle
 import com.example.f1_kmp.ui.components.SeasonPickerField
-import com.example.f1_kmp.ui.components.shimmer.ListRowsShimmer
+import com.example.f1_kmp.ui.components.shimmer.H2hCompareShimmer
 import com.example.f1_kmp.ui.theme.AppDimens
 import com.example.f1_kmp.ui.theme.AppStyles
 import com.example.f1_kmp.ui.theme.appColors
@@ -160,7 +160,7 @@ private fun H2hDriversContent(viewModel: H2hDriversViewModel) {
     )
     Spacer(Modifier.height(24.dp))
     when (val state = comparison) {
-        is AsyncValue.Loading -> ListRowsShimmer(rowCount = 4)
+        is AsyncValue.Loading -> H2hCompareShimmer()
         is AsyncValue.Error -> ErrorBody(
             state.message,
             state.subtitle,
@@ -242,7 +242,7 @@ private fun H2hConstructorsContent(viewModel: H2hConstructorsViewModel) {
     )
     Spacer(Modifier.height(24.dp))
     when (val state = comparison) {
-        is AsyncValue.Loading -> ListRowsShimmer(rowCount = 4)
+        is AsyncValue.Loading -> H2hCompareShimmer()
         is AsyncValue.Error -> ErrorBody(
             state.message,
             state.subtitle,
@@ -264,6 +264,7 @@ private fun H2hConstructorsContent(viewModel: H2hConstructorsViewModel) {
 }
 
 @Composable
+@Suppress("LongParameterList")
 private fun H2hFiltersPanel(
     scopeMode: Int,
     useCurrentSeason: Boolean,

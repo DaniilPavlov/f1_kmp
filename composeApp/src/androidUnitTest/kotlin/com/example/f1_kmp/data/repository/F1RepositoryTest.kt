@@ -232,6 +232,8 @@ class F1RepositoryTest {
         stubH2hTotals()
         assertTrue(repository.getDriverH2hStats("verstappen", null).isSuccess)
         assertTrue(repository.getConstructorH2hStats("red_bull", "2026").isSuccess)
+        assertTrue(repository.getDriverH2hCompareData("verstappen", null).isSuccess)
+        assertTrue(repository.getConstructorH2hCompareData("red_bull", null).isSuccess)
         assertTrue(repository.getDriverH2hRoundScores("verstappen", null).isSuccess)
         assertTrue(repository.getConstructorH2hRoundScores("red_bull", null).isSuccess)
         assertTrue(

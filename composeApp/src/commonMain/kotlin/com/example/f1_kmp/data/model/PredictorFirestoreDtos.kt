@@ -1,7 +1,5 @@
 package com.example.f1_kmp.data.model
 
-import com.example.f1_kmp.domain.predictor.PredictorLeaderboardEntry
-import com.example.f1_kmp.domain.predictor.PredictorLeaderboardProfile
 import com.example.f1_kmp.domain.predictor.PredictorSeason
 import com.example.f1_kmp.domain.predictor.PredictorWeekendPrediction
 import dev.gitlive.firebase.firestore.FieldValue
@@ -53,18 +51,6 @@ data class PredictorWeekendFirestoreDto(
     }
 }
 
-/** Read DTO for `users/{uid}/seasons/{year}` (ignores server timestamps). */
-@Serializable
-data class PredictorSeasonFirestoreDto(
-    val weekends: Map<String, PredictorWeekendFirestoreDto> = emptyMap(),
-) {
-    fun toDomain(year: String): PredictorSeason =
-        PredictorSeason(
-            year = year,
-            weekends = weekends.mapValues { (_, weekend) -> weekend.toDomain() },
-        )
-}
-
 /** Write DTO for season docs — includes server timestamp sentinel. */
 @Serializable
 data class PredictorSeasonWriteDto(
@@ -82,15 +68,20 @@ data class PredictorSeasonWriteDto(
     }
 }
 
-/** Profile fields on `users/{uid}` used by the leaderboard. */
+/** Bootstrap / refresh of Auth fields on `users/{uid}` (no server timestamp). */
 @Serializable
-data class PredictorLeaderboardProfileDto(
-    val nickname: String? = null,
-    val leaderboardOptIn: Boolean = false,
-) {
-    fun toDomain(): PredictorLeaderboardProfile =
-        PredictorLeaderboardProfile(nickname = nickname, leaderboardOptIn = leaderboardOptIn)
-}
+data class AuthUserSyncDto(
+    val email: String? = null,
+    val emailVerified: Boolean = false,
+)
+
+/** First-time user doc create — includes `createdAt` sentinel. */
+@Serializable
+data class AuthUserCreateDto(
+    val email: String? = null,
+    val emailVerified: Boolean = false,
+    val createdAt: FieldValue = FieldValue.serverTimestamp,
+)
 
 @Serializable
 data class PredictorNicknameDocDto(
@@ -98,16 +89,7 @@ data class PredictorNicknameDocDto(
     val nickname: String,
 )
 
-/** Read DTO for public leaderboard rows. */
-@Serializable
-data class PredictorLeaderboardEntryDto(
-    val nickname: String = "",
-    val totalPoints: Int = 0,
-) {
-    fun toDomain(uid: String): PredictorLeaderboardEntry =
-        PredictorLeaderboardEntry(uid = uid, nickname = nickname, totalPoints = totalPoints)
-}
-
+/** Write DTO for public leaderboard rows. */
 @Serializable
 data class PredictorLeaderboardEntryWriteDto(
     val nickname: String,

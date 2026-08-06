@@ -3,6 +3,7 @@ package com.example.f1_kmp.data.repository
 import com.example.f1_kmp.data.model.CareerStats
 import com.example.f1_kmp.data.model.CircuitRaceWin
 import com.example.f1_kmp.data.model.FinishStatusItem
+import com.example.f1_kmp.data.model.H2hEntityCompareData
 import com.example.f1_kmp.data.model.H2hStats
 import com.example.f1_kmp.domain.model.Circuit
 import com.example.f1_kmp.domain.model.Constructor
@@ -82,6 +83,17 @@ interface IF1Repository {
     suspend fun getDriverH2hStats(driverId: String, season: String? = null): Result<H2hStats>
 
     suspend fun getConstructorH2hStats(constructorId: String, season: String? = null): Result<H2hStats>
+
+    /** Stats + round scores за один проход (для H2H без двойной пагинации / 429). */
+    suspend fun getDriverH2hCompareData(
+        driverId: String,
+        season: String? = null,
+    ): Result<H2hEntityCompareData>
+
+    suspend fun getConstructorH2hCompareData(
+        constructorId: String,
+        season: String? = null,
+    ): Result<H2hEntityCompareData>
 
     suspend fun getStandingsAfterRound(
         year: String,

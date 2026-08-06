@@ -68,6 +68,13 @@ private const val ESPN_BASE_URL = EspnApiService.BASE_URL
 /** Имя приложения в User-Agent для Jolpica F1 API. */
 private const val APP_USER_AGENT_NAME = "F1KMP"
 
+/**
+ * UA для ESPN Site API.
+ * `site.api.espn.com/news` отдаёт 403 на Darwin / Mozilla / кастомные app-UA;
+ * overview/search на `site.web.api.espn.com` при этом работают — отсюда «новости в пилоте есть, на Home нет» на iOS.
+ */
+private const val ESPN_USER_AGENT = "okhttp/4.12.0"
+
 /** Jolpica F1 API — формат `AppName/version` (требование jolpica-f1 с 21.08.2026). */
 private val jolpicaUserAgent: String
     get() = "$APP_USER_AGENT_NAME/${appVersionName()}"
@@ -111,7 +118,8 @@ private fun createApiClient(
     json: Json,
     baseUrl: String,
     timeouts: ApiTimeouts,
-    withAppHeaders: Boolean,
+    userAgent: String,
+    withJolpicaHeaders: Boolean = false,
 ): HttpClient = createPlatformHttpClient {
     expectSuccess = true
     installJsonClient(
@@ -122,9 +130,9 @@ private fun createApiClient(
     )
     defaultRequest {
         url(baseUrl)
-        if (withAppHeaders) {
-            // header() заменяет дефолтный UA движка (OkHttp/Darwin), чтобы не попасть под блок default agents.
-            header("User-Agent", jolpicaUserAgent)
+        // header() заменяет дефолтный UA движка (OkHttp/Darwin).
+        header("User-Agent", userAgent)
+        if (withJolpicaHeaders) {
             header("system", "kmp")
             header("version", appVersionName())
             header("build-number", "1")
@@ -159,17 +167,18 @@ val networkModule = module {
             json = get(),
             baseUrl = BASE_URL,
             timeouts = JolpicaTimeouts,
-            withAppHeaders = true,
+            userAgent = jolpicaUserAgent,
+            withJolpicaHeaders = true,
         )
     }
 
-    /** Отдельный HttpClient для ESPN (другой base URL, без заголовков Jolpica). */
+    /** Отдельный HttpClient для ESPN (другой base URL и UA, допустимый для site.api). */
     single(qualifier = named("espn")) {
         createApiClient(
             json = get(),
             baseUrl = ESPN_BASE_URL,
             timeouts = EspnTimeouts,
-            withAppHeaders = false,
+            userAgent = ESPN_USER_AGENT,
         )
     }
 

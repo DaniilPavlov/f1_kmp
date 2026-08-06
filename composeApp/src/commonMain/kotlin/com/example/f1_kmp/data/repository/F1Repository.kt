@@ -17,6 +17,7 @@ import com.example.f1_kmp.data.model.CircuitRaceWin
 import com.example.f1_kmp.data.model.ConstructorStandingsModel
 import com.example.f1_kmp.data.model.DriverStandingsCache
 import com.example.f1_kmp.data.model.FinishStatusItem
+import com.example.f1_kmp.data.model.H2hEntityCompareData
 import com.example.f1_kmp.data.model.H2hStats
 import com.example.f1_kmp.data.model.HistoricalStandingsCache
 import com.example.f1_kmp.data.model.RaceModel
@@ -343,6 +344,23 @@ class F1Repository(
             CareerLoader.loadH2hStats(api, "constructors/$constructorId", season)
         }
 
+    override suspend fun getDriverH2hCompareData(
+        driverId: String,
+        season: String?,
+    ): Result<H2hEntityCompareData> =
+        // 429 ретраи внутри CareerLoader постранично — не перезапускаем весь H2H.
+        ApiCallHandler.safeCall(retries = 0) {
+            CareerLoader.loadH2hCompareData(api, "drivers/$driverId", season)
+        }
+
+    override suspend fun getConstructorH2hCompareData(
+        constructorId: String,
+        season: String?,
+    ): Result<H2hEntityCompareData> =
+        ApiCallHandler.safeCall(retries = 0) {
+            CareerLoader.loadH2hCompareData(api, "constructors/$constructorId", season)
+        }
+
     override suspend fun getStandingsAfterRound(
         year: String,
         round: String,
@@ -386,7 +404,7 @@ class F1Repository(
         driverId: String,
         season: String?,
     ): Result<List<com.example.f1_kmp.viewmodel.H2hRoundScore>> =
-        ApiCallHandler.safeCall {
+        ApiCallHandler.safeCall(retries = 0) {
             CareerLoader.loadH2hRoundScores(api, "drivers/$driverId", season)
         }
 
@@ -394,7 +412,7 @@ class F1Repository(
         constructorId: String,
         season: String?,
     ): Result<List<com.example.f1_kmp.viewmodel.H2hRoundScore>> =
-        ApiCallHandler.safeCall {
+        ApiCallHandler.safeCall(retries = 0) {
             CareerLoader.loadH2hRoundScores(api, "constructors/$constructorId", season)
         }
 

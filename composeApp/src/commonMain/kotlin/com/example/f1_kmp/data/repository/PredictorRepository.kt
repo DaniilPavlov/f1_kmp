@@ -1,6 +1,6 @@
 package com.example.f1_kmp.data.repository
 
-import com.example.f1_kmp.data.model.PredictorSeasonFirestoreDto
+import com.example.f1_kmp.data.model.PredictorWeekendFirestoreDto
 import com.example.f1_kmp.data.model.PredictorSeasonWriteDto
 import com.example.f1_kmp.domain.predictor.PredictorSeason
 import com.example.f1_kmp.domain.predictor.PredictorStore
@@ -107,5 +107,12 @@ class PredictorRepository(
 
 private fun DocumentSnapshot.toSeason(year: String): PredictorSeason {
     if (!exists) return PredictorSeason(year = year)
-    return data(PredictorSeasonFirestoreDto.serializer()).toDomain(year)
+    // Field get — avoid full-document decode (updatedAt Timestamp / unknown keys).
+    val weekends = runCatching {
+        get<Map<String, PredictorWeekendFirestoreDto>?>("weekends")
+    }.getOrNull().orEmpty()
+    return PredictorSeason(
+        year = year,
+        weekends = weekends.mapValues { (_, weekend) -> weekend.toDomain() },
+    )
 }

@@ -1,10 +1,8 @@
 package com.example.f1_kmp.data.repository
 
-import com.example.f1_kmp.data.model.PredictorLeaderboardEntryDto
 import com.example.f1_kmp.data.model.PredictorLeaderboardEntryWriteDto
 import com.example.f1_kmp.data.model.PredictorLeaderboardJoinUserDto
 import com.example.f1_kmp.data.model.PredictorLeaderboardOptOutDto
-import com.example.f1_kmp.data.model.PredictorLeaderboardProfileDto
 import com.example.f1_kmp.data.model.PredictorNicknameDocDto
 import com.example.f1_kmp.data.model.PredictorNicknameUpdateUserDto
 import com.example.f1_kmp.domain.predictor.PredictorLeaderboardEntry
@@ -211,10 +209,21 @@ class PredictorLeaderboardRepository(
 
 private fun DocumentSnapshot.toLeaderboardProfile(): PredictorLeaderboardProfile {
     if (!exists) return PredictorLeaderboardProfile()
-    return data(PredictorLeaderboardProfileDto.serializer()).toDomain()
+    // Field gets — user docs also hold email/timestamps; full data() decode breaks on Timestamp/Any.
+    return PredictorLeaderboardProfile(
+        nickname = runCatching { get<String?>("nickname") }.getOrNull(),
+        leaderboardOptIn = runCatching { get<Boolean?>("leaderboardOptIn") }.getOrNull() ?: false,
+    )
 }
 
 private fun DocumentSnapshot.toLeaderboardEntry(): PredictorLeaderboardEntry {
     if (!exists) return PredictorLeaderboardEntry(uid = id, nickname = "", totalPoints = 0)
-    return data(PredictorLeaderboardEntryDto.serializer()).toDomain(id)
+    val points = runCatching { get<Int?>("totalPoints") }.getOrNull()
+        ?: runCatching { get<Long?>("totalPoints")?.toInt() }.getOrNull()
+        ?: 0
+    return PredictorLeaderboardEntry(
+        uid = id,
+        nickname = runCatching { get<String?>("nickname") }.getOrNull().orEmpty(),
+        totalPoints = points,
+    )
 }

@@ -1,9 +1,11 @@
 package com.example.f1_kmp.domain
 
+import io.ktor.serialization.JsonConvertException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.serialization.SerializationException
 
 class AppErrorTest {
 
@@ -30,6 +32,12 @@ class AppErrorTest {
         val io = kotlinx.io.IOException("offline").toAppError()
         assertEquals(ErrorStrings.noConnection, io.title)
         assertNull(AppError("only").subtitle)
+
+        val parse = JsonConvertException(
+            "bad json",
+            SerializationException("missing rank"),
+        ).toAppError()
+        assertEquals(ErrorStrings.responseParseError, parse.title)
     }
 
     @Test
