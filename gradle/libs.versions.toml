@@ -21,7 +21,7 @@ detekt = "1.23.8"
 coil = "3.5.0"
 appmetrica = "8.4.1"
 kover = "0.9.9"
-gitlive-firebase = "2.5.0"
+gitlive-firebase = "2.6.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
