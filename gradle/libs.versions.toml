@@ -19,7 +19,7 @@ mockk = "1.14.11"
 junit = "4.13.2"
 detekt = "1.23.8"
 coil = "3.5.0"
-appmetrica = "8.4.1"
+appmetrica = "8.5.1"
 kover = "0.9.9"
 gitlive-firebase = "2.5.0"
 
